@@ -8,7 +8,7 @@ from giskardpy.data_types.exceptions import SetupException
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import CollisionWorldSynchronizer, CollisionCheckerLib, \
     CollisionAvoidanceThresholds
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.middleware import get_middleware
 from semantic_world.world import World
 
@@ -131,7 +131,7 @@ class CollisionAvoidanceConfig(abc.ABC):
         if group_name is None:
             group_name = god_map.world.robot_name
         config = self.collision_scene.collision_avoidance_configs[group_name]
-        joint_name = PrefixName(joint_name, group_name)
+        joint_name = PrefixedName(joint_name, group_name)
         if number_of_repeller is not None:
             config.external_collision_avoidance[joint_name].number_of_repeller = number_of_repeller
         if soft_threshold is not None:
@@ -159,7 +159,7 @@ class CollisionAvoidanceConfig(abc.ABC):
         if group_name is None:
             group_name = god_map.world.robot_name
         config = self.collision_scene.collision_avoidance_configs[group_name]
-        link_name = PrefixName(link_name, group_name)
+        link_name = PrefixedName(link_name, group_name)
         if number_of_repeller is not None:
             config.self_collision_avoidance[link_name].number_of_repeller = number_of_repeller
         if soft_threshold is not None:

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPosition, CartesianOrientation
 from giskardpy.motion_statechart.tasks.task import Task, WEIGHT_BELOW_CA
@@ -11,10 +11,10 @@ from semantic_world.spatial_types.symbol_manager import symbol_manager
 class SpiralMixing(Task):
     def __init__(self, *, name: Optional[str] = None,
                  end_time: float,
-                 object_name: PrefixName,
+                 object_name: PrefixedName,
                  tool_height: float,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  radial_increment: float,
                  angle_increment: float,
                  upward_increment: float,

@@ -5,7 +5,7 @@ from typing import List, Dict, TYPE_CHECKING, Optional, Union
 import numpy as np
 
 
-from giskardpy.data_types.data_types import Derivatives, PrefixName
+from giskardpy.data_types.data_types import Derivatives, PrefixedName
 from giskardpy.qp.free_variable import FreeVariable
 import giskardpy.utils.math as giskard_math
 from giskardpy.utils.decorators import memoize
@@ -34,7 +34,7 @@ def joint_derivative_filter(offset, prediction_horizon, max_derivative):
 class NextCommands:
     world: World
 
-    free_variable_data: Dict[PrefixName, List[float]] = field(default_factory=dict)
+    free_variable_data: Dict[PrefixedName, List[float]] = field(default_factory=dict)
 
     @classmethod
     @profile

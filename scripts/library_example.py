@@ -1,4 +1,4 @@
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.model.collision_avoidance_config import DisableCollisionAvoidanceConfig
 from giskardpy.model.trajectory import Trajectory
 from giskardpy.model.world_config import WorldWithOmniDriveRobot
@@ -11,13 +11,13 @@ def execute_cart_goal(giskard: GiskardWrapper) -> Trajectory:
     init = 'init'
     g1 = 'g1'
     g2 = 'g2'
-    init_goal1 = cas.TransformationMatrix(reference_frame=PrefixName('map'))
+    init_goal1 = cas.TransformationMatrix(reference_frame=PrefixedName('map'))
     init_goal1.x = -0.5
 
-    base_goal1 = cas.TransformationMatrix(reference_frame=PrefixName('map'))
+    base_goal1 = cas.TransformationMatrix(reference_frame=PrefixedName('map'))
     base_goal1.x = 1.0
 
-    base_goal2 = cas.TransformationMatrix(reference_frame=PrefixName('map'))
+    base_goal2 = cas.TransformationMatrix(reference_frame=PrefixedName('map'))
     base_goal2.x = -1.0
 
     giskard.monitors.add_set_seed_odometry(base_pose=init_goal1, name=init)

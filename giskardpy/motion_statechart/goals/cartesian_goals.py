@@ -5,7 +5,7 @@ from typing import Optional, List
 import numpy as np
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import Derivatives, ColorRGBA, PrefixName
+from giskardpy.data_types.data_types import Derivatives, ColorRGBA, PrefixedName
 from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.god_map import god_map
 from giskardpy.model.joints import DiffDrive, OmniDrive
@@ -18,7 +18,7 @@ from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, Task
 
 class ToDriveOrNotToDrive(Goal):
     def __init__(self,
-                 tip_link: PrefixName,
+                 tip_link: PrefixedName,
                  xyz: List[float],
                  weight: float = WEIGHT_ABOVE_CA,
                  name: Optional[str] = None):
@@ -43,8 +43,8 @@ class ToDriveOrNotToDrive(Goal):
 class DiffDriveBaseGoal(Goal):
 
     def __init__(self,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  goal_pose: cas.TransformationMatrix,
                  max_linear_velocity: float = 0.1,
                  max_angular_velocity: float = 0.5,
@@ -178,8 +178,8 @@ class DiffDriveBaseGoal(Goal):
 
 class CartesianPoseStraight(Goal):
     def __init__(self,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  goal_pose: cas.TransformationMatrix,
                  reference_linear_velocity: Optional[float] = None,
                  reference_angular_velocity: Optional[float] = None,
@@ -217,8 +217,8 @@ class RelativePositionSequence(Goal):
     def __init__(self,
                  goal1: cas.TransformationMatrix,
                  goal2: cas.TransformationMatrix,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  name: Optional[str] = None):
         """
         Only meant for testing.

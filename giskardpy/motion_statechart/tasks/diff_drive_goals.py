@@ -3,7 +3,7 @@ from __future__ import division
 from typing import Optional
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, Task
 
@@ -66,9 +66,9 @@ class DiffDriveTangentialToPoint(Task):
 
 class KeepHandInWorkspace(Task):
     def __init__(self,
-                 tip_link: PrefixName,
-                 base_footprint: Optional[PrefixName] = None,
-                 map_frame: Optional[PrefixName] = None,
+                 tip_link: PrefixedName,
+                 base_footprint: Optional[PrefixedName] = None,
+                 map_frame: Optional[PrefixedName] = None,
                  pointing_axis: Optional[cas.Vector3] = None,
                  max_velocity: float = 0.3,
                  weight: float = WEIGHT_ABOVE_CA,

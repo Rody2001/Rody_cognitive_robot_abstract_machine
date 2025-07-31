@@ -1,7 +1,7 @@
 from typing import Optional, List
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.model.joints import OmniDrive
 from giskardpy.motion_statechart.monitors.monitors import Monitor
@@ -9,7 +9,7 @@ from giskardpy.motion_statechart.monitors.monitors import Monitor
 
 class InWorldSpace(Monitor):
 
-    def __init__(self, tip_link: PrefixName, xyz: List[float],
+    def __init__(self, tip_link: PrefixedName, xyz: List[float],
                  name: Optional[str] = None, plot: bool = True):
         super().__init__(name=name, plot=plot)
         self.joint: OmniDrive = god_map.world.get_drive_joint()
@@ -32,8 +32,8 @@ class InWorldSpace(Monitor):
 
 class PoseReached(Monitor):
     def __init__(self,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  goal_pose: cas.TransformationMatrix,
                  position_threshold: float = 0.01,
                  orientation_threshold: float = 0.01,
@@ -64,8 +64,8 @@ class PoseReached(Monitor):
 
 class PositionReached(Monitor):
     def __init__(self,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  goal_point: cas.Point3,
                  threshold: float = 0.01,
                  absolute: bool = False,
@@ -85,8 +85,8 @@ class PositionReached(Monitor):
 
 class OrientationReached(Monitor):
     def __init__(self,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  goal_orientation: cas.RotationMatrix,
                  threshold: float = 0.01,
                  absolute: bool = False,
@@ -106,9 +106,9 @@ class OrientationReached(Monitor):
 
 class PointingAt(Monitor):
     def __init__(self,
-                 tip_link: PrefixName,
+                 tip_link: PrefixedName,
                  goal_point: cas.Point3,
-                 root_link: PrefixName,
+                 root_link: PrefixedName,
                  pointing_axis: cas.Vector3,
                  threshold: float = 0.01,
                  name: Optional[str] = None):
@@ -133,8 +133,8 @@ class PointingAt(Monitor):
 
 class VectorsAligned(Monitor):
     def __init__(self,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  goal_normal: cas.Vector3,
                  tip_normal: cas.Vector3,
                  threshold: float = 0.01,
@@ -158,8 +158,8 @@ class VectorsAligned(Monitor):
 
 class DistanceToLine(Monitor):
     def __init__(self,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  center_point: cas.Point3,
                  line_axis: cas.Vector3,
                  line_length: float,

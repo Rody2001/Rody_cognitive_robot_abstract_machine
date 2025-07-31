@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import ColorRGBA, PrefixName
+from giskardpy.data_types.data_types import ColorRGBA, PrefixedName
 from semantic_world.spatial_types.symbol_manager import symbol_manager
 from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA, Task
 from giskardpy.god_map import god_map
@@ -13,9 +13,9 @@ from giskardpy.god_map import god_map
 
 class Pointing(Task):
     def __init__(self,
-                 tip_link: PrefixName,
+                 tip_link: PrefixedName,
                  goal_point: cas.Point3,
-                 root_link: PrefixName,
+                 root_link: PrefixedName,
                  pointing_axis: cas.Vector3,
                  max_velocity: float = 0.3,
                  threshold: float = 0.01,
@@ -71,9 +71,9 @@ class Pointing(Task):
 
 class PointingCone(Task):
     def __init__(self,
-                 tip_link: PrefixName,
+                 tip_link: PrefixedName,
                  goal_point: cas.Point3,
-                 root_link: PrefixName,
+                 root_link: PrefixedName,
                  pointing_axis: cas.Vector3,
                  cone_theta: float = 0.0,
                  max_velocity: float = 0.3,

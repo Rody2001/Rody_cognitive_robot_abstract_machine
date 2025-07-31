@@ -3,15 +3,15 @@ from __future__ import division
 from typing import Optional
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, Task
 from giskardpy.god_map import god_map
 
 
 class GraspBar(Task):
     def __init__(self,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  tip_grasp_axis: cas.Vector3,
                  bar_center: cas.Point3,
                  bar_axis: cas.Vector3,

@@ -11,7 +11,7 @@ from semantic_world.robots import AbstractRobot
 from semantic_world.spatial_types.symbol_manager import symbol_manager
 from lxml import etree
 
-from giskardpy.data_types.data_types import Derivatives, PrefixName
+from giskardpy.data_types.data_types import Derivatives, PrefixedName
 from giskardpy.data_types.exceptions import UnknownGroupException, UnknownLinkException
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
@@ -67,9 +67,9 @@ class CollisionAvoidanceThresholds:
 
 class CollisionAvoidanceGroupThresholds:
     def __init__(self):
-        self.external_collision_avoidance: DefaultDict[PrefixName, CollisionAvoidanceThresholds] = defaultdict(
+        self.external_collision_avoidance: DefaultDict[PrefixedName, CollisionAvoidanceThresholds] = defaultdict(
             CollisionAvoidanceThresholds)
-        self.self_collision_avoidance: DefaultDict[PrefixName, CollisionAvoidanceThresholds] = defaultdict(
+        self.self_collision_avoidance: DefaultDict[PrefixedName, CollisionAvoidanceThresholds] = defaultdict(
             CollisionAvoidanceThresholds)
 
     def max_num_of_repeller(self):
@@ -240,9 +240,9 @@ class SortedCollisionResults:
 
 class Collisions:
     all_collisions: Set[Collision]
-    self_collision: Dict[Tuple[PrefixName, PrefixName], SortedCollisionResults]
-    external_collision: Dict[PrefixName, SortedCollisionResults]
-    external_collision_long_key: Dict[Tuple[PrefixName, PrefixName], Collision]
+    self_collision: Dict[Tuple[PrefixedName, PrefixedName], SortedCollisionResults]
+    external_collision: Dict[PrefixedName, SortedCollisionResults]
+    external_collision_long_key: Dict[Tuple[PrefixedName, PrefixedName], Collision]
 
     @profile
     def __init__(self, collision_list_size):
@@ -341,7 +341,7 @@ class Collisions:
         return collision
 
     @profile
-    def get_external_collisions(self, link_name: PrefixName) -> SortedCollisionResults:
+    def get_external_collisions(self, link_name: PrefixedName) -> SortedCollisionResults:
         """
         Collisions are saved as a list for each movable robot joint, sorted by contact distance
         """
@@ -349,15 +349,15 @@ class Collisions:
             return self.external_collision[link_name]
         return SortedCollisionResults()
 
-    def get_external_collisions_long_key(self, link_a: PrefixName, link_b: PrefixName) -> Collision:
+    def get_external_collisions_long_key(self, link_a: PrefixedName, link_b: PrefixedName) -> Collision:
         return self.external_collision_long_key[link_a, link_b]
 
     @profile
-    def get_number_of_external_collisions(self, joint_name: PrefixName) -> int:
+    def get_number_of_external_collisions(self, joint_name: PrefixedName) -> int:
         return self.number_of_external_collisions[joint_name]
 
     #
-    def get_self_collisions(self, link_a: PrefixName, link_b: PrefixName) -> SortedCollisionResults:
+    def get_self_collisions(self, link_a: PrefixedName, link_b: PrefixedName) -> SortedCollisionResults:
         """
         Make sure that link_a < link_b, the reverse collision is not saved.
         """
@@ -382,23 +382,23 @@ class DisableCollisionReason(Enum):
 
 class CollisionWorldSynchronizer:
     # a blacklist of disabled collisions
-    self_collision_matrix: Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]
+    self_collision_matrix: Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]
     # robot name -> path, self collision matrix
     self_collision_matrix_cache: Dict[str,
     Tuple[str,
-    Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason],
-    Set[PrefixName]]]
+    Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason],
+    Set[PrefixedName]]]
     collision_avoidance_configs: Dict[str, CollisionAvoidanceGroupThresholds] = None
-    disabled_links: Set[PrefixName]
+    disabled_links: Set[PrefixedName]
     srdf_disable_all_collisions = 'disable_all_collisions'
     srdf_disable_self_collision = 'disable_self_collision'
     srdf_moveit_disable_collisions = 'disable_collisions'
     collision_checker_id = CollisionCheckerLib.none
-    _fixed_joints: Tuple[PrefixName, ...]
+    _fixed_joints: Tuple[PrefixedName, ...]
 
     closest_points: Collisions
-    external_monitored_links: Dict[PrefixName, int]
-    self_monitored_links: Dict[Tuple[PrefixName, PrefixName], int]
+    external_monitored_links: Dict[PrefixedName, int]
+    self_monitored_links: Dict[Tuple[PrefixedName, PrefixedName], int]
 
     def __init__(self):
         self.self_collision_matrix = {}
@@ -417,15 +417,15 @@ class CollisionWorldSynchronizer:
         self.collision_matrix = {}
 
     @property
-    def fixed_joints(self) -> Tuple[PrefixName, ...]:
+    def fixed_joints(self) -> Tuple[PrefixedName, ...]:
         return self._fixed_joints
 
-    def add_fixed_joint(self, joint_name: PrefixName):
+    def add_fixed_joint(self, joint_name: PrefixedName):
         fixed_joint_list = list(self._fixed_joints)
         fixed_joint_list.append(joint_name)
         self._fixed_joints = tuple(fixed_joint_list)
 
-    def add_collision_check(self, link_a: PrefixName, link_b: PrefixName, distance: float):
+    def add_collision_check(self, link_a: PrefixedName, link_b: PrefixedName, distance: float):
         """
         Tell Giskard to check this collision, even if it got disabled through other means such as allow_all_collisions.
         :param link_a:
@@ -460,7 +460,7 @@ class CollisionWorldSynchronizer:
         return self.collision_checker_id != CollisionCheckerLib.none
 
     def load_self_collision_matrix_from_srdf(self, path: str, group_name: str) \
-            -> Tuple[Optional[dict], Set[PrefixName]]:
+            -> Tuple[Optional[dict], Set[PrefixedName]]:
         from pkg_resources import resource_filename
         if not self.is_collision_checking_enabled:
             return {}, set()
@@ -539,12 +539,12 @@ class CollisionWorldSynchronizer:
         """
         pass
 
-    def remove_links_from_self_collision_matrix(self, link_names: Set[PrefixName]):
+    def remove_links_from_self_collision_matrix(self, link_names: Set[PrefixedName]):
         for (link1, link2), reason in list(self.self_collision_matrix.items()):
             if link1 in link_names or link2 in link_names:
                 del self.self_collision_matrix[link1, link2]
 
-    def update_self_collision_matrix(self, group_name: str, new_links: Iterable[PrefixName]):
+    def update_self_collision_matrix(self, group_name: str, new_links: Iterable[PrefixedName]):
         group = god_map.world.groups[group_name]
         if group.actuated:
             link_combinations = list(product(group.link_names_with_collisions, new_links))
@@ -572,7 +572,7 @@ class CollisionWorldSynchronizer:
                                       save_to_tmp: bool = True,
                                       overwrite_old_matrix: bool = True,
                                       progress_callback: Optional[Callable[[int, str], None]] = None) \
-            -> Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]:
+            -> Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]:
         """
         :param use_collision_checker: if False, only the parts will be called that don't require collision checking.
         :param progress_callback: a function that is used to display the progress. it's called with a value of 0-100 and
@@ -637,9 +637,9 @@ class CollisionWorldSynchronizer:
         return self_collision_matrix
 
     def compute_self_collision_matrix_adjacent(self,
-                                               link_combinations: Set[Tuple[PrefixName, PrefixName]],
+                                               link_combinations: Set[Tuple[PrefixedName, PrefixedName]],
                                                group: WorldBranch) \
-            -> Tuple[Set[Tuple[PrefixName, PrefixName]], Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]]:
+            -> Tuple[Set[Tuple[PrefixedName, PrefixedName]], Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]]:
         """
         Find connecting links and disable all adjacent link collisions
         """
@@ -656,10 +656,10 @@ class CollisionWorldSynchronizer:
         return remaining_pairs, self_collision_matrix
 
     def compute_self_collision_matrix_default(self,
-                                              link_combinations: Set[Tuple[PrefixName, PrefixName]],
+                                              link_combinations: Set[Tuple[PrefixedName, PrefixedName]],
                                               group: WorldBranch,
                                               distance_threshold_zero: float) \
-            -> Tuple[Set[Tuple[PrefixName, PrefixName]], Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]]:
+            -> Tuple[Set[Tuple[PrefixedName, PrefixedName]], Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]]:
         """
         Disable link pairs that are in collision in default state
         """
@@ -674,12 +674,12 @@ class CollisionWorldSynchronizer:
         return remaining_pairs, self_collision_matrix
 
     def compute_self_collision_matrix_always(self,
-                                             link_combinations: Set[Tuple[PrefixName, PrefixName]],
+                                             link_combinations: Set[Tuple[PrefixedName, PrefixedName]],
                                              group: WorldBranch,
                                              distance_threshold_always: float,
                                              number_of_tries: int = 200,
                                              almost_percentage: float = 0.95) \
-            -> Tuple[Set[Tuple[PrefixName, PrefixName]], Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]]:
+            -> Tuple[Set[Tuple[PrefixedName, PrefixedName]], Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]]:
         """
         Disable link pairs that are (almost) always in collision.
         """
@@ -688,7 +688,7 @@ class CollisionWorldSynchronizer:
         with god_map.world.reset_joint_state_context():
             self_collision_matrix = {}
             remaining_pairs = deepcopy(link_combinations)
-            counts: DefaultDict[Tuple[PrefixName, PrefixName], int] = defaultdict(int)
+            counts: DefaultDict[Tuple[PrefixedName, PrefixedName], int] = defaultdict(int)
             for try_id in range(int(number_of_tries)):
                 self.set_rnd_joint_state(group)
                 for link_a, link_b, _ in self.find_colliding_combinations(remaining_pairs, distance_threshold_always,
@@ -702,7 +702,7 @@ class CollisionWorldSynchronizer:
         return remaining_pairs, self_collision_matrix
 
     def compute_self_collision_matrix_never(self,
-                                            link_combinations: Set[Tuple[PrefixName, PrefixName]],
+                                            link_combinations: Set[Tuple[PrefixedName, PrefixedName]],
                                             group: WorldBranch,
                                             distance_threshold_never_initial: float,
                                             distance_threshold_never_min: float,
@@ -710,7 +710,7 @@ class CollisionWorldSynchronizer:
                                             distance_threshold_never_zero: float,
                                             number_of_tries: int = 10000,
                                             progress_callback: Optional[Callable[[int, str], None]] = None) \
-            -> Tuple[Set[Tuple[PrefixName, PrefixName]], Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason]]:
+            -> Tuple[Set[Tuple[PrefixedName, PrefixedName]], Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason]]:
         """
         Disable link pairs that are never in collision.
         """
@@ -721,7 +721,7 @@ class CollisionWorldSynchronizer:
             self_collision_matrix = {}
             remaining_pairs = deepcopy(link_combinations)
             update_query = True
-            distance_ranges: Dict[Tuple[PrefixName, PrefixName], Tuple[float, float]] = {}
+            distance_ranges: Dict[Tuple[PrefixedName, PrefixedName], Tuple[float, float]] = {}
             once_without_contact = set()
             for try_id in range(int(number_of_tries)):
                 self.set_rnd_joint_state(group)
@@ -760,8 +760,8 @@ class CollisionWorldSynchronizer:
 
     def save_self_collision_matrix(self,
                                    group: WorldBranch,
-                                   self_collision_matrix: Dict[Tuple[PrefixName, PrefixName], DisableCollisionReason],
-                                   disabled_links: Set[PrefixName],
+                                   self_collision_matrix: Dict[Tuple[PrefixedName, PrefixedName], DisableCollisionReason],
+                                   disabled_links: Set[PrefixedName],
                                    file_name: Optional[str] = None):
         # Create the root element
         root = etree.Element('robot')
@@ -823,7 +823,7 @@ class CollisionWorldSynchronizer:
                     key = god_map.world.sort_links(link_a, link_b)
                     self.self_collision_matrix[key] = DisableCollisionReason.Unknown
 
-    # def get_map_T_geometry(self, link_name: PrefixName, collision_id: int = 0) -> Pose:
+    # def get_map_T_geometry(self, link_name: PrefixedName, collision_id: int = 0) -> Pose:
     #     map_T_geometry = god_map.world.compute_fk_with_collision_offset(god_map.world.root_link_name, link_name,
     #                                                                     collision_id)
     #     return msg_converter.to_ros_message(map_T_geometry).pose
@@ -860,16 +860,16 @@ class CollisionWorldSynchronizer:
     def has_self_collision_matrix(self) -> bool:
         return len(self.self_collision_matrix_cache) > 0
 
-    def find_colliding_combinations(self, link_combinations: Iterable[Tuple[PrefixName, PrefixName]],
+    def find_colliding_combinations(self, link_combinations: Iterable[Tuple[PrefixedName, PrefixedName]],
                                     distance: float,
-                                    update_query: bool) -> Set[Tuple[PrefixName, PrefixName]]:
+                                    update_query: bool) -> Set[Tuple[PrefixedName, PrefixedName]]:
         raise NotImplementedError('Collision checking is turned off.')
 
     def check_collisions(self, collision_list_size: float = 1000, buffer: float = 0.05) \
             -> Collisions:
         pass
 
-    def in_collision(self, link_a: PrefixName, link_b: PrefixName, distance: float) -> bool:
+    def in_collision(self, link_a: PrefixedName, link_b: PrefixedName, distance: float) -> bool:
         return False
 
     def sync(self) -> None:
@@ -905,7 +905,7 @@ class CollisionWorldSynchronizer:
             else:
                 self.collision_matrix[key] = distance
 
-    def create_collision_check_distances(self) -> Dict[PrefixName, float]:
+    def create_collision_check_distances(self) -> Dict[PrefixedName, float]:
         for robot_name in self.robot_names:
             collision_avoidance_config = god_map.collision_scene.collision_avoidance_configs[robot_name]
             external_distances = collision_avoidance_config.external_collision_avoidance
@@ -934,7 +934,7 @@ class CollisionWorldSynchronizer:
         return max_distances
 
     def create_collision_matrix(self, collision_goals: List[CollisionEntry],
-                                collision_check_distances: Optional[Dict[PrefixName, float]] = None) \
+                                collision_check_distances: Optional[Dict[PrefixedName, float]] = None) \
             -> Dict[Tuple[str, str], float]:
         """
         :param collision_goals: list of CollisionEntry
@@ -1045,11 +1045,11 @@ class CollisionWorldSynchronizer:
         self.external_monitored_links = {}
         self.self_monitored_links = {}
 
-    def get_map_T_geometry(self, link_name: PrefixName, collision_id: int = 0) -> np.ndarray:
+    def get_map_T_geometry(self, link_name: PrefixedName, collision_id: int = 0) -> np.ndarray:
         return god_map.world.compute_fk_with_collision_offset_np(god_map.world.root_link_name, link_name, collision_id)
 
     # %% external collision symbols
-    def monitor_link_for_external(self, link_name: PrefixName, idx: int):
+    def monitor_link_for_external(self, link_name: PrefixedName, idx: int):
         self.external_monitored_links[link_name] = max(idx, self.external_monitored_links.get(link_name, 0))
 
     def get_external_collision_symbol(self) -> List[cas.Symbol]:
@@ -1086,20 +1086,20 @@ class CollisionWorldSynchronizer:
 
         return self.external_collision_data
 
-    def external_map_V_n_symbol(self, link_name: PrefixName, idx: int) -> cas.Vector3:
+    def external_map_V_n_symbol(self, link_name: PrefixedName, idx: int) -> cas.Vector3:
         provider = lambda n=link_name, i=idx: self.closest_points.get_external_collisions(n)[i].map_V_n
         return symbol_manager.register_vector3(name=f'closest_point({link_name})[{idx}].map_V_n',
                                                provider=provider)
 
-    def external_new_a_P_pa_symbol(self, link_name: PrefixName, idx: int) -> cas.Point3:
+    def external_new_a_P_pa_symbol(self, link_name: PrefixedName, idx: int) -> cas.Point3:
         provider = lambda n=link_name, i=idx: self.closest_points.get_external_collisions(n)[i].new_a_P_pa
         return symbol_manager.register_point3(name=f'closest_point({link_name})[{idx}].new_a_P_pa',
                                               provider=provider)
 
     def external_contact_distance_symbol(self,
-                                         link_name: PrefixName,
+                                         link_name: PrefixedName,
                                          idx: Optional[int] = None,
-                                         link_b_name: Optional[PrefixName] = None) -> cas.Symbol:
+                                         link_b_name: Optional[PrefixedName] = None) -> cas.Symbol:
         if link_b_name is None:
             assert idx is not None
             provider = lambda n=link_name, i=idx: self.closest_points.get_external_collisions(n)[i].contact_distance
@@ -1113,9 +1113,9 @@ class CollisionWorldSynchronizer:
             provider=provider)
 
     def external_link_b_hash_symbol(self,
-                                    link_name: PrefixName,
+                                    link_name: PrefixedName,
                                     idx: Optional[int] = None,
-                                    link_b_name: Optional[PrefixName] = None) -> cas.Symbol:
+                                    link_b_name: Optional[PrefixedName] = None) -> cas.Symbol:
         if link_b_name is None:
             assert idx is not None
             provider = lambda n=link_name, i=idx: self.closest_points.get_external_collisions(n)[i].link_b_hash
@@ -1129,13 +1129,13 @@ class CollisionWorldSynchronizer:
             provider=provider
         )
 
-    def external_number_of_collisions_symbol(self, link_name: PrefixName) -> cas.Symbol:
+    def external_number_of_collisions_symbol(self, link_name: PrefixedName) -> cas.Symbol:
         provider = lambda n=link_name: self.closest_points.get_number_of_external_collisions(n)
         return symbol_manager.register_symbol_provider(name=f'len(closest_point({link_name}))',
                                                        provider=provider)
 
     # %% self collision symbols
-    def monitor_link_for_self(self, link_a: PrefixName, link_b: PrefixName, idx: int):
+    def monitor_link_for_self(self, link_a: PrefixedName, link_b: PrefixedName, idx: int):
         self.self_monitored_links[link_a, link_b] = max(idx, self.self_monitored_links.get((link_a, link_b), 0))
 
     def get_self_collision_symbol(self) -> List[cas.Symbol]:
@@ -1174,28 +1174,28 @@ class CollisionWorldSynchronizer:
 
         return self.self_collision_data
 
-    def self_new_b_V_n_symbol(self, link_a: PrefixName, link_b: PrefixName, idx: int) -> cas.Vector3:
+    def self_new_b_V_n_symbol(self, link_a: PrefixedName, link_b: PrefixedName, idx: int) -> cas.Vector3:
         provider = lambda a=link_a, b=link_b, i=idx: self.closest_points.get_self_collisions(a, b)[i].new_b_V_n
         return symbol_manager.register_vector3(name=f'closest_point({link_a}, {link_b})[{idx}].new_b_V_n',
                                                provider=provider)
 
-    def self_new_a_P_pa_symbol(self, link_a: PrefixName, link_b: PrefixName, idx: int) -> cas.Point3:
+    def self_new_a_P_pa_symbol(self, link_a: PrefixedName, link_b: PrefixedName, idx: int) -> cas.Point3:
         provider = lambda a=link_a, b=link_b, i=idx: self.closest_points.get_self_collisions(a, b)[i].new_a_P_pa
         return symbol_manager.register_point3(name=f'closest_point({link_a}, {link_b}).new_a_P_pa',
                                               provider=provider)
 
-    def self_new_b_P_pb_symbol(self, link_a: PrefixName, link_b: PrefixName, idx: int) -> cas.Point3:
+    def self_new_b_P_pb_symbol(self, link_a: PrefixedName, link_b: PrefixedName, idx: int) -> cas.Point3:
         provider = lambda a=link_a, b=link_b, i=idx: self.closest_points.get_self_collisions(a, b)[i].new_b_P_pb
         p = symbol_manager.register_point3(name=f'closest_point({link_a}, {link_b}).new_b_P_pb',
                                            provider=provider)
         return p
 
-    def self_contact_distance_symbol(self, link_a: PrefixName, link_b: PrefixName, idx: int) -> cas.Symbol:
+    def self_contact_distance_symbol(self, link_a: PrefixedName, link_b: PrefixedName, idx: int) -> cas.Symbol:
         provider = lambda a=link_a, b=link_b, i=idx: self.closest_points.get_self_collisions(a, b)[i].contact_distance
         return symbol_manager.register_symbol_provider(name=f'closest_point({link_a}, {link_b}).contact_distance',
                                                        provider=provider)
 
-    def self_number_of_collisions_symbol(self, link_a: PrefixName, link_b: PrefixName) -> cas.Symbol:
+    def self_number_of_collisions_symbol(self, link_a: PrefixedName, link_b: PrefixedName) -> cas.Symbol:
         provider = lambda a=link_a, b=link_b: self.closest_points.get_number_of_self_collisions(a, b)
         return symbol_manager.register_symbol_provider(name=f'len(closest_point({link_a}, {link_b}))',
                                                        provider=provider)

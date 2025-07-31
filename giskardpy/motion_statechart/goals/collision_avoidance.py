@@ -7,7 +7,7 @@ from giskardpy.model.collision_world_syncer import CollisionEntry, Collision
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, WEIGHT_COLLISION_AVOIDANCE, Task
 from giskardpy.god_map import god_map
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from semantic_world.spatial_types.symbol_manager import symbol_manager
 from giskardpy.middleware import get_middleware
 from line_profiler import profile
@@ -16,12 +16,12 @@ from line_profiler import profile
 class ExternalCA(Goal):
 
     def __init__(self,
-                 link_name: PrefixName,
+                 link_name: PrefixedName,
                  robot_name: str,
                  max_velocity: float = 0.2,
                  hard_threshold: float = 0.0,
                  name_prefix: Optional[str] = None,
-                 soft_thresholds: Optional[Dict[PrefixName, float]] = None,
+                 soft_thresholds: Optional[Dict[PrefixedName, float]] = None,
                  idx: int = 0,
                  num_repeller: int = 1):
         """
@@ -130,8 +130,8 @@ class ExternalCA(Goal):
 class SelfCA(Goal):
 
     def __init__(self,
-                 link_a: PrefixName,
-                 link_b: PrefixName,
+                 link_a: PrefixedName,
+                 link_b: PrefixedName,
                  robot_name: str,
                  max_velocity: float = 0.2,
                  hard_threshold: float = 0.0,
@@ -227,11 +227,11 @@ class SelfCA(Goal):
 
 class CollisionAvoidanceHint(Goal):
     def __init__(self,
-                 tip_link: PrefixName,
+                 tip_link: PrefixedName,
                  avoidance_hint: cas.Vector3,
-                 object_link_name: PrefixName,
+                 object_link_name: PrefixedName,
                  max_linear_velocity: float = 0.1,
-                 root_link: Optional[PrefixName] = None,
+                 root_link: Optional[PrefixedName] = None,
                  max_threshold: float = 0.05,
                  spring_threshold: Optional[float] = None,
                  weight: float = WEIGHT_ABOVE_CA,

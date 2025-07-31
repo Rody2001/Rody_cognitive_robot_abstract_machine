@@ -1,7 +1,7 @@
 from typing import Optional
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import ColorRGBA, PrefixName
+from giskardpy.data_types.data_types import ColorRGBA, PrefixedName
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA, Task
 from giskardpy.middleware import get_middleware
 from giskardpy.god_map import god_map
@@ -9,8 +9,8 @@ from giskardpy.god_map import god_map
 
 class AlignPlanes(Task):
     def __init__(self,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  goal_normal: cas.Vector3,
                  tip_normal: cas.Vector3,
                  threshold: float = 0.01,

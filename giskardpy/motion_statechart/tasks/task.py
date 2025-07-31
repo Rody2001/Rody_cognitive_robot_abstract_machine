@@ -349,7 +349,7 @@ class Task(MotionStatechartNode):
         # avoid singularity
         # the sign determines in which direction the robot moves when in singularity.
         # -0.0001 preserves the old behavior from before this goal was refactored
-        hack = cas.RotationMatrix.from_axis_angle(cas.UnitVector3.Z(), -0.0001)
+        hack = cas.RotationMatrix.from_axis_angle(cas.Vector3.Z(), -0.0001)
         frame_R_current = frame_R_current.dot(hack)
         q_actual = frame_R_current.to_quaternion()
         q_goal = frame_R_goal.to_quaternion()

@@ -9,7 +9,7 @@ import numpy as np
 import urdf_parser_py.urdf as up
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import derivative_map, PrefixName, Derivatives
+from giskardpy.data_types.data_types import derivative_map, PrefixedName, Derivatives
 from giskardpy.god_map import god_map
 from giskardpy.qp.free_variable import FreeVariable
 from semantic_world.spatial_types.symbol_manager import symbol_manager
@@ -92,9 +92,9 @@ def urdf_to_joint(urdf_joint: up.Joint, prefix: str) \
                                                   roll=rotation_offset[0],
                                                   pitch=rotation_offset[1],
                                                   yaw=rotation_offset[2])
-    joint_name = PrefixName(urdf_joint.name, prefix)
-    parent_link_name = PrefixName(urdf_joint.parent, prefix)
-    child_link_name = PrefixName(urdf_joint.child, prefix)
+    joint_name = PrefixedName(urdf_joint.name, prefix)
+    parent_link_name = PrefixedName(urdf_joint.parent, prefix)
+    child_link_name = PrefixedName(urdf_joint.child, prefix)
     if joint_class == FixedJoint:
         return joint_class(name=joint_name,
                            parent_link_name=parent_link_name,
@@ -113,7 +113,7 @@ def urdf_to_joint(urdf_joint: up.Joint, prefix: str) \
         else:
             offset = 0
 
-        free_variable_name = PrefixName(urdf_joint.mimic.joint, prefix)
+        free_variable_name = PrefixedName(urdf_joint.mimic.joint, prefix)
     else:
         free_variable_name = joint_name
 
@@ -132,9 +132,9 @@ def urdf_to_joint(urdf_joint: up.Joint, prefix: str) \
 
 
 class Joint(ABC):
-    name: PrefixName
-    parent_link_name: PrefixName
-    child_link_name: PrefixName
+    name: PrefixedName
+    parent_link_name: PrefixedName
+    child_link_name: PrefixedName
     parent_T_child: cas.TransformationMatrix
 
     def __str__(self) -> str:
@@ -165,14 +165,14 @@ class MovableJoint(Joint):
     free_variables: List[FreeVariable]
 
     @abc.abstractmethod
-    def get_free_variable_names(self) -> List[PrefixName]: ...
+    def get_free_variable_names(self) -> List[PrefixedName]: ...
 
 
 class FixedJoint(Joint):
     def __init__(self,
-                 name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName,
+                 name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName,
                  parent_T_child: Optional[cas.TransformationMatrix] = None):
         self.name = name
         self.parent_link_name = parent_link_name
@@ -182,19 +182,19 @@ class FixedJoint(Joint):
 
 class Joint6DOF(Joint, VirtualFreeVariables):
     def __init__(self,
-                 name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName):
+                 name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName):
         self.name = name
         self.parent_link_name = parent_link_name
         self.child_link_name = child_link_name
-        self.x = god_map.world.add_virtual_free_variable(name=PrefixName('x', self.name))
-        self.y = god_map.world.add_virtual_free_variable(name=PrefixName('y', self.name))
-        self.z = god_map.world.add_virtual_free_variable(name=PrefixName('z', self.name))
-        self.qx = god_map.world.add_virtual_free_variable(name=PrefixName('qx', self.name))
-        self.qy = god_map.world.add_virtual_free_variable(name=PrefixName('qy', self.name))
-        self.qz = god_map.world.add_virtual_free_variable(name=PrefixName('qz', self.name))
-        self.qw = god_map.world.add_virtual_free_variable(name=PrefixName('qw', self.name))
+        self.x = god_map.world.add_virtual_free_variable(name=PrefixedName('x', self.name))
+        self.y = god_map.world.add_virtual_free_variable(name=PrefixedName('y', self.name))
+        self.z = god_map.world.add_virtual_free_variable(name=PrefixedName('z', self.name))
+        self.qx = god_map.world.add_virtual_free_variable(name=PrefixedName('qx', self.name))
+        self.qy = god_map.world.add_virtual_free_variable(name=PrefixedName('qy', self.name))
+        self.qz = god_map.world.add_virtual_free_variable(name=PrefixedName('qz', self.name))
+        self.qw = god_map.world.add_virtual_free_variable(name=PrefixedName('qw', self.name))
         god_map.world.state[self.qw.name].position = 1
         parent_P_child = cas.Point3((self.x.get_symbol(Derivatives.position),
                                      self.y.get_symbol(Derivatives.position),
@@ -228,10 +228,10 @@ class OneDofJoint(MovableJoint):
     free_variable: FreeVariable
 
     def __init__(self,
-                 name: PrefixName,
-                 free_variable_name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName,
+                 name: PrefixedName,
+                 free_variable_name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName,
                  axis: Tuple[float, float, float],
                  lower_limits: derivative_map,
                  upper_limits: derivative_map,
@@ -258,7 +258,7 @@ class OneDofJoint(MovableJoint):
             self.free_variable = god_map.world.add_free_variable(free_variable_name, lower_limits, upper_limits)
         self.free_variables = [self.free_variable]
 
-    def get_free_variable_names(self) -> List[PrefixName]:
+    def get_free_variable_names(self) -> List[PrefixedName]:
         return [self.free_variable.name]
 
     def get_symbol(self, derivative: Derivatives) -> cas.Expression:
@@ -273,10 +273,10 @@ class OneDofJoint(MovableJoint):
 class RevoluteJoint(OneDofJoint):
 
     def __init__(self,
-                 name: PrefixName,
-                 free_variable_name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName,
+                 name: PrefixedName,
+                 free_variable_name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName,
                  axis: Tuple[float, float, float],
                  lower_limits: derivative_map,
                  upper_limits: derivative_map,
@@ -302,10 +302,10 @@ class RevoluteJoint(OneDofJoint):
 class PrismaticJoint(OneDofJoint):
 
     def __init__(self,
-                 name: PrefixName,
-                 free_variable_name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName,
+                 name: PrefixedName,
+                 free_variable_name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName,
                  axis: Tuple[float, float, float],
                  lower_limits: derivative_map,
                  upper_limits: derivative_map,
@@ -341,29 +341,29 @@ class OmniDrive(MovableJoint, VirtualFreeVariables):
     y_vel: FreeVariable
 
     def __init__(self,
-                 name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName,
+                 name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName,
                  translation_limits: Optional[derivative_map] = None,
                  rotation_limits: Optional[derivative_map] = None,
-                 x_name: Optional[PrefixName] = None,
-                 y_name: Optional[PrefixName] = None,
-                 yaw_name: Optional[PrefixName] = None):
+                 x_name: Optional[PrefixedName] = None,
+                 y_name: Optional[PrefixedName] = None,
+                 yaw_name: Optional[PrefixedName] = None):
         self.name = name
         self.parent_link_name = parent_link_name
         self.child_link_name = child_link_name
         if x_name is not None:
             self.x_name = x_name
         else:
-            self.x_name = PrefixName('x', self.name)
+            self.x_name = PrefixedName('x', self.name)
         if y_name is not None:
             self.y_name = y_name
         else:
-            self.y_name = PrefixName('y', self.name)
+            self.y_name = PrefixedName('y', self.name)
         if yaw_name is not None:
             self.yaw_vel_name = yaw_name
         else:
-            self.yaw_vel_name = PrefixName('yaw', self.name)
+            self.yaw_vel_name = PrefixedName('yaw', self.name)
         if translation_limits is None:
             self.translation_limits = {
                 Derivatives.velocity: 0.5,
@@ -405,20 +405,20 @@ class OmniDrive(MovableJoint, VirtualFreeVariables):
 
         self.x = god_map.world.add_virtual_free_variable(name=self.x_name)
         self.y = god_map.world.add_virtual_free_variable(name=self.y_name)
-        self.z = god_map.world.add_virtual_free_variable(name=PrefixName('z', self.name))
+        self.z = god_map.world.add_virtual_free_variable(name=PrefixedName('z', self.name))
 
-        self.roll = god_map.world.add_virtual_free_variable(name=PrefixName('roll', self.name))
-        self.pitch = god_map.world.add_virtual_free_variable(name=PrefixName('pitch', self.name))
+        self.roll = god_map.world.add_virtual_free_variable(name=PrefixedName('roll', self.name))
+        self.pitch = god_map.world.add_virtual_free_variable(name=PrefixedName('pitch', self.name))
         self.yaw = god_map.world.add_free_variable(name=self.yaw_vel_name,
                                                    lower_limits=rotation_lower_limits,
                                                    upper_limits=self.rotation_limits,
                                                    is_base=True)
 
-        self.x_vel = god_map.world.add_free_variable(name=PrefixName('x_vel', self.name),
+        self.x_vel = god_map.world.add_free_variable(name=PrefixedName('x_vel', self.name),
                                                      lower_limits=translation_lower_limits,
                                                      upper_limits=self.translation_limits,
                                                      is_base=True)
-        self.y_vel = god_map.world.add_free_variable(name=PrefixName('y_vel', self.name),
+        self.y_vel = god_map.world.add_free_variable(name=PrefixedName('y_vel', self.name),
                                                      lower_limits=translation_lower_limits,
                                                      upper_limits=self.translation_limits,
                                                      is_base=True)
@@ -448,7 +448,7 @@ class OmniDrive(MovableJoint, VirtualFreeVariables):
         state[self.y.name].velocity = (np.sin(delta) * x_vel + np.cos(delta) * y_vel)
         state[self.y.name].position += state[self.y.name].velocity * dt
 
-    def get_free_variable_names(self) -> List[PrefixName]:
+    def get_free_variable_names(self) -> List[PrefixedName]:
         return [self.x.name, self.y.name, self.yaw.name]
 
 
@@ -462,9 +462,9 @@ class DiffDrive(MovableJoint, VirtualFreeVariables):
     x_vel: FreeVariable
 
     def __init__(self,
-                 name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName,
+                 name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName,
                  translation_limits: Optional[derivative_map] = None,
                  rotation_limits: Optional[derivative_map] = None):
         self.name = name
@@ -502,17 +502,17 @@ class DiffDrive(MovableJoint, VirtualFreeVariables):
         translation_lower_limits = {derivative: -limit if limit is not None else limit for derivative, limit in self.translation_limits.items()}
         rotation_lower_limits = {derivative: -limit if limit is not None else limit for derivative, limit in self.rotation_limits.items()}
 
-        self.x = god_map.world.add_virtual_free_variable(name=PrefixName('x', self.name))
-        self.y = god_map.world.add_virtual_free_variable(name=PrefixName('y', self.name))
-        self.z = god_map.world.add_virtual_free_variable(name=PrefixName('z', self.name))
+        self.x = god_map.world.add_virtual_free_variable(name=PrefixedName('x', self.name))
+        self.y = god_map.world.add_virtual_free_variable(name=PrefixedName('y', self.name))
+        self.z = god_map.world.add_virtual_free_variable(name=PrefixedName('z', self.name))
 
-        self.roll = god_map.world.add_virtual_free_variable(name=PrefixName('roll', self.name))
-        self.pitch = god_map.world.add_virtual_free_variable(name=PrefixName('pitch', self.name))
+        self.roll = god_map.world.add_virtual_free_variable(name=PrefixedName('roll', self.name))
+        self.pitch = god_map.world.add_virtual_free_variable(name=PrefixedName('pitch', self.name))
 
-        self.x_vel = god_map.world.add_free_variable(name=PrefixName('x_vel', self.name),
+        self.x_vel = god_map.world.add_free_variable(name=PrefixedName('x_vel', self.name),
                                                      lower_limits=translation_lower_limits,
                                                      upper_limits=self.translation_limits)
-        self.yaw = god_map.world.add_free_variable(name=PrefixName('yaw', self.name),
+        self.yaw = god_map.world.add_free_variable(name=PrefixedName('yaw', self.name),
                                                    lower_limits=rotation_lower_limits,
                                                    upper_limits=self.rotation_limits)
         self.free_variables = [self.x_vel, self.yaw]
@@ -539,7 +539,7 @@ class DiffDrive(MovableJoint, VirtualFreeVariables):
         state[self.y.name].velocity = np.sin(yaw) * x_vel
         state[self.y.name].position += state[self.y.name].velocity * dt
 
-    def get_free_variable_names(self) -> List[PrefixName]:
+    def get_free_variable_names(self) -> List[PrefixedName]:
         return [self.x.name, self.y.name, self.yaw.name]
 
 
@@ -554,9 +554,9 @@ class OmniDrivePR22(MovableJoint, VirtualFreeVariables):
     yaw: FreeVariable
 
     def __init__(self,
-                 name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName,
+                 name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName,
                  translation_limits: Optional[derivative_map] = None,
                  rotation_limits: Optional[derivative_map] = None):
         self.name = name
@@ -600,21 +600,21 @@ class OmniDrivePR22(MovableJoint, VirtualFreeVariables):
             Derivatives.jerk: None,
         }
 
-        self.x = god_map.world.add_virtual_free_variable(name=PrefixName('x', self.name))
-        self.y = god_map.world.add_virtual_free_variable(name=PrefixName('y', self.name))
-        self.z = god_map.world.add_virtual_free_variable(name=PrefixName('z', self.name))
+        self.x = god_map.world.add_virtual_free_variable(name=PrefixedName('x', self.name))
+        self.y = god_map.world.add_virtual_free_variable(name=PrefixedName('y', self.name))
+        self.z = god_map.world.add_virtual_free_variable(name=PrefixedName('z', self.name))
 
-        self.roll = god_map.world.add_virtual_free_variable(name=PrefixName('roll', self.name))
-        self.pitch = god_map.world.add_virtual_free_variable(name=PrefixName('pitch', self.name))
-        self.yaw = god_map.world.add_virtual_free_variable(name=PrefixName('yaw', self.name))
+        self.roll = god_map.world.add_virtual_free_variable(name=PrefixedName('roll', self.name))
+        self.pitch = god_map.world.add_virtual_free_variable(name=PrefixedName('pitch', self.name))
+        self.yaw = god_map.world.add_virtual_free_variable(name=PrefixedName('yaw', self.name))
 
-        self.forward_vel = god_map.world.add_free_variable(name=PrefixName('forward_vel', self.name),
+        self.forward_vel = god_map.world.add_free_variable(name=PrefixedName('forward_vel', self.name),
                                                            lower_limits=translation_lower_limits,
                                                            upper_limits=self.translation_limits)
-        self.yaw1_vel = god_map.world.add_free_variable(name=PrefixName('yaw1_vel', self.name),
+        self.yaw1_vel = god_map.world.add_free_variable(name=PrefixedName('yaw1_vel', self.name),
                                                         lower_limits=caster_lower_limits,
                                                         upper_limits=caster_upper_limits)
-        self.yaw = god_map.world.add_free_variable(name=PrefixName('yaw2_vel', self.name),
+        self.yaw = god_map.world.add_free_variable(name=PrefixedName('yaw2_vel', self.name),
                                                    lower_limits=rotation_lower_limits,
                                                    upper_limits=self.rotation_limits)
         self.free_variables = [self.forward_vel, self.yaw1_vel, self.yaw]
@@ -625,7 +625,7 @@ class OmniDrivePR22(MovableJoint, VirtualFreeVariables):
         self.yaw1_vel.quadratic_weights[Derivatives.jerk] = 0.1
         self.virtual_free_variables = [self.x, self.y, self.z, self.roll, self.pitch, self.yaw]
 
-    def get_free_variable_names(self) -> List[PrefixName]:
+    def get_free_variable_names(self) -> List[PrefixedName]:
         return [self.forward_vel.name, self.yaw1_vel.name, self.yaw.name]
 
     @profile
@@ -685,10 +685,10 @@ class OmniDrivePR22(MovableJoint, VirtualFreeVariables):
 
 class PR2CasterJoint(MovableJoint):
     def __init__(self,
-                 name: PrefixName,
-                 free_variable_name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName,
+                 name: PrefixedName,
+                 free_variable_name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName,
                  axis: Tuple[float, float, float],
                  parent_T_child: cas.TransformationMatrix,
                  lower_limits: derivative_map,
@@ -739,7 +739,7 @@ class PR2CasterJoint(MovableJoint):
         new_vel_y = vel_y + pos_x * vel_z
         return new_vel_x, new_vel_y
 
-    def get_free_variable_names(self) -> List[PrefixName]:
+    def get_free_variable_names(self) -> List[PrefixedName]:
         return []
 
 
@@ -749,9 +749,9 @@ class JustinTorso(Joint):
     q3: cas.Expression
 
     def __init__(self,
-                 name: PrefixName,
-                 parent_link_name: PrefixName,
-                 child_link_name: PrefixName,
+                 name: PrefixedName,
+                 parent_link_name: PrefixedName,
+                 child_link_name: PrefixedName,
                  axis: Tuple[float, float, float],
                  parent_T_child: cas.TransformationMatrix,
                  q1: FreeVariable,

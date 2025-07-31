@@ -8,7 +8,7 @@ import urdf_parser_py.urdf as up
 from giskardpy.data_types.exceptions import CorruptMeshException
 from giskardpy.middleware import get_middleware
 from giskardpy.model.utils import cube_volume, cube_surface, sphere_volume, cylinder_volume, cylinder_surface
-from giskardpy.data_types.data_types import PrefixName, ColorRGBA
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.utils.utils import get_file_hash
 import semantic_world.spatial_types.spatial_types as cas
 
@@ -167,13 +167,13 @@ class SphereGeometry(LinkGeometry):
 
 
 class Link:
-    child_joint_names: List[PrefixName]
+    child_joint_names: List[PrefixedName]
     collisions: List[LinkGeometry]
-    name: PrefixName
+    name: PrefixedName
     visuals: List[LinkGeometry]
-    parent_joint_name: Optional[PrefixName]
+    parent_joint_name: Optional[PrefixedName]
 
-    def __init__(self, name: PrefixName):
+    def __init__(self, name: PrefixedName):
         self.name = name
         self.visuals = []
         self.collisions = []
@@ -191,7 +191,7 @@ class Link:
 
     @classmethod
     def from_urdf(cls, urdf_link: up.Link, prefix: str, color: ColorRGBA) -> Link:
-        link_name = PrefixName(urdf_link.name, prefix)
+        link_name = PrefixedName(urdf_link.name, prefix)
         link = cls(link_name)
         for urdf_collision in urdf_link.collisions:
             link.collisions.append(LinkGeometry.from_urdf(urdf_thing=urdf_collision,

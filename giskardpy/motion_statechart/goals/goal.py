@@ -4,13 +4,14 @@ from functools import cached_property
 from typing import List, Union, Optional
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import PrefixName, Derivatives
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import GoalInitalizationException
 from giskardpy.god_map import god_map
 from giskardpy.model.joints import OneDofJoint
 from giskardpy.motion_statechart.graph_node import MotionStatechartNode
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.motion_statechart.tasks.task import Task
+from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.spatial_types.symbol_manager import symbol_manager
 
 
@@ -50,7 +51,7 @@ class Goal(MotionStatechartNode):
             node.end_condition = node
             first_node = node
 
-    def get_joint_position_symbol(self, joint_name: PrefixName) -> Union[cas.Symbol, float]:
+    def get_joint_position_symbol(self, joint_name: PrefixedName) -> Union[cas.Symbol, float]:
         """
         returns a symbol that refers to the given joint
         """

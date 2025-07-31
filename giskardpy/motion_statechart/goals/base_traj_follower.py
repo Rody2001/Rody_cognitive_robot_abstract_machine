@@ -1,7 +1,7 @@
 from __future__ import division
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import Derivatives, PrefixName
+from giskardpy.data_types.data_types import Derivatives, PrefixedName
 from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.god_map import god_map
 from giskardpy.model.joints import OmniDrive, OmniDrivePR22
@@ -12,7 +12,7 @@ from line_profiler import profile
 
 class BaseTrajFollower(Goal):
     def __init__(self,
-                 joint_name: PrefixName,
+                 joint_name: PrefixedName,
                  track_only_velocity: bool = False,
                  weight: float = WEIGHT_ABOVE_CA):
         self.weight = weight
@@ -30,13 +30,13 @@ class BaseTrajFollower(Goal):
         self.add_rot_constraints()
 
     @profile
-    def x_symbol(self, t: int, free_variable_name: PrefixName, derivative: Derivatives = Derivatives.position) \
+    def x_symbol(self, t: int, free_variable_name: PrefixedName, derivative: Derivatives = Derivatives.position) \
             -> cas.Symbol:
         expr = f'god_map.trajectory.get_exact({t})[\'{free_variable_name}\'][{derivative}]'
         return symbol_manager.get_symbol(expr)
 
     @profile
-    def current_traj_point(self, free_variable_name: PrefixName, start_t: float,
+    def current_traj_point(self, free_variable_name: PrefixedName, start_t: float,
                            derivative: Derivatives = Derivatives.position) \
             -> cas.Expression:
         time = god_map.time_symbol

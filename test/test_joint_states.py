@@ -1,10 +1,10 @@
 import numpy as np
-from giskardpy.data_types.data_types import JointStates, PrefixName, Derivatives
+from giskardpy.data_types.data_types import JointStates, PrefixedName, Derivatives
 
 
 def test_joint_states():
-    joint1 = PrefixName('joint1')
-    joint2 = PrefixName('joint2')
+    joint1 = PrefixedName('joint1')
+    joint2 = PrefixedName('joint2')
     js = JointStates()
 
     # Accessing a nonexistent joint auto-creates it as [0,0,0,0]

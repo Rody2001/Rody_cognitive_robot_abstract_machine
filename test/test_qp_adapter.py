@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 import pytest
 
-from giskardpy.data_types.data_types import JointStates, Derivatives, PrefixName
+from giskardpy.data_types.data_types import JointStates, Derivatives, PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA
 from giskardpy.qp.constraint import EqualityConstraint, InequalityConstraint
@@ -32,15 +32,15 @@ def fake_world():
     quadratic_weights = defaultdict(float, {Derivatives.velocity: 0.01})
 
     dofs = []
-    dofs.append(FreeVariable(PrefixName('a'),
+    dofs.append(FreeVariable(PrefixedName('a'),
                              lower_limits=lower_limits,
                              upper_limits=upper_limits,
                              quadratic_weights=quadratic_weights))
-    dofs.append(FreeVariable(PrefixName('b'),
+    dofs.append(FreeVariable(PrefixedName('b'),
                              lower_limits=lower_limits,
                              upper_limits=upper_limits,
                              quadratic_weights=quadratic_weights))
-    dofs.append(FreeVariable(PrefixName('c'),
+    dofs.append(FreeVariable(PrefixedName('c'),
                              lower_limits=lower_limits,
                              upper_limits=upper_limits,
                              quadratic_weights=quadratic_weights))
@@ -49,7 +49,7 @@ def fake_world():
     lower_limits = deepcopy(lower_limits)
     upper_limits[Derivatives.position] = 1
     lower_limits[Derivatives.position] = -0.5
-    dofs.append(FreeVariable(PrefixName('d'),
+    dofs.append(FreeVariable(PrefixedName('d'),
                              lower_limits=lower_limits,
                              upper_limits=upper_limits,
                              quadratic_weights=quadratic_weights))
@@ -61,18 +61,18 @@ def fake_world():
 def test_explicit_qp_format(fake_world: FakeWorld):
     prediction_horizon = 10
     eq_constraints = []
-    eq_constraints.append(EqualityConstraint('eq1', PrefixName(''),
+    eq_constraints.append(EqualityConstraint('eq1', PrefixedName(''),
                                              expression=fake_world.dofs[0].get_symbol(Derivatives.position),
                                              derivative_goal=0.1,
                                              velocity_limit=1,
                                              quadratic_weight=WEIGHT_BELOW_CA))
-    eq_constraints.append(EqualityConstraint('eq2', PrefixName(''),
+    eq_constraints.append(EqualityConstraint('eq2', PrefixedName(''),
                                              expression=fake_world.dofs[1].get_symbol(Derivatives.position),
                                              derivative_goal=-0.1,
                                              velocity_limit=1,
                                              quadratic_weight=WEIGHT_BELOW_CA))
 
-    eq_constraints.append(EqualityConstraint('eq3', PrefixName(''),
+    eq_constraints.append(EqualityConstraint('eq3', PrefixedName(''),
                                              expression=fake_world.dofs[2].get_symbol(Derivatives.position),
                                              derivative_goal=0.1,
                                              velocity_limit=1,
@@ -115,27 +115,27 @@ def test_explicit_qp_format(fake_world: FakeWorld):
 def test_explicit_qp_format_neq(fake_world: FakeWorld):
     prediction_horizon = 10
     neq_constraints = []
-    neq_constraints.append(InequalityConstraint('neq1', PrefixName(''),
+    neq_constraints.append(InequalityConstraint('neq1', PrefixedName(''),
                                                 expression=fake_world.dofs[0].get_symbol(Derivatives.position),
                                                 lower_error=-0.2,
                                                 upper_error=-0.1,
                                                 velocity_limit=1,
                                                 quadratic_weight=WEIGHT_BELOW_CA))
-    neq_constraints.append(InequalityConstraint('neq2', PrefixName(''),
+    neq_constraints.append(InequalityConstraint('neq2', PrefixedName(''),
                                                 expression=fake_world.dofs[1].get_symbol(Derivatives.position),
                                                 lower_error=-np.inf,
                                                 upper_error=-0.1,
                                                 velocity_limit=1,
                                                 quadratic_weight=WEIGHT_BELOW_CA))
 
-    neq_constraints.append(InequalityConstraint('neq3', PrefixName(''),
+    neq_constraints.append(InequalityConstraint('neq3', PrefixedName(''),
                                                 expression=fake_world.dofs[2].get_symbol(Derivatives.position),
                                                 lower_error=0.1,
                                                 upper_error=np.inf,
                                                 velocity_limit=1,
                                                 quadratic_weight=WEIGHT_BELOW_CA))
 
-    neq_constraints.append(InequalityConstraint('neq4', PrefixName(''),
+    neq_constraints.append(InequalityConstraint('neq4', PrefixedName(''),
                                                 expression=fake_world.dofs[2].get_symbol(Derivatives.position),
                                                 lower_error=-0.1,
                                                 upper_error=np.inf,

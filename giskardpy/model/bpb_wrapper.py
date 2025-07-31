@@ -9,7 +9,7 @@ from pkg_resources import resource_filename
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_world_syncer import Collision
 from giskardpy.model.links import Link, LinkGeometry, BoxGeometry, SphereGeometry, CylinderGeometry, MeshGeometry
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.utils import suppress_stdout
 from semantic_world.geometry import Shape, Box, Sphere, Cylinder, Mesh
@@ -139,7 +139,7 @@ def convert_to_decomposed_obj_and_save_in_tmp(file_name: str, log_path='/tmp/gis
     return new_path
 
 
-def create_object(name: PrefixName, shape: pb.CollisionShape, transform: Optional[pb.Transform] = None) \
+def create_object(name: PrefixedName, shape: pb.CollisionShape, transform: Optional[pb.Transform] = None) \
         -> pb.CollisionObject:
     if transform is None:
         transform = pb.Transform.identity()

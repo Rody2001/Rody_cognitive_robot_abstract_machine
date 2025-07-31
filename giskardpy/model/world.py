@@ -14,7 +14,7 @@ import numpy as np
 import urdf_parser_py.urdf as up
 import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.data_types.data_types import JointStates, ColorRGBA
-from giskardpy.data_types.data_types import PrefixName, Derivatives, derivative_map
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import DuplicateNameException, UnknownGroupException, UnknownLinkException, \
     WorldException, UnknownJointException, CorruptURDFException
 from giskardpy.middleware import get_middleware
@@ -31,13 +31,13 @@ from line_profiler import profile
 
 
 class TravelCompanion:
-    def link_call(self, link_name: PrefixName) -> bool:
+    def link_call(self, link_name: PrefixedName) -> bool:
         """
         :return: return True to stop climbing up the branch
         """
         return False
 
-    def joint_call(self, joint_name: PrefixName) -> bool:
+    def joint_call(self, joint_name: PrefixedName) -> bool:
         """
         :return: return True to stop climbing up the branch
         """
@@ -45,8 +45,8 @@ class TravelCompanion:
 
 
 class WorldTreeInterface(ABC):
-    joints: Dict[PrefixName, Union[Joint, OmniDrive]]
-    links: Dict[PrefixName, Link]
+    joints: Dict[PrefixedName, Union[Joint, OmniDrive]]
+    links: Dict[PrefixedName, Link]
     groups: Dict[str, WorldBranch]
 
     @property
@@ -54,20 +54,20 @@ class WorldTreeInterface(ABC):
         return list(self.joints.keys())
 
     @property
-    def link_names(self) -> List[PrefixName]:
+    def link_names(self) -> List[PrefixedName]:
         return list(self.links.keys())
 
     @property
     @abc.abstractmethod
-    def controlled_joints(self) -> List[PrefixName]:
+    def controlled_joints(self) -> List[PrefixedName]:
         ...
 
     @property
-    def link_names_with_visuals(self) -> Set[PrefixName]:
+    def link_names_with_visuals(self) -> Set[PrefixedName]:
         return set(link.name for link in self.links.values() if link.has_visuals())
 
     @cached_property
-    def link_names_with_collisions(self) -> Set[PrefixName]:
+    def link_names_with_collisions(self) -> Set[PrefixedName]:
         return set(link.name for link in self.links.values() if link.has_collisions())
 
     @profile
@@ -83,19 +83,19 @@ class WorldTreeInterface(ABC):
         return hash_object.hexdigest()
 
     @cached_property
-    def link_names_without_collisions(self) -> Set[PrefixName]:
+    def link_names_without_collisions(self) -> Set[PrefixedName]:
         return self.link_names_as_set.difference(self.link_names_with_collisions)
 
     @cached_property
-    def movable_joint_names(self) -> List[PrefixName]:
+    def movable_joint_names(self) -> List[PrefixedName]:
         return [j.name for j in self.joints.values() if isinstance(j, MovableJoint)]
 
     @cached_property
-    def link_names_as_set(self) -> Set[PrefixName]:
+    def link_names_as_set(self) -> Set[PrefixedName]:
         return set(self.links.keys())
 
     @property
-    def joint_names_as_set(self) -> Set[PrefixName]:
+    def joint_names_as_set(self) -> Set[PrefixedName]:
         return set(self.joints.keys())
 
     @property
@@ -151,16 +151,16 @@ class ResetJointStateContextManager:
 
 
 class WorldTree(WorldTreeInterface):
-    joints: Dict[PrefixName, Union[Joint, OmniDrive]]
-    links: Dict[PrefixName, Link]
+    joints: Dict[PrefixedName, Union[Joint, OmniDrive]]
+    links: Dict[PrefixedName, Link]
     state: JointStates
-    free_variables: Dict[PrefixName, FreeVariable]
-    virtual_free_variables: Dict[PrefixName, FreeVariable]
+    free_variables: Dict[PrefixedName, FreeVariable]
+    virtual_free_variables: Dict[PrefixedName, FreeVariable]
     context_manager_active: bool = False
     _default_limits: Dict[Derivatives, float]
     _default_weights: Dict[Derivatives, float]
-    _root_link_name: PrefixName = None
-    _controlled_joints: List[PrefixName]
+    _root_link_name: PrefixedName = None
+    _controlled_joints: List[PrefixedName]
 
     def __init__(self):
         self.default_link_color = ColorRGBA(1, 1, 1, 0.75)
@@ -185,7 +185,7 @@ class WorldTree(WorldTreeInterface):
                                      Derivatives.jerk: jerk_weight})
 
     @property
-    def root_link_name(self) -> PrefixName:
+    def root_link_name(self) -> PrefixedName:
         return self._root_link_name
 
     @property
@@ -218,7 +218,7 @@ class WorldTree(WorldTreeInterface):
             self._default_weights[derivative] = weight
         assert len(self._default_weights) == max(self._default_weights)
 
-    def search_for_joint_name(self, joint_name: str, group_name: Optional[str] = None) -> PrefixName:
+    def search_for_joint_name(self, joint_name: str, group_name: Optional[str] = None) -> PrefixedName:
         """
         Will search the worlds joint for one that matches joint_name. group_name is only needed if there are multiple
         joints with the same name.
@@ -245,7 +245,7 @@ class WorldTree(WorldTreeInterface):
         return [j for j in self.joints.values() if isinstance(j, joint_types)]
 
     def get_drive_joint(self, possible_types: Tuple[Type[Joint]] = (OmniDrive, DiffDrive),
-                        joint_name: Optional[PrefixName] = None) -> Joint:
+                        joint_name: Optional[PrefixedName] = None) -> Joint:
         if joint_name is None:
             joints = self.search_for_joint_of_type(possible_types)
             if len(joints) == 1:
@@ -260,7 +260,7 @@ class WorldTree(WorldTreeInterface):
             return joint
 
     @modifies_world
-    def rename_link(self, old_name: PrefixName, new_name: PrefixName):
+    def rename_link(self, old_name: PrefixedName, new_name: PrefixedName):
         if old_name not in self.link_names:
             self._raise_if_link_does_not_exist(old_name)
         if new_name in self.link_names:
@@ -273,13 +273,13 @@ class WorldTree(WorldTreeInterface):
             elif joint.child_link_name == old_name:
                 joint.child_link_name = new_name
 
-    def get_joint(self, joint_name: PrefixName, group_name: Optional[str] = None) -> Joint:
+    def get_joint(self, joint_name: PrefixedName, group_name: Optional[str] = None) -> Joint:
         """
         Like get_joint_name, but returns the actual joint.
         """
         return self.joints[joint_name]
 
-    def get_one_dof_joint_symbol(self, joint_name: PrefixName, derivative: Derivatives) -> Union[cas.Expression, float]:
+    def get_one_dof_joint_symbol(self, joint_name: PrefixedName, derivative: Derivatives) -> Union[cas.Expression, float]:
         """
         returns a symbol that refers to the given joint
         """
@@ -290,11 +290,11 @@ class WorldTree(WorldTreeInterface):
             return joint.get_symbol(derivative)
         raise TypeError(f'get_joint_position_symbol is only supported for OneDofJoint, not {type(joint)}')
 
-    def get_link_name(self, link_name: str, group_name: Optional[str] = None) -> PrefixName:
+    def get_link_name(self, link_name: str, group_name: Optional[str] = None) -> PrefixedName:
         get_middleware().logwarn(f'Deprecated warning: use \'search_for_link_name\' instead of \'get_link_name\'.')
         return self.search_for_link_name(link_name, group_name)
 
-    def search_for_link_name(self, link_name: str, group_name: Optional[str] = None) -> PrefixName:
+    def search_for_link_name(self, link_name: str, group_name: Optional[str] = None) -> PrefixedName:
         """
         Like get_joint_name but for links.
         """
@@ -391,7 +391,7 @@ class WorldTree(WorldTreeInterface):
             self.notify_state_change()
             self._model_version += 1
 
-    def _travel_branch(self, link_name: PrefixName, companion: TravelCompanion):
+    def _travel_branch(self, link_name: PrefixedName, companion: TravelCompanion):
         """
         Do a depth first search on a branch starting at link_name.
         Use companion to do whatever you want. It link_call and joint_call are called on every link/joint it sees.
@@ -408,12 +408,12 @@ class WorldTree(WorldTreeInterface):
                 self._travel_branch(child_link_name, companion)
 
     def _search_branch(self,
-                       link_name: PrefixName,
-                       stop_at_joint_when: Optional[Callable[[PrefixName], bool]] = None,
-                       stop_at_link_when: Optional[Callable[[PrefixName], bool]] = None,
-                       collect_joint_when: Optional[Callable[[PrefixName], bool]] = None,
-                       collect_link_when: Optional[Callable[[PrefixName], bool]] = None) -> \
-            Tuple[List[PrefixName], List[PrefixName]]:
+                       link_name: PrefixedName,
+                       stop_at_joint_when: Optional[Callable[[PrefixedName], bool]] = None,
+                       stop_at_link_when: Optional[Callable[[PrefixedName], bool]] = None,
+                       collect_joint_when: Optional[Callable[[PrefixedName], bool]] = None,
+                       collect_link_when: Optional[Callable[[PrefixedName], bool]] = None) -> \
+            Tuple[List[PrefixedName], List[PrefixedName]]:
         """
         Do a depth first search starting at link_name.
         :param link_name: starting point of the search
@@ -467,9 +467,9 @@ class WorldTree(WorldTreeInterface):
 
     @memoize
     def get_directly_controlled_child_links_with_collisions(self,
-                                                            joint_name: PrefixName,
+                                                            joint_name: PrefixedName,
                                                             joints_to_exclude: Optional[Tuple] = None) \
-            -> List[PrefixName]:
+            -> List[PrefixedName]:
         """
         Collect all links with collisions that are connected to joint_name by fixed joints or joints in
         joints_to_exclude.
@@ -491,7 +491,7 @@ class WorldTree(WorldTreeInterface):
                                             collect_link_when=self.has_link_collisions)
         return links
 
-    def get_siblings_with_collisions(self, joint_name: PrefixName) -> List[PrefixName]:
+    def get_siblings_with_collisions(self, joint_name: PrefixedName) -> List[PrefixedName]:
         """
         Goes up the tree until the first controlled joint and then down again until another controlled joint or
         the joint_name is reached again. Collects all links with collision along the way.
@@ -512,7 +512,7 @@ class WorldTree(WorldTreeInterface):
                                                       collect_link_when=self.has_link_collisions)
         return link_names
 
-    def register_group(self, name: str, root_link_name: PrefixName, actuated: bool = False):
+    def register_group(self, name: str, root_link_name: PrefixedName, actuated: bool = False):
         """
         Create a new subgroup at root_link_name.
         :param name:
@@ -566,7 +566,7 @@ class WorldTree(WorldTreeInterface):
 
     @modifies_world
     def add_free_variable(self,
-                          name: PrefixName,
+                          name: PrefixedName,
                           lower_limits: derivative_map,
                           upper_limits: derivative_map,
                           is_base: bool = False) -> FreeVariable:
@@ -588,7 +588,7 @@ class WorldTree(WorldTreeInterface):
         return free_variable
 
     @modifies_world
-    def add_virtual_free_variable(self, name: PrefixName) -> FreeVariable:
+    def add_virtual_free_variable(self, name: PrefixedName) -> FreeVariable:
         self.state[name].position = 0
         free_variable = FreeVariable(name=name,
                                      lower_limits={},
@@ -611,7 +611,7 @@ class WorldTree(WorldTreeInterface):
     def add_urdf(self,
                  urdf: str,
                  group_name: Optional[str] = None,
-                 parent_link_name: Optional[PrefixName] = None,
+                 parent_link_name: Optional[PrefixedName] = None,
                  pose: Optional[cas.TransformationMatrix] = None,
                  actuated: bool = False):
         """
@@ -633,7 +633,7 @@ class WorldTree(WorldTreeInterface):
                 f'Failed to add group \'{group_name}\' because one with such a name already exists')
 
         urdf_root_link_name = parsed_urdf.link_map[parsed_urdf.get_root()].name
-        urdf_root_link_name_prefixed = PrefixName(urdf_root_link_name, group_name)
+        urdf_root_link_name_prefixed = PrefixedName(urdf_root_link_name, group_name)
 
         if parent_link_name is not None:
             urdf_link = parsed_urdf.link_map[urdf_root_link_name]
@@ -641,7 +641,7 @@ class WorldTree(WorldTreeInterface):
                                             prefix=group_name,
                                             color=self.default_link_color)
             self.add_link(urdf_root_link)
-            joint = Joint6DOF(name=PrefixName(group_name, self.connection_prefix),
+            joint = Joint6DOF(name=PrefixedName(group_name, self.connection_prefix),
                               parent_link_name=parent_link_name,
                               child_link_name=urdf_root_link.name)
             joint.update_transform(pose)
@@ -685,21 +685,21 @@ class WorldTree(WorldTreeInterface):
         self.register_group(group_name, urdf_root_link_name_prefixed, actuated=actuated)
 
     @modifies_world
-    def add_fixed_joint(self, parent_link: Link, child_link: Link, joint_name: Optional[PrefixName] = None,
+    def add_fixed_joint(self, parent_link: Link, child_link: Link, joint_name: Optional[PrefixedName] = None,
                         transform: Optional[cas.TransformationMatrix] = None) -> None:
         self._raise_if_link_does_not_exist(parent_link.name)
         self._raise_if_link_does_not_exist(child_link.name)
         if joint_name is None:
-            joint_name = PrefixName(f'{parent_link.name}_{child_link.name}_fixed_joint', None)
+            joint_name = PrefixedName(f'{parent_link.name}_{child_link.name}_fixed_joint', None)
         self.add_joint(FixedJoint(name=joint_name,
                                   parent_link_name=parent_link.name,
                                   child_link_name=child_link.name,
                                   parent_T_child=transform))
 
-    def get_parent_link_of_link(self, link_name: PrefixName) -> PrefixName:
+    def get_parent_link_of_link(self, link_name: PrefixedName) -> PrefixedName:
         return self.joints[self.links[link_name].parent_joint_name].parent_link_name
 
-    def get_group_of_joint(self, joint_name: PrefixName):
+    def get_group_of_joint(self, joint_name: PrefixedName):
         ret = set()
         for group_name, subtree in self.groups.items():
             if joint_name in subtree.joints:
@@ -745,7 +745,7 @@ class WorldTree(WorldTreeInterface):
                 ancestry[group_name] = ancestors[0]
         return ancestry
 
-    def get_group_name_containing_link(self, link_name: Union[PrefixName, str]) -> str:
+    def get_group_name_containing_link(self, link_name: Union[PrefixedName, str]) -> str:
         groups = self.get_group_names_containing_link(link_name)
         ret = self._get_group_from_groups(groups)
         if ret is None:
@@ -772,14 +772,14 @@ class WorldTree(WorldTreeInterface):
                         group = relatives[0]
             return group
 
-    def get_group_names_containing_link(self, link_name: Union[PrefixName, str]) -> Set[str]:
+    def get_group_names_containing_link(self, link_name: Union[PrefixedName, str]) -> Set[str]:
         groups = set()
         for group_name, subtree in self.groups.items():
             if link_name in subtree.link_names_as_set:
                 groups.add(group_name)
         return groups
 
-    def _get_robots_containing_link(self, link_name: Union[PrefixName, str]) -> Set[str]:
+    def _get_robots_containing_link(self, link_name: Union[PrefixedName, str]) -> Set[str]:
         groups = set()
         for group_name, subtree in self.groups.items():
             if subtree.actuated:
@@ -789,10 +789,10 @@ class WorldTree(WorldTreeInterface):
 
     @memoize
     def compute_chain_reduced_to_controlled_joints(self,
-                                                   link_a: PrefixName,
-                                                   link_b: PrefixName,
+                                                   link_a: PrefixedName,
+                                                   link_b: PrefixedName,
                                                    joints_to_exclude: Optional[tuple] = None) \
-            -> Tuple[PrefixName, PrefixName]:
+            -> Tuple[PrefixedName, PrefixedName]:
         """
         1. Compute kinematic chain of links between link_a and link_b.
         2. Remove all entries from link_a downward until one is connected with a non fixed joint.
@@ -824,7 +824,7 @@ class WorldTree(WorldTreeInterface):
         return new_link_a, new_link_b
 
     @memoize
-    def get_movable_parent_joint(self, link_name: PrefixName) -> PrefixName:
+    def get_movable_parent_joint(self, link_name: PrefixedName) -> PrefixedName:
         joint = self.links[link_name].parent_joint_name
         while not self.is_joint_movable(joint):
             joint = self.links[self.joints[joint].parent_link_name].parent_joint_name
@@ -884,25 +884,25 @@ class WorldTree(WorldTreeInterface):
             raise WorldException(f'Found multiple orphaned links: {orphans}.')
         self._root_link_name = orphans[0]
 
-    def _raise_if_link_does_not_exist(self, link_name: PrefixName):
+    def _raise_if_link_does_not_exist(self, link_name: PrefixedName):
         if link_name not in self.links:
             raise UnknownLinkException(f'Link \'{link_name}\' does not exist.')
 
-    def _raise_if_link_exists(self, link_name: PrefixName):
+    def _raise_if_link_exists(self, link_name: PrefixedName):
         if link_name in self.links:
             raise DuplicateNameException(f'Link \'{link_name}\' does already exist.')
 
-    def _raise_if_joint_does_not_exist(self, joint_name: PrefixName):
+    def _raise_if_joint_does_not_exist(self, joint_name: PrefixedName):
         if joint_name not in self.joints:
             raise UnknownJointException(f'Joint \'{joint_name}\' does not exist.')
 
-    def _raise_if_joint_exists(self, joint_name: PrefixName):
+    def _raise_if_joint_exists(self, joint_name: PrefixedName):
         if joint_name in self.joints:
             raise DuplicateNameException(f'Joint \'{joint_name}\' does already exist.')
 
     @modifies_world
     @profile
-    def move_branch(self, joint_name: PrefixName, new_parent_link_name: PrefixName):
+    def move_branch(self, joint_name: PrefixedName, new_parent_link_name: PrefixedName):
         """
         Removed joint_name and creates a fixed joint between the old parent and child link.
         :param joint_name:
@@ -944,7 +944,7 @@ class WorldTree(WorldTreeInterface):
                     pass
 
     @modifies_world
-    def move_group(self, group_name: str, new_parent_link_name: PrefixName):
+    def move_group(self, group_name: str, new_parent_link_name: PrefixedName):
         """
         Removed the joint connecting group_name to the world and attach it to new_parent_link_name.
         The pose relative to the self.root_link does not change.
@@ -965,7 +965,7 @@ class WorldTree(WorldTreeInterface):
         self.delete_branch(self.groups[group_name].root_link_name)
 
     @modifies_world
-    def delete_branch(self, link_name: PrefixName):
+    def delete_branch(self, link_name: PrefixedName):
         """
         Delete every link and joint from link_name downward, including the link.
         """
@@ -973,7 +973,7 @@ class WorldTree(WorldTreeInterface):
 
     @modifies_world
     @profile
-    def delete_branch_at_joint(self, joint_name: PrefixName):
+    def delete_branch_at_joint(self, joint_name: PrefixedName):
         """
         Delete every link and joint from joint_name downward, including the joint.
         """
@@ -1000,14 +1000,14 @@ class WorldTree(WorldTreeInterface):
 
         helper(joint.child_link_name)
 
-    def link_order(self, link_a: PrefixName, link_b: PrefixName) -> bool:
+    def link_order(self, link_a: PrefixedName, link_b: PrefixedName) -> bool:
         """
         this function is used when deciding for which order to calculate the collisions
         true if link_a < link_b
         """
         return link_a < link_b
 
-    def sort_links(self, link_a: PrefixName, link_b: PrefixName) -> Tuple[PrefixName, PrefixName]:
+    def sort_links(self, link_a: PrefixedName, link_b: PrefixedName) -> Tuple[PrefixedName, PrefixedName]:
         """
         A deterministic way of sorting links, not necessary dependent on the alphabetical order.
         """
@@ -1016,14 +1016,14 @@ class WorldTree(WorldTreeInterface):
         return link_b, link_a
 
     @property
-    def controlled_joints(self) -> List[PrefixName]:
+    def controlled_joints(self) -> List[PrefixedName]:
         return self._controlled_joints
 
     @controlled_joints.setter
-    def controlled_joints(self, value: List[PrefixName]):
+    def controlled_joints(self, value: List[PrefixedName]):
         self._controlled_joints = value
 
-    def register_controlled_joints(self, controlled_joints: List[PrefixName]) -> None:
+    def register_controlled_joints(self, controlled_joints: List[PrefixedName]) -> None:
         """
         Flag these joints as controlled.
         """
@@ -1042,20 +1042,20 @@ class WorldTree(WorldTreeInterface):
         self.controlled_joints = list(sorted(old_controlled_joints))
 
     @memoize
-    def get_controlled_parent_joint_of_link(self, link_name: PrefixName) -> PrefixName:
+    def get_controlled_parent_joint_of_link(self, link_name: PrefixedName) -> PrefixedName:
         joint = self.links[link_name].parent_joint_name
         if self.is_joint_controlled(joint):
             return joint
         return self.get_controlled_parent_joint_of_joint(joint)
 
     @memoize
-    def get_controlled_parent_joint_of_joint(self, joint_name: PrefixName) -> PrefixName:
+    def get_controlled_parent_joint_of_joint(self, joint_name: PrefixedName) -> PrefixedName:
         return self.search_for_parent_joint(joint_name, self.is_joint_controlled)
 
     @memoize
     def search_for_parent_joint(self,
-                                joint_name: PrefixName,
-                                stop_when: Optional[Callable[[PrefixName], bool]] = None) -> PrefixName:
+                                joint_name: PrefixedName,
+                                stop_when: Optional[Callable[[PrefixedName], bool]] = None) -> PrefixedName:
         try:
             joint = self.links[self.joints[joint_name].parent_link_name].parent_joint_name
             while stop_when is not None and not stop_when(joint):
@@ -1067,12 +1067,12 @@ class WorldTree(WorldTreeInterface):
     @profile
     @memoize
     def compute_chain(self,
-                      root_link_name: PrefixName,
-                      tip_link_name: PrefixName,
+                      root_link_name: PrefixedName,
+                      tip_link_name: PrefixedName,
                       add_joints: bool,
                       add_links: bool,
                       add_fixed_joints: bool,
-                      add_non_controlled_joints: bool) -> List[PrefixName]:
+                      add_non_controlled_joints: bool) -> List[PrefixedName]:
         """
         Computes a chain between root_link_name and tip_link_name. Only works if root_link_name is above tip_link_name
         in the world tree.
@@ -1105,13 +1105,13 @@ class WorldTree(WorldTreeInterface):
 
     @memoize
     def compute_split_chain(self,
-                            root_link_name: PrefixName,
-                            tip_link_name: PrefixName,
+                            root_link_name: PrefixedName,
+                            tip_link_name: PrefixedName,
                             add_joints: bool,
                             add_links: bool,
                             add_fixed_joints: bool,
                             add_non_controlled_joints: bool) \
-            -> Tuple[List[PrefixName], List[PrefixName], List[PrefixName]]:
+            -> Tuple[List[PrefixedName], List[PrefixedName], List[PrefixedName]]:
         """
         Computes the chain between root_link_name and tip_link_name. Can handle chains that start and end anywhere
         in the tree.
@@ -1155,7 +1155,7 @@ class WorldTree(WorldTreeInterface):
 
     @copy_memoize
     @profile
-    def compose_fk_expression(self, root_link: PrefixName, tip_link: PrefixName) -> cas.TransformationMatrix:
+    def compose_fk_expression(self, root_link: PrefixedName, tip_link: PrefixedName) -> cas.TransformationMatrix:
         """
         Multiplies all transformation matrices in the chain between root_link and tip_link
         :param root_link:
@@ -1176,7 +1176,7 @@ class WorldTree(WorldTreeInterface):
         fk.child_frame = tip_link
         return fk
 
-    def get_fk_velocity(self, root: PrefixName, tip: PrefixName) -> cas.Expression:
+    def get_fk_velocity(self, root: PrefixedName, tip: PrefixedName) -> cas.Expression:
         # FIXME, only use symbols of fk expr?
         r_T_t = self.compose_fk_expression(root, tip)
         r_R_t = r_T_t.to_rotation()
@@ -1194,18 +1194,18 @@ class WorldTree(WorldTreeInterface):
                                     self.joint_velocity_symbols)
 
     @copy_memoize
-    def compute_fk(self, root_link: PrefixName, tip_link: PrefixName) -> cas.TransformationMatrix:
+    def compute_fk(self, root_link: PrefixedName, tip_link: PrefixedName) -> cas.TransformationMatrix:
         result = cas.TransformationMatrix(self.compute_fk_np(root_link, tip_link))
         result.reference_frame = root_link
         result.child_frame = tip_link
         return result
 
-    def compute_fk_point(self, root_link: PrefixName, tip_link: PrefixName) -> cas.Point3:
+    def compute_fk_point(self, root_link: PrefixedName, tip_link: PrefixedName) -> cas.Point3:
         return self.compute_fk(root_link=root_link, tip_link=tip_link).to_position()
 
     @memoize
     @profile
-    def compute_fk_with_collision_offset_np(self, root_link: PrefixName, tip_link: PrefixName,
+    def compute_fk_with_collision_offset_np(self, root_link: PrefixedName, tip_link: PrefixedName,
                                             collision_id: int) -> np.ndarray:
         root_T_tip = self.compute_fk_np(root_link, tip_link)
         tip_link = self.links[tip_link]
@@ -1218,11 +1218,11 @@ class WorldTree(WorldTreeInterface):
     @profile
     def init_all_fks(self):
         class ExpressionCompanion(TravelCompanion):
-            idx_start: Dict[PrefixName, int]
+            idx_start: Dict[PrefixedName, int]
             compiled_collision_fks: cas.CompiledFunction
             compiled_all_fks: cas.CompiledFunction
             fks: np.ndarray
-            fks_exprs: Dict[PrefixName, cas.TransformationMatrix]
+            fks_exprs: Dict[PrefixedName, cas.TransformationMatrix]
 
             def __init__(self, world: WorldTree):
                 self.world = world
@@ -1230,7 +1230,7 @@ class WorldTree(WorldTreeInterface):
                 self.tf = OrderedDict()
 
             @profile
-            def joint_call(self, joint_name: PrefixName) -> bool:
+            def joint_call(self, joint_name: PrefixedName) -> bool:
                 joint = self.world.joints[joint_name]
                 map_T_parent = self.fks_exprs[joint.parent_link_name]
                 self.fks_exprs[joint.child_link_name] = map_T_parent.dot(joint.parent_T_child)
@@ -1263,7 +1263,7 @@ class WorldTree(WorldTreeInterface):
 
             @memoize
             @profile
-            def compute_fk_np(self, root: PrefixName, tip: PrefixName) -> np.ndarray:
+            def compute_fk_np(self, root: PrefixedName, tip: PrefixedName) -> np.ndarray:
                 root_is_world = root == self.world.root_link_name
                 tip_is_world = tip == self.world.root_link_name
 
@@ -1295,11 +1295,11 @@ class WorldTree(WorldTreeInterface):
         self._fk_computer.recompute()
 
     @profile
-    def compute_fk_np(self, root: PrefixName, tip: PrefixName) -> np.ndarray:
+    def compute_fk_np(self, root: PrefixedName, tip: PrefixedName) -> np.ndarray:
         return self._fk_computer.compute_fk_np(root, tip)
 
     @profile
-    def compose_fk_evaluated_expression(self, root: PrefixName, tip: PrefixName) -> cas.TransformationMatrix:
+    def compose_fk_evaluated_expression(self, root: PrefixedName, tip: PrefixedName) -> cas.TransformationMatrix:
         result = symbol_manager.register_transformation_matrix(f'fk_{root}-{tip}',
                                                                provider=lambda r=root, t=tip: self.compute_fk_np(root, tip))
         result.reference_frame = root
@@ -1308,9 +1308,9 @@ class WorldTree(WorldTreeInterface):
 
     @memoize
     @profile
-    def are_linked(self, link_a: PrefixName, link_b: PrefixName,
+    def are_linked(self, link_a: PrefixedName, link_b: PrefixedName,
                    do_not_ignore_non_controlled_joints: bool = False,
-                   joints_to_be_assumed_fixed: Optional[Sequence[PrefixName]] = None) -> bool:
+                   joints_to_be_assumed_fixed: Optional[Sequence[PrefixedName]] = None) -> bool:
         """
         Return True if all joints between link_a and link_b are fixed.
         """
@@ -1332,28 +1332,28 @@ class WorldTree(WorldTreeInterface):
         self._raise_if_joint_exists(joint.name)
         self.joints[joint.name] = joint
 
-    def joint_limit_expr(self, joint_name: PrefixName, order: Derivatives) \
+    def joint_limit_expr(self, joint_name: PrefixedName, order: Derivatives) \
             -> Tuple[Optional[cas.symbol_expr_float], Optional[cas.symbol_expr_float]]:
         return self.joints[joint_name].get_limit_expressions(order)
 
     @overload
-    def transform(self, target_frame: PrefixName, geometric_cas_object: cas.Point3) -> cas.Point3:
+    def transform(self, target_frame: PrefixedName, geometric_cas_object: cas.Point3) -> cas.Point3:
         ...
 
     @overload
-    def transform(self, target_frame: PrefixName, geometric_cas_object: cas.TransformationMatrix) -> cas.TransformationMatrix:
+    def transform(self, target_frame: PrefixedName, geometric_cas_object: cas.TransformationMatrix) -> cas.TransformationMatrix:
         ...
 
     @overload
-    def transform(self, target_frame: PrefixName, geometric_cas_object: cas.Vector3) -> cas.Vector3:
+    def transform(self, target_frame: PrefixedName, geometric_cas_object: cas.Vector3) -> cas.Vector3:
         ...
 
     @overload
-    def transform(self, target_frame: PrefixName, geometric_cas_object: cas.Quaternion) -> cas.Quaternion:
+    def transform(self, target_frame: PrefixedName, geometric_cas_object: cas.Quaternion) -> cas.Quaternion:
         ...
 
     @overload
-    def transform(self, target_frame: PrefixName, geometric_cas_object: cas.RotationMatrix) -> cas.RotationMatrix:
+    def transform(self, target_frame: PrefixedName, geometric_cas_object: cas.RotationMatrix) -> cas.RotationMatrix:
         ...
 
     def transform(self, target_frame, geometric_cas_object):
@@ -1368,7 +1368,7 @@ class WorldTree(WorldTreeInterface):
         else:
             return target_frame_T_reference_frame.dot(geometric_cas_object)
 
-    def compute_joint_limits(self, joint_name: PrefixName, order: Derivatives) \
+    def compute_joint_limits(self, joint_name: PrefixedName, order: Derivatives) \
             -> Tuple[Optional[cas.symbol_expr_float], Optional[cas.symbol_expr_float]]:
         try:
             lower_limit, upper_limit = self.joint_limit_expr(joint_name, order)
@@ -1381,7 +1381,7 @@ class WorldTree(WorldTreeInterface):
             upper_limit = symbol_manager.evaluate_expr(upper_limit)
         return lower_limit, upper_limit
 
-    def get_joint_position_limits(self, joint_name: PrefixName) -> Tuple[Optional[float], Optional[float]]:
+    def get_joint_position_limits(self, joint_name: PrefixedName) -> Tuple[Optional[float], Optional[float]]:
         """
         :return: minimum position, maximum position as float
         """
@@ -1401,7 +1401,7 @@ class WorldTree(WorldTreeInterface):
         for link in self.links.values():
             link.dye_collisions(color)
 
-    def get_all_free_variable_velocity_limits(self) -> Dict[PrefixName, float]:
+    def get_all_free_variable_velocity_limits(self) -> Dict[PrefixedName, float]:
         limits = {}
         for free_variable_name, free_variable in self.free_variables.items():
             limits[free_variable_name] = free_variable.get_upper_limit(derivative=Derivatives.velocity,
@@ -1421,43 +1421,43 @@ class WorldTree(WorldTreeInterface):
         free_variables = {**self.free_variables, **self.virtual_free_variables}
         return [free_variables[v_name].position_symbol for v_name in self.state]
 
-    def is_joint_prismatic(self, joint_name: PrefixName) -> bool:
+    def is_joint_prismatic(self, joint_name: PrefixedName) -> bool:
         return isinstance(self.joints[joint_name], PrismaticJoint)
 
-    def is_joint_fixed(self, joint_name: PrefixName) -> bool:
+    def is_joint_fixed(self, joint_name: PrefixedName) -> bool:
         return isinstance(self.joints[joint_name], FixedJoint)
 
-    def is_joint_movable(self, joint_name: PrefixName) -> bool:
+    def is_joint_movable(self, joint_name: PrefixedName) -> bool:
         return not self.is_joint_fixed(joint_name)
 
-    def is_joint_controlled(self, joint_name: PrefixName) -> bool:
+    def is_joint_controlled(self, joint_name: PrefixedName) -> bool:
         return joint_name in self.controlled_joints
 
     @memoize
-    def is_link_controlled(self, link_name: PrefixName) -> bool:
+    def is_link_controlled(self, link_name: PrefixedName) -> bool:
         try:
             self.get_controlled_parent_joint_of_link(link_name)
             return True
         except KeyError as e:
             return False
 
-    def is_joint_revolute(self, joint_name: PrefixName) -> bool:
+    def is_joint_revolute(self, joint_name: PrefixedName) -> bool:
         return isinstance(self.joints[joint_name], RevoluteJoint) and not self.is_joint_continuous(joint_name)
 
-    def is_joint_continuous(self, joint_name: PrefixName) -> bool:
+    def is_joint_continuous(self, joint_name: PrefixedName) -> bool:
         joint = self.joints[joint_name]
         return isinstance(joint, RevoluteJoint) and not joint.free_variable.has_position_limits()
 
-    def is_joint_rotational(self, joint_name: PrefixName) -> bool:
+    def is_joint_rotational(self, joint_name: PrefixedName) -> bool:
         return self.is_joint_revolute(joint_name) or self.is_joint_continuous(joint_name)
 
-    def has_joint(self, joint_name: PrefixName) -> bool:
+    def has_joint(self, joint_name: PrefixedName) -> bool:
         return joint_name in self.joints
 
-    def has_link_collisions(self, link_name: PrefixName) -> bool:
+    def has_link_collisions(self, link_name: PrefixedName) -> bool:
         return self.links[link_name].has_collisions()
 
-    def has_link_visuals(self, link_name: PrefixName) -> bool:
+    def has_link_visuals(self, link_name: PrefixedName) -> bool:
         return self.links[link_name].has_visuals()
 
     def save_graph_pdf(self, folder_name: str) -> None:
@@ -1511,17 +1511,17 @@ class WorldTree(WorldTreeInterface):
 
 
 class WorldBranch(WorldTreeInterface):
-    def __init__(self, name: str, root_link_name: PrefixName, world: WorldTree, actuated: bool = False):
+    def __init__(self, name: str, root_link_name: PrefixedName, world: WorldTree, actuated: bool = False):
         self.name = name
         self.root_link_name = root_link_name
         self.actuated = actuated
         self.world = world
 
-    def get_siblings_with_collisions(self, joint_name: PrefixName) -> List[PrefixName]:
+    def get_siblings_with_collisions(self, joint_name: PrefixedName) -> List[PrefixedName]:
         siblings = self.world.get_siblings_with_collisions(joint_name)
         return [x for x in siblings if x in self.link_names_as_set]
 
-    def search_for_link_name(self, link_name: str) -> PrefixName:
+    def search_for_link_name(self, link_name: str) -> PrefixedName:
         matches = []
         for internal_link_name in self.link_names:
             if internal_link_name.short_name == link_name or internal_link_name == link_name:
@@ -1532,7 +1532,7 @@ class WorldBranch(WorldTreeInterface):
             raise ValueError(f'No matches for \'{link_name}\' found: \'{matches}\'.')
         return matches[0]
 
-    def search_for_joint_name(self, joint_name: str) -> PrefixName:
+    def search_for_joint_name(self, joint_name: str) -> PrefixedName:
         matches = []
         for internal_joint_name in self.joint_names:
             if joint_name == internal_joint_name or joint_name == internal_joint_name.short_name:
@@ -1544,15 +1544,15 @@ class WorldBranch(WorldTreeInterface):
         return matches[0]
 
     @cached_property
-    def controlled_joints(self) -> List[PrefixName]:
+    def controlled_joints(self) -> List[PrefixedName]:
         return [j for j in self.world.controlled_joints if j in self.joint_names_as_set]
 
     @property
-    def parent_link_of_root(self) -> PrefixName:
+    def parent_link_of_root(self) -> PrefixedName:
         return self.world.get_parent_link_of_link(self.world.groups[self.name].root_link_name)
 
     @profile
-    def possible_collision_combinations(self) -> Set[Tuple[PrefixName, PrefixName]]:
+    def possible_collision_combinations(self) -> Set[Tuple[PrefixedName, PrefixedName]]:
         links = self.link_names_with_collisions
         link_combinations = {self.world.sort_links(link_a, link_b) for link_a, link_b in combinations(links, 2)}
         for link_name in links:
@@ -1573,7 +1573,7 @@ class WorldBranch(WorldTreeInterface):
                 self.world.sort_links(link_a, link_b) for link_a, link_b in combinations(direct_children, 2))
         return link_combinations
 
-    def get_unmovable_links(self) -> List[PrefixName]:
+    def get_unmovable_links(self) -> List[PrefixedName]:
         unmovable_links, _ = self.world._search_branch(link_name=self.root_link_name,
                                                        stop_at_joint_when=lambda
                                                            joint_name: joint_name in self.controlled_joints,
@@ -1608,8 +1608,8 @@ class WorldBranch(WorldTreeInterface):
         return self.world.links[self.root_link_name]
 
     @cached_property
-    def joints(self) -> Dict[PrefixName, Joint]:
-        def helper(root_link: Link) -> Dict[PrefixName, Joint]:
+    def joints(self) -> Dict[PrefixedName, Joint]:
+        def helper(root_link: Link) -> Dict[PrefixedName, Joint]:
             joints = {j: self.world.joints[j] for j in root_link.child_joint_names}
             for joint_name in root_link.child_joint_names:
                 joint = self.world.joints[joint_name]
@@ -1635,8 +1635,8 @@ class WorldBranch(WorldTreeInterface):
                 and group.name != self.name}
 
     @cached_property
-    def links(self) -> Dict[PrefixName, Link]:
-        def helper(root_link: Link) -> Dict[PrefixName, Link]:
+    def links(self) -> Dict[PrefixedName, Link]:
+        def helper(root_link: Link) -> Dict[PrefixedName, Link]:
             links = {root_link.name: root_link}
             for j in root_link.child_joint_names:
                 j = self.world.joints[j]
@@ -1646,12 +1646,12 @@ class WorldBranch(WorldTreeInterface):
 
         return helper(self.root_link)
 
-    def compute_fk_pose(self, root: PrefixName, tip: PrefixName) -> cas.TransformationMatrix:
+    def compute_fk_pose(self, root: PrefixedName, tip: PrefixedName) -> cas.TransformationMatrix:
         return self.world.compute_fk(root, tip)
 
-    def compute_fk_pose_with_collision_offset(self, root: PrefixName, tip: PrefixName, collision_id: int) \
+    def compute_fk_pose_with_collision_offset(self, root: PrefixedName, tip: PrefixedName, collision_id: int) \
             -> cas.TransformationMatrix:
         return self.world.compute_fk_with_collision_offset_np(root, tip, collision_id)
 
-    def is_link_controlled(self, link_name: PrefixName) -> bool:
+    def is_link_controlled(self, link_name: PrefixedName) -> bool:
         return self.world.is_link_controlled(link_name)

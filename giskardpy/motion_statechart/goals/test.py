@@ -2,7 +2,7 @@ from __future__ import division
 
 from typing import Optional
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.motion_statechart.monitors.monitors import TrueMonitor, CancelMotion
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
@@ -14,8 +14,8 @@ import semantic_world.spatial_types.spatial_types as cas
 
 class GraspSequence(Goal):
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  gripper_joint: str,
                  goal_pose: cas.TransformationMatrix,
                  max_velocity: float = 100,
@@ -69,8 +69,8 @@ class GraspSequence(Goal):
 
 class Cutting(Goal):
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  depth: float,
                  right_shift: float,
                  max_velocity: float = 100,

@@ -4,7 +4,7 @@ from typing import Optional
 import numpy as np
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.tasks.task import Task, WEIGHT_ABOVE_CA
 from semantic_world.spatial_types.symbol_manager import symbol_manager
@@ -13,8 +13,8 @@ from semantic_world.spatial_types.symbol_manager import symbol_manager
 class WiggleInsert(Task):
 
     def __init__(self, *,
-                 root_link: PrefixName,
-                 tip_link: PrefixName,
+                 root_link: PrefixedName,
+                 tip_link: PrefixedName,
                  hole_point: cas.Point3,
                  noise_translation: float,
                  noise_angle: float,

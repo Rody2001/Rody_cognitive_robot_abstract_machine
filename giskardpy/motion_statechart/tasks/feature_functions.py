@@ -3,7 +3,8 @@ from __future__ import division
 from typing import Optional, Union
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import PrefixName, ColorRGBA
+from giskardpy.data_types.data_types import ColorRGBA
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.tasks.task import WEIGHT_BELOW_CA, Task
 from geometry_msgs.msg import PointStamped, Vector3Stamped
@@ -16,8 +17,8 @@ class FeatureFunctionGoal(Task):
     way and sets the debug function.
     """
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  controlled_feature: Union[cas.Point3, cas.Vector3],
                  reference_feature: Union[cas.Point3, cas.Vector3],
                  name: Optional[str] = None):
@@ -60,8 +61,8 @@ class AlignPerpendicular(FeatureFunctionGoal):
     :param reference_normal: Reference normal to align the tip normal to.
     """
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  tip_normal: cas.Vector3,
                  reference_normal: cas.Vector3,
                  name: Optional[str] = None,
@@ -92,8 +93,8 @@ class HeightGoal(FeatureFunctionGoal):
     :param upper_limit: Upper limit to control the distance away from the reference_point.
     """
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  tip_point: cas.Point3,
                  reference_point: cas.Point3,
                  lower_limit: float,
@@ -129,8 +130,8 @@ class DistanceGoal(FeatureFunctionGoal):
        :param upper_limit: Upper limit to control the distance away from the reference_point.
     """
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  tip_point: cas.Point3,
                  reference_point: cas.Point3,
                  lower_limit: float,
@@ -176,8 +177,8 @@ class AngleGoal(FeatureFunctionGoal):
     :param upper_angle: Upper limit to control the angle between the tip_vector and the reference_vector.
     """
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  tip_vector: cas.Vector3,
                  reference_vector: cas.Vector3,
                  lower_angle: float,

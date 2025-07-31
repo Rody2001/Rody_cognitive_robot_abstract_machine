@@ -12,10 +12,11 @@ from sortedcontainers import SortedDict
 from line_profiler import profile
 
 from giskardpy.data_types.data_types import JointStates
-from giskardpy.data_types.data_types import PrefixName, Derivatives
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.utils.utils import cm_to_inch
+from semantic_world.spatial_types.derivatives import Derivatives
 
 plot_lock = Lock()
 
@@ -69,7 +70,7 @@ class Trajectory:
         return len(self) * god_map.qp_controller.config.mpc_dt
 
     def to_dict(self, normalize_position: Optional[bool] = None, filter_0_vel: bool = True, sort: bool = True)\
-            -> Dict[Derivatives, Dict[PrefixName, np.ndarray]]:
+            -> Dict[Derivatives, Dict[PrefixedName, np.ndarray]]:
         data = defaultdict(lambda: defaultdict(list))
         for time, joint_states in self.items():
             for free_variable, joint_state in joint_states.items():

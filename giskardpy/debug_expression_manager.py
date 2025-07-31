@@ -6,17 +6,17 @@ import numpy as np
 import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.data_types.data_types import Derivatives
 from giskardpy.data_types.data_types import JointStates, ColorRGBA
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.middleware import get_middleware
 from giskardpy.model.trajectory import Trajectory
 from semantic_world.spatial_types.symbol_manager import symbol_manager
 from line_profiler import profile
 
 class DebugExpressionManager:
-    debug_expressions: Dict[PrefixName, cas.Expression]
-    compiled_debug_expressions: Dict[PrefixName, cas.CompiledFunction]
-    evaluated_debug_expressions: Dict[PrefixName, np.ndarray]
-    _raw_debug_trajectory: List[Dict[PrefixName, np.ndarray]]
+    debug_expressions: Dict[PrefixedName, cas.Expression]
+    compiled_debug_expressions: Dict[PrefixedName, cas.CompiledFunction]
+    evaluated_debug_expressions: Dict[PrefixedName, np.ndarray]
+    _raw_debug_trajectory: List[Dict[PrefixedName, np.ndarray]]
 
     def __init__(self):
         self.reset()
@@ -38,7 +38,7 @@ class DebugExpressionManager:
             expression.color = color
         expression.debug_derivative = derivative
         expression.debug_derivatives_to_plot = derivatives_to_plot
-        self.debug_expressions[PrefixName(name, prefix='')] = expression
+        self.debug_expressions[PrefixedName(name, prefix='')] = expression
 
     def compile_debug_expressions(self):
         for name, expr in self.debug_expressions.items():
@@ -106,7 +106,7 @@ class DebugExpressionManager:
 
         return debug_trajectory
 
-    def evaluated_expr_to_js(self, name: Union[PrefixName, str], last_js: JointStates, next_js: JointStates, value: float,
+    def evaluated_expr_to_js(self, name: Union[PrefixedName, str], last_js: JointStates, next_js: JointStates, value: float,
                              dt:float, derivative: Derivatives, control_cycle_counter: int):
         next_js[name][derivative] = value
 

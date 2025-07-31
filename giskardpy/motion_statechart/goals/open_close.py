@@ -2,7 +2,7 @@ from __future__ import division
 
 from typing import Optional
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
@@ -13,8 +13,8 @@ import semantic_world.spatial_types.spatial_types as cas
 
 class Open(Goal):
     def __init__(self,
-                 tip_link: PrefixName,
-                 environment_link: PrefixName,
+                 tip_link: PrefixedName,
+                 environment_link: PrefixedName,
                  goal_joint_state: Optional[float] = None,
                  max_velocity: float = 100,
                  weight: float = WEIGHT_ABOVE_CA,
@@ -62,8 +62,8 @@ class Open(Goal):
 
 class Close(Open):
     def __init__(self,
-                 tip_link: PrefixName,
-                 environment_link: PrefixName,
+                 tip_link: PrefixedName,
+                 environment_link: PrefixedName,
                  goal_joint_state: Optional[float] = None,
                  weight: float = WEIGHT_ABOVE_CA,
                  name: Optional[str] = None):

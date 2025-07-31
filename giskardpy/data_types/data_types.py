@@ -9,73 +9,7 @@ import numpy as np
 import semantic_world.spatial_types.spatial_types as cas
 from collections.abc import MutableMapping
 
-
-class PrefixName:
-    primary_separator = '/'
-    secondary_separator = '_'
-
-    def __init__(self, name: str, prefix: Optional[Union[str, PrefixName]] = None):
-        prefix = prefix or ''
-        if isinstance(prefix, PrefixName):
-            self.prefix = prefix.long_name
-        else:
-            self.prefix = prefix
-        self.short_name = name
-        if self.prefix:
-            self.long_name = f'{self.prefix}{self.primary_separator}{self.short_name}'
-        else:
-            self.long_name = name
-
-    def __len__(self) -> int:
-        return len(self.short_name) + len(self.long_name)
-
-    def __getitem__(self, item) -> str:
-        return str(self)[item]
-
-    @classmethod
-    def from_string(cls, name: Union[str, PrefixName], set_none_if_no_slash: bool = False):
-        if isinstance(name, PrefixName):
-            return name
-        parts = name.split(cls.primary_separator)
-        if len(parts) != 2:
-            if set_none_if_no_slash:
-                return cls(parts[0], None)
-            else:
-                raise AttributeError(f'{name} can not be converted to a {str(cls)}.')
-        return cls(parts[1], parts[0])
-
-    def __str__(self):
-        return self.long_name.__str__()
-
-    def __repr__(self):
-        return self.long_name.__repr__()
-
-    def __hash__(self):
-        return self.long_name.__hash__()
-
-    def __eq__(self, other):
-        return self.long_name.__eq__(other.__str__())
-
-    def __ne__(self, other):
-        return self.long_name.__ne__(other.__str__())
-
-    def __le__(self, other):
-        return self.long_name.__le__(other.__str__())
-
-    def __ge__(self, other):
-        return self.long_name.__ge__(other.__str__())
-
-    def __gt__(self, other):
-        return self.long_name.__gt__(other.__str__())
-
-    def __lt__(self, other):
-        return self.long_name.__lt__(other.__str__())
-
-    def __contains__(self, item):
-        return self.long_name.__contains__(item.__str__())
-
-    def encode(self, param: str):
-        return self.long_name.__str__().encode(param)
+from semantic_world.prefixed_name import PrefixedName
 
 
 class ColorRGBA:
@@ -134,7 +68,7 @@ class Derivatives(IntEnum):
         return [item for item in cls if start <= item <= stop][::step]
 
 
-my_string = Union[str, PrefixName]
+my_string = Union[str, PrefixedName]
 goal_parameter = Union[str, float, bool, dict, list, IntEnum, None]
 derivative_map = Dict[Derivatives, float]
 
@@ -223,17 +157,17 @@ class JointStates(MutableMapping):
     data: np.ndarray
 
     # list of joint names in column order
-    _names: List[PrefixName]
+    _names: List[PrefixedName]
 
     # maps joint_name -> column index
-    _index: Dict[PrefixName, int]
+    _index: Dict[PrefixedName, int]
 
     def __init__(self):
         self.data = np.zeros((4, 0), dtype=float)
         self._names = []
         self._index = {}
 
-    def _add_joint(self, name: PrefixName) -> None:
+    def _add_joint(self, name: PrefixedName) -> None:
         idx = len(self._names)
         self._names.append(name)
         self._index[name] = idx
@@ -244,14 +178,14 @@ class JointStates(MutableMapping):
         else:
             self.data = np.hstack((self.data, new_col))
 
-    def __getitem__(self, name: PrefixName) -> JointStateView:
+    def __getitem__(self, name: PrefixedName) -> JointStateView:
         if name not in self._index:
             self._add_joint(name)
         idx = self._index[name]
         # return the column view (shape (4,))
         return JointStateView(self.data[:, idx])
 
-    def __setitem__(self, name: PrefixName, value: np.ndarray) -> None:
+    def __setitem__(self, name: PrefixedName, value: np.ndarray) -> None:
         arr = np.asarray(value, dtype=float)
         if arr.shape != (4,):
             raise ValueError(f"Value for '{name}' must be length-4 array (pos, vel, acc, jerk).")
@@ -260,7 +194,7 @@ class JointStates(MutableMapping):
         idx = self._index[name]
         self.data[:, idx] = arr
 
-    def __delitem__(self, name: PrefixName) -> None:
+    def __delitem__(self, name: PrefixedName) -> None:
         if name not in self._index:
             raise KeyError(name)
         idx = self._index.pop(name)
@@ -277,23 +211,23 @@ class JointStates(MutableMapping):
     def __len__(self) -> int:
         return len(self._names)
 
-    def keys(self) -> List[PrefixName]:
+    def keys(self) -> List[PrefixedName]:
         return self._names
 
-    def items(self) -> List[tuple[PrefixName, np.ndarray]]:
+    def items(self) -> List[tuple[PrefixedName, np.ndarray]]:
         return [(name, self.data[:, self._index[name]].copy()) for name in self._names]
 
     def values(self) -> List[np.ndarray]:
         return [self.data[:, self._index[name]].copy() for name in self._names]
 
-    def __contains__(self, name: PrefixName) -> bool:
+    def __contains__(self, name: PrefixedName) -> bool:
         return name in self._index
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({{ " + ", ".join(f"{n}: {list(self.data[:, i])}"
                                                             for i, n in enumerate(self._names)) + " })"
 
-    def to_position_dict(self) -> Dict[PrefixName, float]:
+    def to_position_dict(self) -> Dict[PrefixedName, float]:
         return {joint_name: self[joint_name].position for joint_name in self._names}
 
     @property

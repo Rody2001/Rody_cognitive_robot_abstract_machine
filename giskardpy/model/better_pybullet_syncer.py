@@ -3,7 +3,7 @@ from typing import Dict, Tuple, DefaultDict, List, Set, Optional, Iterable
 
 import betterpybullet as bpb
 
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.god_map import god_map
 from giskardpy.middleware import get_middleware
 from giskardpy.model.bpb_wrapper import create_shape_from_link, BPCollisionWrapper
@@ -20,8 +20,8 @@ class BetterPyBulletSyncer(CollisionWorldSynchronizer):
 
     def __init__(self, ):
         self.kw = bpb.KineverseWorld()
-        self.object_name_to_id: Dict[PrefixName, bpb.CollisionObject] = {}
-        self.query: Optional[DefaultDict[PrefixName, Set[Tuple[bpb.CollisionObject, float]]]] = None
+        self.object_name_to_id: Dict[PrefixedName, bpb.CollisionObject] = {}
+        self.query: Optional[DefaultDict[PrefixedName, Set[Tuple[bpb.CollisionObject, float]]]] = None
         super().__init__()
 
     @profile
@@ -37,9 +37,9 @@ class BetterPyBulletSyncer(CollisionWorldSynchronizer):
         super().reset_cache()
 
     @profile
-    def cut_off_distances_to_query(self, cut_off_distances: Dict[Tuple[PrefixName, PrefixName], float],
+    def cut_off_distances_to_query(self, cut_off_distances: Dict[Tuple[PrefixedName, PrefixedName], float],
                                    buffer: float = 0.05) -> DefaultDict[
-        PrefixName, Set[Tuple[bpb.CollisionObject, float]]]:
+        PrefixedName, Set[Tuple[bpb.CollisionObject, float]]]:
         if self.query is None:
             self.query = {(self.object_name_to_id[a], self.object_name_to_id[b]): v + buffer for (a, b), v in
                           cut_off_distances.items()}
@@ -56,9 +56,9 @@ class BetterPyBulletSyncer(CollisionWorldSynchronizer):
         return self.closest_points
 
     @profile
-    def find_colliding_combinations(self, link_combinations: Iterable[Tuple[PrefixName, PrefixName]],
+    def find_colliding_combinations(self, link_combinations: Iterable[Tuple[PrefixedName, PrefixedName]],
                                     distance: float,
-                                    update_query: bool) -> Set[Tuple[PrefixName, PrefixName, float]]:
+                                    update_query: bool) -> Set[Tuple[PrefixedName, PrefixedName, float]]:
         if update_query:
             self.query = None
             self.collision_matrix = {link_combination: distance for link_combination in link_combinations}
@@ -107,6 +107,6 @@ class BetterPyBulletSyncer(CollisionWorldSynchronizer):
             bpb.batch_set_transforms(self.objects_in_order, god_map.world.compute_all_collision_fks())
 
     @profile
-    def get_map_T_geometry(self, link_name: PrefixName, collision_id: int = 0):
+    def get_map_T_geometry(self, link_name: PrefixedName, collision_id: int = 0):
         collision_object = self.object_name_to_id[link_name]
         return collision_object.compound_transform(collision_id)

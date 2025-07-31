@@ -1,15 +1,15 @@
 from typing import Optional, Union
 
 import semantic_world.spatial_types.spatial_types as cas
-from giskardpy.data_types.data_types import PrefixName
+from semantic_world.prefixed_name import PrefixedName
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from giskardpy.god_map import god_map
 
 
 class FeatureMonitor(Monitor):
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  reference_feature: Union[cas.Point3, cas.Vector3],
                  controlled_feature: Union[cas.Point3, cas.Vector3],
                  name: Optional[str] = None):
@@ -34,8 +34,8 @@ class FeatureMonitor(Monitor):
 
 class HeightMonitor(FeatureMonitor):
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  reference_point: cas.Point3,
                  tip_point: cas.Point3,
                  lower_limit: float,
@@ -54,8 +54,8 @@ class HeightMonitor(FeatureMonitor):
 
 
 class PerpendicularMonitor(FeatureMonitor):
-    def __init__(self, tip_link: PrefixName,
-                 root_link: PrefixName,
+    def __init__(self, tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  reference_normal: cas.Vector3,
                  tip_normal: cas.Vector3,
                  threshold: float = 0.01,
@@ -72,8 +72,8 @@ class PerpendicularMonitor(FeatureMonitor):
 
 class DistanceMonitor(FeatureMonitor):
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  reference_point: cas.Point3,
                  tip_point: cas.Point3,
                  lower_limit: float,
@@ -93,8 +93,8 @@ class DistanceMonitor(FeatureMonitor):
 
 class AngleMonitor(FeatureMonitor):
     def __init__(self,
-                 tip_link: PrefixName,
-                 root_link: PrefixName,
+                 tip_link: PrefixedName,
+                 root_link: PrefixedName,
                  reference_vector: cas.Vector3,
                  tip_vector: cas.Vector3,
                  lower_angle: float,
