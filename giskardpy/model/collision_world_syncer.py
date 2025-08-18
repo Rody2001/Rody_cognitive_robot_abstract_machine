@@ -10,7 +10,7 @@ from line_profiler import profile
 import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.god_map import god_map
 from giskardpy.model.collision_detector import CollisionDetector, Collisions, NullCollisionDetector
-from giskardpy.model.collision_matrix_manager import CollisionMatrixManager
+from giskardpy.model.collision_matrix_manager import CollisionMatrixManager, CollisionCheck
 from semantic_world.robots import AbstractRobot
 from semantic_world.spatial_types.symbol_manager import symbol_manager
 from semantic_world.world import World
@@ -31,6 +31,8 @@ class CollisionWorldSynchronizer:
 
     collision_detector: CollisionDetector = None
     matrix_manager: CollisionMatrixManager = field(init=False)
+
+    collision_matrix: Set[CollisionCheck] = field(default_factory=set)
 
     external_monitored_links: Dict[Body, int] = field(default_factory=dict)
     self_monitored_links: Dict[Tuple[Body, Body], int] = field(default_factory=dict)
@@ -54,9 +56,11 @@ class CollisionWorldSynchronizer:
             return True
         return False
 
+    def set_collision_matrix(self, collision_matrix):
+        self.collision_matrix = collision_matrix
+
     def check_collisions(self) -> Collisions:
-        collision_matrix = self.matrix_manager.compute_collision_matrix()
-        self.closest_points = self.collision_detector.check_collisions(collision_matrix)
+        self.closest_points = self.collision_detector.check_collisions(self.collision_matrix)
         return self.closest_points
 
     def is_collision_checking_enabled(self) -> bool:

@@ -356,7 +356,8 @@ class CollisionAvoidance(Goal):
         #                                              new_collision_matrix=self.collision_matrix)
         #     god_map.motion_statechart_manager.add_monitor(payload_monitor)
         # else:
-        # god_map.collision_scene.set_collision_matrix(self.collision_matrix)
+        collision_matrix = god_map.collision_scene.matrix_manager.compute_collision_matrix()
+        god_map.collision_scene.set_collision_matrix(collision_matrix)
 
     def _task_sanity_check(self):
         pass
