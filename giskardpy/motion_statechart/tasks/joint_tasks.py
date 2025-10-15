@@ -9,7 +9,6 @@ from giskardpy.motion_statechart.tasks.task import Task, WEIGHT_BELOW_CA
 from semantic_world.datastructures.prefixed_name import PrefixedName
 from semantic_world.spatial_types.derivatives import Derivatives
 from semantic_world.world_description.connections import (
-    Has1DOFState,
     RevoluteConnection,
     ActiveConnection,
     PrismaticConnection,
@@ -34,9 +33,9 @@ class JointPositionList(Task):
 
         for connection, goal_position in self.goal_state.items():
             self.connections.append(connection)
-            if not isinstance(connection, Has1DOFState):
+            if not isinstance(connection, ActiveConnection1DOF):
                 raise GoalInitalizationException(
-                    f"Connection {connection.name} must be of type Has1DOFState"
+                    f"Connection {connection.name} must be of type ActiveConnection1DOF"
                 )
 
             ul_pos = connection.dof.upper_limits.position
@@ -163,7 +162,9 @@ class JointPositionLimitList(Task):
             raise GoalInitalizationException(f"Can't initialize {self} with no joints.")
 
         for joint_name, (lower_limit, upper_limit) in self.lower_upper_limits.items():
-            connection: Has1DOFState = god_map.world.get_connection_by_name(joint_name)
+            connection: ActiveConnection1DOF = god_map.world.get_connection_by_name(
+                joint_name
+            )
             self.connections.append(connection)
 
             ll_pos = connection.dof.lower_limits.position
@@ -273,7 +274,7 @@ class JointVelocityLimit(Task):
         :param hard: turn this into a hard constraint.
         """
         for joint in self.joints:
-            current_joint = joint.dof.symbols.position
+            current_joint = joint.joint_position_expression
             try:
                 limit_expr = joint.dof.upper_limits.velocity
                 max_velocity = cas.min(self.max_velocity, limit_expr)
@@ -339,7 +340,7 @@ class UnlimitedJointGoal(Task):
     goal_position: float
 
     def __post_init__(self):
-        connection_symbol = self.connection.dof.symbols.position
+        connection_symbol = self.connection.joint_position_expression
         self.add_position_constraint(
             expr_current=connection_symbol,
             expr_goal=self.goal_position,

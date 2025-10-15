@@ -5,7 +5,9 @@ from functools import cached_property
 from typing import List, Union, Optional
 
 import semantic_world.spatial_types.spatial_types as cas
-from semantic_world.world_description.connections import Has1DOFState
+from semantic_world.world_description.connections import (
+    ActiveConnection1DOF,
+)
 from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.data_types.exceptions import GoalInitalizationException
 from giskardpy.god_map import god_map
@@ -60,7 +62,7 @@ class Goal(MotionStatechartNode):
         if not god_map.world.has_joint(joint_name):
             raise KeyError(f"World doesn't have joint named: {joint_name}.")
         joint = god_map.world.joints[joint_name]
-        if isinstance(joint, Has1DOFState):
+        if isinstance(joint, ActiveConnection1DOF):
             return joint.dof.symbols.position
         raise TypeError(
             f"get_joint_position_symbol is only supported for OneDofJoint, not {type(joint)}"

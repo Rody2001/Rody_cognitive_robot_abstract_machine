@@ -5,8 +5,8 @@ import numpy as np
 import semantic_world.spatial_types.spatial_types as cas
 from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.tasks.task import Task
-from semantic_world.world_description.connections import Has1DOFState
 from semantic_world.spatial_types.symbol_manager import symbol_manager
+from semantic_world.world_description.connections import ActiveConnection1DOF
 
 
 @dataclass
@@ -48,7 +48,9 @@ class CannotResolveSymbol(Task):
     def __post_init__(self):
         self.data = {}
         s = symbol_manager.register_symbol_provider("s", provider=lambda: self.data[2])
-        joint: Has1DOFState = god_map.world.get_connection_by_name(self.joint_name)
+        joint: ActiveConnection1DOF = god_map.world.get_connection_by_name(
+            self.joint_name
+        )
         joint_position = joint.dof.symbols.position
         self.add_equality_constraint(
             reference_velocity=1,

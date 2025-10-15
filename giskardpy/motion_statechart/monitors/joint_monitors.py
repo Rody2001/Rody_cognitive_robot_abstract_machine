@@ -6,7 +6,6 @@ from giskardpy.data_types.exceptions import GoalInitalizationException
 from giskardpy.god_map import god_map
 from giskardpy.motion_statechart.monitors.monitors import Monitor
 from semantic_world.world_description.connections import (
-    Has1DOFState,
     RevoluteConnection,
     ActiveConnection,
     ActiveConnection1DOF,
@@ -40,9 +39,9 @@ class JointPositionAbove(Monitor):
     threshold: float
 
     def __post_init__(self):
-        if not isinstance(self.connection, Has1DOFState):
+        if not isinstance(self.connection, ActiveConnection1DOF):
             raise GoalInitalizationException(
-                f"Connection {self.connection} must be of type Has1DOFState"
+                f"Connection {self.connection} must be of type ActiveConnection1DOF"
             )
         if (
             isinstance(self.connection, RevoluteConnection)

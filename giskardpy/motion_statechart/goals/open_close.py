@@ -3,14 +3,13 @@ from __future__ import division
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from semantic_world.world_description.connections import Has1DOFState
-from semantic_world.datastructures.prefixed_name import PrefixedName
 from giskardpy.motion_statechart.goals.goal import Goal
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
 from giskardpy.motion_statechart.tasks.task import WEIGHT_ABOVE_CA
 from giskardpy.god_map import god_map
 import semantic_world.spatial_types.spatial_types as cas
+from semantic_world.world_description.connections import ActiveConnection1DOF
 from semantic_world.world_description.world_entity import Body, Connection
 
 
@@ -34,7 +33,7 @@ class Open(Goal):
         :param weight:
         """
         self.handle_link = self.environment_link
-        self.connection: Union[Has1DOFState, Connection] = (
+        self.connection: Union[ActiveConnection1DOF, Connection] = (
             god_map.world.get_controlled_parent_connection(self.handle_link)
         )
 
@@ -74,7 +73,7 @@ class Close(Open):
         """
         Same as Open, but will use minimum value as default for goal_joint_state
         """
-        self.connection: Union[Has1DOFState, Connection] = (
+        self.connection: Union[ActiveConnection1DOF, Connection] = (
             god_map.world.get_controlled_parent_connection(self.handle_link)
         )
         min_position = self.connection.dof.lower_limits.position
