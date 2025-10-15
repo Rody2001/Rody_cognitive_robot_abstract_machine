@@ -80,18 +80,8 @@ class Cutting(Goal):
     weight: float = WEIGHT_ABOVE_CA
 
     def __post_init__(self):
-        """
-        Open a container in an environment.
-        Only works with the environment was added as urdf.
-        Assumes that a handle has already been grasped.
-        Can only handle containers with 1 dof, e.g. drawers or doors.
-        :param tip_link: end effector that is grasping the handle
-        :param environment_link: name of the handle that was grasped
-        :param goal_joint_state: goal state for the container. default is maximum joint state.
-        :param weight:
-        """
         schnibble_down_pose = god_map.world.compute_forward_kinematics(
-            root_link=self.tip_link, tip_link=self.tip_link
+            root=self.tip_link, tip=self.tip_link
         )
         schnibble_down_pose.x = -self.depth
         cut_down = CartesianPose(
@@ -112,10 +102,10 @@ class Cutting(Goal):
             name=f"{self.name}/CancelMotion", exception=Exception("no contact")
         )
         self.add_monitor(cancel)
-        cancel.start_condition = f"not {made_contact}"
+        cancel.start_condition = f"not {made_contact.name}"
 
         schnibble_up_pose = god_map.world.compute_forward_kinematics(
-            root_link=self.tip_link, tip_link=self.tip_link
+            root=self.tip_link, tip=self.tip_link
         )
         schnibble_up_pose.x = self.depth
         cut_up = CartesianPose(
@@ -128,7 +118,7 @@ class Cutting(Goal):
         self.add_task(cut_up)
 
         schnibble_right_pose = god_map.world.compute_forward_kinematics(
-            root_link=self.tip_link, tip_link=self.tip_link
+            root=self.tip_link, tip=self.tip_link
         )
         schnibble_right_pose.y = self.right_shift
         move_right = CartesianPose(
@@ -142,7 +132,7 @@ class Cutting(Goal):
 
         self.arrange_in_sequence([cut_down, cut_up, move_right])
         self.observation_expression = cas.if_else(
-            cas.is_ternary_true(move_right.observation_state_symbol),
+            cas.is_trinary_true(move_right.observation_state_symbol),
             cas.TrinaryTrue,
             cas.TrinaryFalse,
         )

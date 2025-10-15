@@ -16,8 +16,6 @@ from semantic_world.spatial_types.symbol_manager import symbol_manager
 
 @dataclass
 class Monitor(MotionStatechartNode):
-    obs_symbol: cas.Symbol = field(init=False)
-    life_symbol: cas.Symbol = field(init=False)
 
     @cached_property
     def observation_state_symbol(self) -> cas.Symbol:
@@ -116,8 +114,8 @@ class LocalMinimumReached(Monitor):
 
         traj_longer_than_1_sec = god_map.time_symbol > 1
         self.observation_expression = cas.logic_and(
-            traj_longer_than_1_sec, cas.logic_all(vel_symbols < ref))
-
+            traj_longer_than_1_sec, cas.logic_all(vel_symbols < ref)
+        )
 
 
 @dataclass
