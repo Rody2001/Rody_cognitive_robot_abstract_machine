@@ -236,7 +236,9 @@ class TestWorld:
     ):
         root = simple_two_arm_world.get_body_by_name("r_eef")
         tip = simple_two_arm_world.get_body_by_name("l_eef")
-        controlled_joints: ControlledConnections = simple_two_arm_world.views[1]
+        controlled_joints: ControlledConnections = (
+            simple_two_arm_world.semantic_annotations[1]
+        )
         link_a, link_b = controlled_joints.compute_chain_reduced_to_controlled_joints(
             root, tip
         )

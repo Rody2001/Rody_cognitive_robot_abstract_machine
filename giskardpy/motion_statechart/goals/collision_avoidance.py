@@ -463,7 +463,7 @@ class CollisionAvoidance(Goal):
     def add_external_collision_avoidance_constraints(self):
         robot: AbstractRobot
         # thresholds = god_map.collision_scene.matrix_manager.external_thresholds
-        for robot in god_map.world.get_views_by_type(AbstractRobot):
+        for robot in god_map.world.get_semantic_annotations_by_type(AbstractRobot):
             for connection in robot.controlled_connections:
                 if connection.frozen_for_collision_avoidance:
                     continue
@@ -497,7 +497,7 @@ class CollisionAvoidance(Goal):
         num_constr = 0
         robot: AbstractRobot
         # collect bodies from the same connection to the main body pair
-        for robot in god_map.world.get_views_by_type(AbstractRobot):
+        for robot in god_map.world.get_semantic_annotations_by_type(AbstractRobot):
             for body_a_original in robot.bodies_with_enabled_collision:
                 for body_b_original in robot.bodies_with_enabled_collision:
                     if (

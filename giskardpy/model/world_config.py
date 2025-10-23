@@ -9,7 +9,10 @@ import numpy as np
 
 from giskardpy.model.utils import robot_name_from_urdf_string
 from semantic_digital_twin.adapters.urdf import URDFParser
-from semantic_digital_twin.world_description.connections import Connection6DoF, OmniDrive
+from semantic_digital_twin.world_description.connections import (
+    Connection6DoF,
+    OmniDrive,
+)
 from semantic_digital_twin.world_description.geometry import Color
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.spatial_types.derivatives import Derivatives
