@@ -244,6 +244,7 @@ class BuildContext:
 class NodeArtifacts:
     constraints: ConstraintCollection = field(default_factory=ConstraintCollection)
     observation: cas.Expression = field(default_factory=lambda: cas.TrinaryUnknown)
+    debug_expressions: Dict[str, cas.Expression] = field(default_factory=dict)
 
 
 @dataclass(repr=False, eq=False)
@@ -275,6 +276,7 @@ class MotionStatechartNode(SubclassJSONSerializer):
 
     _constraint_collection: ConstraintCollection = field(init=False)
     _observation_expression: cas.Expression = field(init=False)
+    _debug_expressions: Dict[str, cas.Expression] = field(init=False)
 
     _start_condition: TrinaryCondition = field(init=False)
     _pause_condition: TrinaryCondition = field(init=False)
@@ -320,6 +322,12 @@ class MotionStatechartNode(SubclassJSONSerializer):
                 self._reset_condition = transition
             case _:
                 raise ValueError(f"Unknown transition kind: {transition.kind}")
+
+    def evaluate_debug_expressions(self) -> Dict[str, float]:
+        return {
+            name: float(expr.evaluate())
+            for name, expr in self._debug_expressions.items()
+        }
 
     @property
     def life_cycle_variable(self) -> LifeCycleVariable:

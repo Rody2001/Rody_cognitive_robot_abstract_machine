@@ -409,8 +409,10 @@ class QPController:
         self.dof_filter = np.array(
             [
                 i
-                for i, v in enumerate(degrees_of_freedom)
-                if v.variables.position.name in float_variable_names
+                for i, v in sorted(
+                    enumerate(self.world_state_symbols), key=lambda x: x[1].name
+                )
+                if v.name in float_variable_names
             ]
         )
         self.active_dofs = [degrees_of_freedom[i] for i in self.dof_filter]

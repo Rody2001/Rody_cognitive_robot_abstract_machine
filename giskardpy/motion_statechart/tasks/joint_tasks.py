@@ -41,6 +41,14 @@ class JointState(SubclassJSONSerializer):
         return zip(self._connections, self._target_values)
 
     @classmethod
+    def from_str_dict(cls, mapping: Dict[str, float], world: World):
+        mapping = {
+            world.get_connection_by_name(connection_name): target
+            for connection_name, target in mapping.items()
+        }
+        return cls(mapping=mapping)
+
+    @classmethod
     def from_lists(cls, connections: List[ActiveConnection1DOF], targets: List[float]):
         return cls(mapping=dict(zip(connections, targets)))
 
@@ -97,6 +105,13 @@ class JointPositionList(Task):
                 task_expression=current,
             )
             errors.append(cas.abs(error) < self.threshold)
+            artifacts.debug_expressions[f"{connection.name}/cur"] = cas.Expression(
+                current
+            )
+            artifacts.debug_expressions[f"{connection.name}/goal"] = cas.Expression(
+                target
+            )
+            artifacts.debug_expressions[f"{connection.name}/error"] = error
         artifacts.observation = cas.logic_all(cas.Expression(errors))
         return artifacts
 

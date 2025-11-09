@@ -345,6 +345,7 @@ class MotionStatechart(SubclassJSONSerializer):
             node._constraint_collection = artifacts.constraints
             node._constraint_collection.link_to_motion_statechart_node(node)
             node._observation_expression = artifacts.observation
+            node._debug_expressions = artifacts.debug_expressions
 
     def _apply_goal_conditions_to_their_children(self):
         for goal in self.get_nodes_by_type(Goal):
@@ -371,7 +372,7 @@ class MotionStatechart(SubclassJSONSerializer):
 
     def _compile_qp_controller(self, controller_config: QPControllerConfig):
         ordered_dofs = sorted(
-            self.world.active_degrees_of_freedom,
+            self.world.degrees_of_freedom,
             key=lambda dof: self.world.state._index[dof.name],
         )
         constraint_collection = self._combine_constraint_collections_of_nodes()
@@ -449,7 +450,7 @@ class MotionStatechart(SubclassJSONSerializer):
         )
         self.world.apply_control_commands(
             next_cmd,
-            self.qp_controller.config.control_dt,
+            self.qp_controller.config.control_dt or self.qp_controller.config.mpc_dt,
             self.qp_controller.config.max_derivative,
         )
 

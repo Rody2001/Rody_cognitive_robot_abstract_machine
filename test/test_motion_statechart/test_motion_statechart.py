@@ -857,3 +857,42 @@ def test_set_seed_odometry(pr2_world):
             pr2_world.root, node1.odom_connection.child
         ),
     )
+
+
+def test_continuous_joint(pr2_world):
+    msc = MotionStatechart(pr2_world)
+    joint_goal = JointPositionList(
+        name=PrefixedName("joint_goal"),
+        goal_state=JointState.from_str_dict(
+            {
+                "r_wrist_roll_joint": -np.pi,
+                "l_wrist_roll_joint": -2.1 * np.pi,
+            },
+            world=pr2_world,
+        ),
+    )
+    msc.add_node(joint_goal)
+    end = EndMotion(name=PrefixedName("end"))
+    msc.add_node(end)
+    end.start_condition = joint_goal.observation_variable
+    msc.compile(QPControllerConfig.create_default_with_50hz())
+    msc.tick_until_end()
+
+def test_revolute_joint(pr2_world):
+    msc = MotionStatechart(pr2_world)
+    joint_goal = JointPositionList(
+        name=PrefixedName("joint_goal"),
+        goal_state=JointState.from_str_dict(
+            {
+                "head_pan_joint": 0.041880780651479044,
+                "head_tilt_joint": -0.37,
+            },
+            world=pr2_world,
+        ),
+    )
+    msc.add_node(joint_goal)
+    end = EndMotion(name=PrefixedName("end"))
+    msc.add_node(end)
+    end.start_condition = joint_goal.observation_variable
+    msc.compile(QPControllerConfig.create_default_with_50hz())
+    msc.tick_until_end()
