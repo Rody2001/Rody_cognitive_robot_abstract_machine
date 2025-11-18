@@ -56,7 +56,7 @@ jobs:
       # Lets all tests finish, even if one test fails
       fail-fast: false
       matrix:
-        tests: [ "test/test_motion_statechart"]
+        tests: [ "test_motion_statechart"]
         ubuntu_version: [ "20.04", "24.04"]
         qp_solver: [ qpSWIFT ]
     runs-on: ubuntu-latest
