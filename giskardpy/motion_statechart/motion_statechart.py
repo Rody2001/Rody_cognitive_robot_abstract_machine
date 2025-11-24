@@ -352,10 +352,6 @@ class MotionStatechart(SubclassJSONSerializer):
     Combined representation of the life cycle state of the motion statechart, to enable an efficient tick().
     """
 
-    control_cycle_counter: int = field(default=0, init=False)
-    """
-    Increases by 1 each time tick() is called.
-    """
     history: StateHistory = field(default_factory=StateHistory, init=False)
     """
     The history of how the state of the motion statechart changed over time.
@@ -493,7 +489,7 @@ class MotionStatechart(SubclassJSONSerializer):
         self.life_cycle_state.compile()
         self.history.append(
             next_item=StateHistoryItem(
-                control_cycle=self.control_cycle_counter,
+                control_cycle=0,
                 life_cycle_state=self.life_cycle_state,
                 observation_state=self.observation_state,
             )
@@ -579,13 +575,12 @@ class MotionStatechart(SubclassJSONSerializer):
         First the observation state is updated, then the life cycle state is updated.
         :param context: The context required to execute the tick.
         """
-        self.control_cycle_counter += 1
         self._update_observation_state(context)
         self._update_life_cycle_state(context.to_execution_context())
         self._raise_if_cancel_motion()
         self.history.append(
             next_item=StateHistoryItem(
-                control_cycle=self.control_cycle_counter,
+                control_cycle=context.control_cycle_variable.evaluate(),
                 life_cycle_state=self.life_cycle_state,
                 observation_state=self.observation_state,
             )

@@ -254,7 +254,7 @@ def test_sequence_goal():
     kin_sim.compile(motion_statechart=msc)
     kin_sim.tick_until_end()
     msc.draw("muh.pdf")
-    assert kin_sim._control_cycles == 6
+    assert kin_sim.control_cycles == 7
     assert msc.nodes[0].life_cycle_state == LifeCycleValues.RUNNING
     assert msc.nodes[1].life_cycle_state == LifeCycleValues.RUNNING
     assert msc.nodes[2].life_cycle_state == LifeCycleValues.DONE
