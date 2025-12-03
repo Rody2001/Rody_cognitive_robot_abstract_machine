@@ -780,6 +780,12 @@ def test_sum_on_empty_list(handles_and_containers_world):
     assert query.evaluate() is None
 
 
+def test_sum_without_entity():
+    heights = [1, 2, 3, 4, 5]
+    heights_var = let(int, domain=heights)
+    query = sum_(heights_var)
+    assert query.evaluate() == sum(heights)
+
 def test_limit(handles_and_containers_world):
     world = handles_and_containers_world
     query = an(
@@ -858,6 +864,16 @@ def test_max_min_no_variable():
     assert max_query.evaluate() == max(values)
 
     min_query = min_(entity(value))
+    assert min_query.evaluate() == min(values)
+
+def test_max_min_without_entity():
+    values = [2, 1, 3, 5, 4]
+    value = let(int, domain=values)
+
+    max_query = max_(value)
+    assert max_query.evaluate() == max(values)
+
+    min_query = min_(value)
     assert min_query.evaluate() == min(values)
 
 

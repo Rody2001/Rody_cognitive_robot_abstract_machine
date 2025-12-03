@@ -296,7 +296,7 @@ def max_(variable: Selectable[T], key: Optional[Callable] = None, default: Optio
     return Max(variable, _key_func_=key, _default_value_=default)
 
 
-def min_(variable: Entity[T], key: Optional[Callable] = None, default: Optional[T] = None) -> Union[T, Min[T]]:
+def min_(variable: Selectable[T], key: Optional[Callable] = None, default: Optional[T] = None) -> Union[T, Min[T]]:
     """
     Add a result mapping that maps the results to the result that has the minimum
     value for the given variable.
@@ -309,7 +309,7 @@ def min_(variable: Entity[T], key: Optional[Callable] = None, default: Optional[
     return Min(variable, _key_func_=key, _default_value_=default)
 
 
-def sum_(variable: Entity[T], key: Optional[Callable] = None, default: Optional[T] = None) -> Union[T, Sum[T]]:
+def sum_(variable: Selectable[T], key: Optional[Callable] = None, default: Optional[T] = None) -> Union[T, Sum[T]]:
     """
     Computes the sum of values produced by the given variable.
 
@@ -321,7 +321,7 @@ def sum_(variable: Entity[T], key: Optional[Callable] = None, default: Optional[
     return Sum(variable, _key_func_=key, _default_value_=default)
 
 
-def count(variable: QueryObjectDescriptor[T]) -> Union[T, Count[T]]:
+def count(variable: Selectable[T]) -> Union[T, Count[T]]:
     """
     Count the number of values produced by the given variable.
 

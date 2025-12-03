@@ -455,11 +455,9 @@ class ResultProcessor(CanBehaveLikeAVariable[T], ABC):
     (e.g., An, The).
     """
 
-    _child_: QueryObjectDescriptor[T]
+    _child_: SymbolicExpression[T]
 
     def __post_init__(self):
-        if not isinstance(self._child_, QueryObjectDescriptor):
-            raise InvalidEntityType(type(self._child_))
         super().__post_init__()
         self._var_ = (
             self._child_._var_
@@ -503,7 +501,7 @@ class ResultProcessor(CanBehaveLikeAVariable[T], ABC):
         :param result: The result to be mapped.
         :return: The mapped result.
         """
-        if isinstance(self._child_, Entity):
+        if isinstance(self._child_, CanBehaveLikeAVariable):
             return result[self._id_].value
         elif isinstance(self._child_, SetOf):
             selected_variables_ids = [v._id_ for v in self._child_._selected_variables]
@@ -598,9 +596,9 @@ class Aggregator(ResultProcessor[T], ABC):
 @dataclass
 class EntityAggregator(Aggregator[T], ABC):
 
-    _child_: Entity[T]
+    _child_: Selectable[T]
     """
-    The child entity to be aggregated. It must be an Entity, it cannot be a SetOf.
+    The child entity to be aggregated.
     """
     _key_func_: Callable = field(kw_only=True, default=lambda x: x)
     """
@@ -608,7 +606,7 @@ class EntityAggregator(Aggregator[T], ABC):
     """
 
     def __post_init__(self):
-        if not isinstance(self._child_, Entity):
+        if not isinstance(self._child_, Selectable):
             raise InvalidEntityType(type(self._child_))
         super().__post_init__()
 
@@ -704,8 +702,16 @@ class ResultQuantifier(ResultProcessor[T], ABC):
     Base for quantifiers that return concrete results from entity/set queries
     (e.g., An, The).
     """
-
+    _child_: QueryObjectDescriptor[T]
+    """
+    A child of a result quantifier. It must be a QueryObjectDescriptor.
+    """
     _quantification_constraint_: Optional[ResultQuantificationConstraint] = None
+
+    def __post_init__(self):
+        if not isinstance(self._child_, QueryObjectDescriptor):
+            raise InvalidEntityType(type(self._child_))
+        super().__post_init__()
 
     def _evaluate__(
         self,
