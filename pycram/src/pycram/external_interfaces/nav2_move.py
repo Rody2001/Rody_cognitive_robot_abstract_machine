@@ -14,7 +14,6 @@ from geometry_msgs.msg import PoseStamped
 from pycram.ros import create_action_client
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 # Global variables for shared resources
 nav_action_client: ActionClient | None = None
