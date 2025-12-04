@@ -26,8 +26,6 @@ class OpeningMotion(BaseMotion):
 
     def perform(self):
         return
-        pm_manager = ProcessModuleManager().get_manager(self.robot_view)
-        return pm_manager.open().execute(self)
 
     @property
     def _motion_chart(self):
@@ -52,8 +50,6 @@ class ClosingMotion(BaseMotion):
 
     def perform(self):
         return
-        pm_manager = ProcessModuleManager().get_manager(self.robot_view)
-        return pm_manager.close().execute(self)
 
     @property
     def _motion_chart(self):

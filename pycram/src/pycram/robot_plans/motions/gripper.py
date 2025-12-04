@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional, List
 
+from Cython.Shadow import returns
+
 from giskardpy.motion_statechart.goals.templates import Sequence
 from giskardpy.motion_statechart.tasks.cartesian_tasks import (
     CartesianPosition,
@@ -115,8 +117,6 @@ class MoveGripperMotion(BaseMotion):
 
     def perform(self):
         return
-        pm_manager = ProcessModuleManager().get_manager(self.robot_view)
-        return pm_manager.move_gripper().execute(self)
 
     @property
     def _motion_chart(self):
@@ -160,8 +160,6 @@ class MoveTCPMotion(BaseMotion):
 
     def perform(self):
         return
-        pm_manager = ProcessModuleManager().get_manager(self.robot_view)
-        try_motion(pm_manager.move_tcp(), self, ToolPoseNotReachedError)
 
     @property
     def _motion_chart(self):
@@ -200,10 +198,18 @@ class MoveTCPWaypointsMotion(BaseMotion):
     """
 
     def perform(self):
-        pm_manager = ProcessModuleManager().get_manager(self.robot_view)
-        pm_manager.move_tcp_waypoints().execute(self)
+        return
 
     @property
     def _motion_chart(self):
         tip = ViewManager().get_end_effector_view(self.arm, self.robot_view).tool_frame
-        pass
+        nodes = [
+            CartesianPose(
+                root_link=self.robot_view.root,
+                tip_link=tip,
+                goal_pose=pose.to_spatial_type(),
+                # threshold=0.005,
+            )
+            for pose in self.waypoints
+        ]
+        return Sequence(nodes=nodes)

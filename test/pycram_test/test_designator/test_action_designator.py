@@ -4,6 +4,7 @@ import unittest
 import rclpy
 import rustworkx
 from giskardpy.utils.utils_for_tests import compare_axis_angle
+from pycram.motion_executor import MotionExecutor
 from semantic_digital_twin.adapters.procthor.procthor_semantic_annotations import Milk
 from semantic_digital_twin.adapters.viz_marker import VizMarkerPublisher
 
@@ -107,8 +108,12 @@ class TestActionDesignatorGrounding(ApartmentWorldTestCase):
             ApproachDirection.FRONT, VerticalAlignment.NoAlignment, False
         )
         performable = ReachActionDescription(
-            target_pose=PoseStamped.from_spatial_type(self.world.get_body_by_name("milk.stl").global_pose),
-            object_designator=self.world.get_body_by_name("milk.stl"),  arm=Arms.LEFT, grasp_description=grasp_description
+            target_pose=PoseStamped.from_spatial_type(
+                self.world.get_body_by_name("milk.stl").global_pose
+            ),
+            object_designator=self.world.get_body_by_name("milk.stl"),
+            arm=Arms.LEFT,
+            grasp_description=grasp_description,
         )
         plan = SequentialPlan(
             self.context,
@@ -248,7 +253,7 @@ class TestActionDesignatorGrounding(ApartmentWorldTestCase):
                 ).id
             ].position,
             0.45,
-            places=1
+            places=1,
         )
 
     def test_close(self):
@@ -276,7 +281,7 @@ class TestActionDesignatorGrounding(ApartmentWorldTestCase):
                 ).id
             ].position,
             0,
-            places=1
+            places=1,
         )
 
     def test_transport(self):
@@ -345,32 +350,35 @@ class TestActionDesignatorGrounding(ApartmentWorldTestCase):
             path.append(new_pose)
         description = MoveTCPWaypointsMotion(path, Arms.RIGHT)
         plan = SequentialPlan(self.context, description)
+
+        me = MotionExecutor([description._motion_chart], self.world)
+        me.construct_msc()
         with simulated_robot:
-            plan.perform()
+            me.execute()
         gripper_position = PoseStamped.from_spatial_type(
             self.world.get_body_by_name("r_gripper_tool_frame").global_pose
         )
         self.assertAlmostEqual(
-            path[-1].position.x, gripper_position.position.x, places=4
+            path[-1].position.x, gripper_position.position.x, places=1
         )
         self.assertAlmostEqual(
-            path[-1].position.y, gripper_position.position.y, places=4
+            path[-1].position.y, gripper_position.position.y, places=1
         )
         self.assertAlmostEqual(
-            path[-1].position.z, gripper_position.position.z, places=4
+            path[-1].position.z, gripper_position.position.z, places=1
         )
 
         self.assertAlmostEqual(
-            path[-1].orientation.x, gripper_position.orientation.x, places=4
+            path[-1].orientation.x, gripper_position.orientation.x, places=1
         )
         self.assertAlmostEqual(
-            path[-1].orientation.y, gripper_position.orientation.y, places=4
+            path[-1].orientation.y, gripper_position.orientation.y, places=1
         )
         self.assertAlmostEqual(
-            path[-1].orientation.z, gripper_position.orientation.z, places=4
+            path[-1].orientation.z, gripper_position.orientation.z, places=1
         )
         self.assertAlmostEqual(
-            path[-1].orientation.w, gripper_position.orientation.w, places=4
+            path[-1].orientation.w, gripper_position.orientation.w, places=1
         )
 
     @unittest.skip

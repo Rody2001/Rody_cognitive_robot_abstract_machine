@@ -30,14 +30,6 @@ except ImportError:
     )
 
 
-@pytest.fixture(autouse=True, scope="function")
-def cleanup_after_test():
-    # runs BEFORE each test
-    yield
-    # runs AFTER each test (even if the test fails or errors)
-    SymbolGraph().clear()
-
-
 @pytest.fixture(autouse=True, scope="session")
 def cleanup_ros():
     """
