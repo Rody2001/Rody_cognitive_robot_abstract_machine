@@ -455,42 +455,42 @@ class MJCFParser:
         body = self.world.get_body_by_name(body_name)
         resolution = (
             [1, 1]
-            if any(numpy.isnan(x) for x in mujoco_camera.resolution)
+            if numpy.isnan(mujoco_camera.resolution).any()
             else mujoco_camera.resolution.tolist()
         )
         focal_length = (
             [0, 0]
-            if any(numpy.isnan(x) for x in mujoco_camera.focal_length)
+            if numpy.isnan(mujoco_camera.focal_length).any()
             else mujoco_camera.focal_length.tolist()
         )
         focal_pixel = (
             [0, 0]
-            if any(numpy.isnan(x) for x in mujoco_camera.focal_pixel)
+            if numpy.isnan(mujoco_camera.focal_pixel).any()
             else mujoco_camera.focal_pixel.astype(int).tolist()
         )
         principal_length = (
             [0, 0]
-            if any(numpy.isnan(x) for x in mujoco_camera.principal_length)
+            if numpy.isnan(mujoco_camera.principal_length).any()
             else mujoco_camera.principal_length.tolist()
         )
         principal_pixel = (
             [0, 0]
-            if any(numpy.isnan(x) for x in mujoco_camera.principal_pixel)
+            if numpy.isnan(mujoco_camera.principal_pixel).any()
             else mujoco_camera.principal_pixel.astype(int).tolist()
         )
         sensor_size = (
             [0, 0]
-            if any(numpy.isnan(x) for x in mujoco_camera.sensor_size)
+            if numpy.isnan(mujoco_camera.sensor_size).any()
             else mujoco_camera.sensor_size.tolist()
         )
         pos = (
             [0, 0, 0]
-            if any(numpy.isnan(x) for x in mujoco_camera.pos)
+            if numpy.isnan(mujoco_camera.pos).any()
             else mujoco_camera.pos.tolist()
         )
         quat = (
             [1, 0, 0, 0]
-            if any(numpy.isnan(x) for x in mujoco_camera.quat)
+            if numpy.isnan(mujoco_camera.quat).any()
             else mujoco_camera.quat.tolist()
         )
 
