@@ -21,6 +21,7 @@ from probabilistic_model.probabilistic_circuit.rx.helper import (
 )
 from random_events.interval import Bound
 from random_events.product_algebra import *
+from semantic_digital_twin.semantic_annotations.semantic_annotations import CounterTop
 from typing_extensions import Generic, TypeVar
 
 from ..datastructures.prefixed_name import PrefixedName
@@ -43,6 +44,8 @@ from ..semantic_annotations.semantic_annotations import (
     DoubleDoor,
     Room,
     Floor,
+    Fridge,
+    Dishwasher,
 )
 from ..world import World
 from ..world_description.connections import (
@@ -727,6 +730,258 @@ class HasDrawerFactories(ABC):
 
         return upper_limits, lower_limits
 
+@dataclass
+class HasDoorFactories(ABC):
+    """
+    Mixin for factories receiving multiple DoorFactories.
+    """
+
+    doors_factories: List[DoorFactory] = field(default_factory=list, hash=False)
+    """
+    The factories used to create doors.
+    """
+
+    parent_T_doors: List[TransformationMatrix] = field(
+        default_factory=list, hash=False
+    )
+    """
+    The transformations for the doors their parent container.
+    """
+
+    def _add_door_to_world(
+        self,
+        door_factory: DoorFactory,
+        parent_T_door: TransformationMatrix,
+        parent_world: World,
+    ):
+
+        lower_limits, upper_limits = self._create_door_upper_lower_limits(
+            door_factory
+        )
+        door_world = door_factory.create()
+        parent_root = parent_world.root
+        child_root = door_world.root
+
+        parent_T_door.reference_frame = parent_root
+
+        dof = DegreeOfFreedom(
+            name=PrefixedName(
+                f"{child_root.name.name}_connection", child_root.name.prefix
+            ),
+            lower_limits=lower_limits,
+            upper_limits=upper_limits,
+        )
+        with parent_world.modify_world():
+            parent_world.add_degree_of_freedom(dof)
+            connection = PrismaticConnection(
+                parent=parent_root,
+                child=child_root,
+                parent_T_connection_expression=parent_T_door,
+                multiplier=1.0,
+                offset=0.0,
+                axis=Vector3.X(),
+                dof_id=dof.id,
+            )
+
+            parent_world.merge_world(door_world, connection)
+
+    def add_doors_to_world(self, parent_world: World):
+        """
+        Adds doors to the parent world. A prismatic connection is created for each door.
+        """
+
+        for door_factory, transform in zip(
+            self.doors_factories, self.parent_T_doors
+        ):
+            self._add_door_to_world(
+                door_factory=door_factory,
+                parent_T_door=transform,
+                parent_world=parent_world,
+            )
+
+    @staticmethod
+    def _create_door_upper_lower_limits(
+        door_factory: DoorFactory,
+    ) -> Tuple[DerivativeMap[float], DerivativeMap[float]]:
+        """
+        Return the upper and lower limits for the door's degree of freedom.
+        """
+        lower_limits = DerivativeMap[float]()
+        upper_limits = DerivativeMap[float]()
+        lower_limits.position = 0.0
+        upper_limits.position = door_factory.container_factory.scale.x * 0.75
+
+        return upper_limits, lower_limits
+########################
+
+@dataclass
+class HasDishwasherDoorFactories(ABC):
+    """
+    Mixin for factories receiving multiple dishwasher DoorFactories,
+    where each door opens by rotating downward from a bottom hinge.
+    """
+
+    doors_factories: List[DoorFactory] = field(default_factory=list, hash=False)
+    parent_T_doors: List[TransformationMatrix] = field(default_factory=list, hash=False)
+    """
+    The transformation from the parent frame to each door hinge.
+    """
+
+    def _add_dishwasher_door_to_world(
+        self,
+        door_factory: DoorFactory,
+        parent_T_door: TransformationMatrix,
+        parent_world: World,
+    ):
+
+        lower_limits, upper_limits = self._create_dishwasher_door_limits(door_factory)
+
+        # Create the door as its own world
+        door_world = door_factory.create()
+        parent_root = parent_world.root
+        child_root = door_world.root
+
+        parent_T_door.reference_frame = parent_root
+
+        # Degree of freedom for the hinge rotation
+        dof = DegreeOfFreedom(
+            name=PrefixedName(
+                f"{child_root.name.name}_hinge", child_root.name.prefix
+            ),
+            lower_limits=lower_limits,
+            upper_limits=upper_limits,
+        )
+
+        with parent_world.modify_world():
+            parent_world.add_degree_of_freedom(dof)
+
+            # ROTATIONAL joint around X axis (hinge along bottom)
+            connection = RevoluteConnection(
+                parent=parent_root,
+                child=child_root,
+                parent_T_connection_expression=parent_T_door,
+                axis=Vector3.X(),      # <-- Drehung um X-Achse (Tür klappt unten auf)
+                offset=0.0,
+                multiplier=1.0,
+                dof_id=dof.id,
+            )
+
+            parent_world.merge_world(door_world, connection)
+
+    def add_dishwasher_doors_to_world(self, parent_world: World):
+        """
+        Adds all dishwasher-style drop-down doors to the world.
+        """
+        for door_factory, transform in zip(self.doors_factories, self.parent_T_doors):
+            self._add_dishwasher_door_to_world(
+                door_factory=door_factory,
+                parent_T_door=transform,
+                parent_world=parent_world,
+            )
+
+    @staticmethod
+    def _create_dishwasher_door_limits(
+        door_factory: DoorFactory,
+    ) -> Tuple[DerivativeMap[float], DerivativeMap[float]]:
+        """
+        Rotational limits for dishwasher doors that open downward.
+        Default example:
+            0 rad = closed
+            +1.2 rad ≈ 69° open
+        """
+
+        lower = DerivativeMap[float]()
+        upper = DerivativeMap[float]()
+
+        lower.position = 0.0       # closed
+        upper.position = 1.2       # approx. 69° down, adjust as needed
+
+        return lower, upper
+
+
+@dataclass
+class HasDishwasherFactories(ABC):
+    """
+    Mixin for factories receiving multiple DishwasherFactories.
+    """
+
+    dishwashers_factories: List[DishwasherFactory] = field(default_factory=list, hash=False)
+    """
+    The factories used to create dishwashers.
+    """
+
+    parent_T_dishwashers: List[TransformationMatrix] = field(
+        default_factory=list, hash=False
+    )
+    """
+    The transformations for the dishwashers their parent container.
+    """
+
+    def _add_dishwasher_to_world(
+        self,
+        dishwasher_factory: DishwasherFactory,
+        parent_T_dishwasher: TransformationMatrix,
+        parent_world: World,
+    ):
+
+        lower_limits, upper_limits = self._create_dishwasher_upper_lower_limits(
+            dishwasher_factory
+        )
+        dishwasher_world = dishwasher_factory.create()
+        parent_root = parent_world.root
+        child_root = dishwasher_world.root
+
+        parent_T_dishwasher.reference_frame = parent_root
+
+        dof = DegreeOfFreedom(
+            name=PrefixedName(
+                f"{child_root.name.name}_connection", child_root.name.prefix
+            ),
+            lower_limits=lower_limits,
+            upper_limits=upper_limits,
+        )
+        with parent_world.modify_world():
+            parent_world.add_degree_of_freedom(dof)
+            connection = PrismaticConnection(
+                parent=parent_root,
+                child=child_root,
+                parent_T_connection_expression=parent_T_dishwasher,
+                multiplier=1.0,
+                offset=0.0,
+                axis=Vector3.X(),
+                dof_id=dof.id,
+            )
+
+            parent_world.merge_world(dishwasher_world, connection)
+
+    def add_dishwashers_to_world(self, parent_world: World):
+        """
+        Adds dishwashers to the parent world. A prismatic connection is created for each dishwasher.
+        """
+
+        for dishwasher_factory, transform in zip(
+            self.dishwashers_factories, self.parent_T_dishwashers
+        ):
+            self._add_dishwasher_to_world(
+                dishwasher_factory=dishwasher_factory,
+                parent_T_dishwasher=transform,
+                parent_world=parent_world,
+            )
+
+    @staticmethod
+    def _create_dishwasher_upper_lower_limits(
+        dishwasher_factory: DishwasherFactory,
+    ) -> Tuple[DerivativeMap[float], DerivativeMap[float]]:
+        """
+        Return the upper and lower limits for the dishwasher's degree of freedom.
+        """
+        lower_limits = DerivativeMap[float]()
+        upper_limits = DerivativeMap[float]()
+        lower_limits.position = 0.0
+        upper_limits.position = dishwasher_factory.container_factory.scale.x * 0.75
+
+        return upper_limits, lower_limits
+
 
 T = TypeVar("T")
 
@@ -1234,6 +1489,407 @@ class DresserFactory(
 
         return container_event
 
+@dataclass
+class FridgeFactory(
+    SemanticAnnotationFactory[Fridge], HasDoorLikeFactories, HasDrawerFactories
+):
+    """
+    Factory for creating a fridge with drawers, and doors.
+    """
+
+    container_factory: ContainerFactory = field(default=None)
+    """
+    The factory used to create the container of the fridge.
+    """
+
+    def _create(self, world: World) -> World:
+        """
+        Return a world with a fridge at its root. The fridge consists of a container, potentially drawers, and doors.
+        Assumes that the number of drawers matches the number of drawer transforms.
+        """
+        assert len(self.drawers_factories) == len(
+            self.parent_T_drawers
+        ), "Number of drawers must match number of transforms"
+
+        fridge_world = self._make_fridge_world()
+        fridge_world.name = world.name
+        return self._make_interior(fridge_world)
+
+    def _make_fridge_world(self) -> World:
+        """
+        Create a world with a fridge semantic annotation that contains a container, drawers, and doors, but no interior yet.
+        """
+        fridge_world = self.container_factory.create()
+        with fridge_world.modify_world():
+            semantic_container_annotation: Container = (
+                fridge_world.get_semantic_annotations_by_type(Container)[0]
+            )
+
+            self.add_doorlike_semantic_annotation_to_world(fridge_world)
+
+            self.add_drawers_to_world(fridge_world)
+
+            semantic_fridge_annotation = Fridge(
+                name=self.name,
+                container=semantic_container_annotation,
+                drawers=fridge_world.get_semantic_annotations_by_type(Drawer),
+                doors=fridge_world.get_semantic_annotations_by_type(Door),
+            )
+            fridge_world.add_semantic_annotation(
+                semantic_fridge_annotation
+            )
+            fridge_world.name = self.name.name
+
+        return fridge_world
+
+    def _make_interior(self, world: World) -> World:
+        """
+        Create the interior of the fridge by subtracting the drawers and doors from the container, and filling  with
+        the remaining space.
+
+        :param world: The world containing the fridge body as its root.
+        """
+        fridge_body: Body = world.root
+        container_event = fridge_body.collision.as_bounding_box_collection_at_origin(
+            TransformationMatrix(reference_frame=fridge_body)
+        ).event
+
+        container_footprint = self._subtract_bodies_from_container_footprint(
+            world, container_event
+        )
+
+        container_event = self._fill_container_body(
+            container_footprint, container_event
+        )
+
+        collision_shapes = BoundingBoxCollection.from_event(
+            fridge_body, container_event
+        ).as_shapes()
+        fridge_body.collision = collision_shapes
+        fridge_body.visual = collision_shapes
+        return world
+
+    def _subtract_bodies_from_container_footprint(
+        self, world: World, container_event: Event
+    ) -> Event:
+        """
+        Subtract the bounding boxes of all bodies in the world from the container event,
+        except for the fridge body itself. This creates a frontal footprint of the container
+
+        :param world: The world containing the fridge body as its root.
+        :param container_event: The event representing the container.
+
+        :return: An event representing the footprint of the container after subtracting other bodies.
+        """
+        fridge_body = world.root
+
+        container_footprint = container_event.marginal(SpatialVariables.yz)
+
+        for body in world.bodies_with_enabled_collision:
+            if body == fridge_body:
+                continue
+            body_footprint = body.collision.as_bounding_box_collection_at_origin(
+                TransformationMatrix(reference_frame=fridge_body)
+            ).event.marginal(SpatialVariables.yz)
+            container_footprint -= body_footprint
+            if container_footprint.is_empty():
+                return Event()
+
+        return container_footprint
+
+    def _fill_container_body(
+        self, container_footprint: Event, container_event: Event
+    ) -> Event:
+        """
+        Expand container footprint into 3d space and fill the space of the resulting container body.
+
+        :param container_footprint: The footprint of the container in the yz-plane.
+        :param container_event: The event representing the container.
+
+        :return: An event representing the container body with the footprint filled in the x-direction.
+        """
+
+        container_footprint.fill_missing_variables([SpatialVariables.x.value])
+
+        depth_interval = container_event.bounding_box()[SpatialVariables.x.value]
+        limiting_event = SimpleEvent(
+            {SpatialVariables.x.value: depth_interval}
+        ).as_composite_set()
+        limiting_event.fill_missing_variables(SpatialVariables.yz)
+
+        container_event |= container_footprint & limiting_event
+
+        return container_event
+
+
+@dataclass
+class DishwasherFactory(
+    SemanticAnnotationFactory[Dishwasher], HasDoorLikeFactories, HasDrawerFactories
+):
+    """
+    Factory for creating a dishwasher with drawers, and doors.
+    """
+
+    container_factory: ContainerFactory = field(default=None)
+    """
+    The factory used to create the container of the dishwasher.
+    """
+
+    def _create(self, world: World) -> World:
+        """
+        Return a world with a dishwasher at its root. The dishwasher consists of a container, potentially drawers, and doors.
+        Assumes that the number of drawers matches the number of drawer transforms.
+        """
+        assert len(self.drawers_factories) == len(
+            self.parent_T_drawers
+        ), "Number of drawers must match number of transforms"
+
+        dishwasher_world = self._make_dishwasher_world()
+        dishwasher_world.name = world.name
+        return self._make_interior(dishwasher_world)
+
+    def _make_dishwasher_world(self) -> World:
+        """
+        Create a world with a dishwasher semantic annotation that contains a container, drawers, and doors, but no interior yet.
+        """
+        dishwasher_world = self.container_factory.create()
+        with dishwasher_world.modify_world():
+            semantic_container_annotation: Container = (
+                dishwasher_world.get_semantic_annotations_by_type(Container)[0]
+            )
+
+            self.add_doorlike_semantic_annotation_to_world(dishwasher_world)
+
+            self.add_drawers_to_world(dishwasher_world)
+
+            semantic_dishwasher_annotation = Dishwasher(
+                name=self.name,
+                container=semantic_container_annotation,
+                drawers=dishwasher_world.get_semantic_annotations_by_type(Drawer),
+                doors=dishwasher_world.get_semantic_annotations_by_type(Door),
+            )
+            dishwasher_world.add_semantic_annotation(
+                semantic_dishwasher_annotation
+            )
+            dishwasher_world.name = self.name.name
+
+        return dishwasher_world
+
+    def _make_interior(self, world: World) -> World:
+        """
+        Create the interior of the dishwasher by subtracting the drawers and doors from the container, and filling  with
+        the remaining space.
+
+        :param world: The world containing the dishwasher body as its root.
+        """
+        dishwasher_body: Body = world.root
+        container_event = dishwasher_body.collision.as_bounding_box_collection_at_origin(
+            TransformationMatrix(reference_frame=dishwasher_body)
+        ).event
+
+        container_footprint = self._subtract_bodies_from_container_footprint(
+            world, container_event
+        )
+
+        container_event = self._fill_container_body(
+            container_footprint, container_event
+        )
+
+        collision_shapes = BoundingBoxCollection.from_event(
+            dishwasher_body, container_event
+        ).as_shapes()
+        dishwasher_body.collision = collision_shapes
+        dishwasher_body.visual = collision_shapes
+        return world
+
+    def _subtract_bodies_from_container_footprint(
+        self, world: World, container_event: Event
+    ) -> Event:
+        """
+        Subtract the bounding boxes of all bodies in the world from the container event,
+        except for the dishwasher body itself. This creates a frontal footprint of the container
+
+        :param world: The world containing the dishwasher body as its root.
+        :param container_event: The event representing the container.
+
+        :return: An event representing the footprint of the container after subtracting other bodies.
+        """
+        dishwasher_body = world.root
+
+        container_footprint = container_event.marginal(SpatialVariables.yz)
+
+        for body in world.bodies_with_enabled_collision:
+            if body == dishwasher_body:
+                continue
+            body_footprint = body.collision.as_bounding_box_collection_at_origin(
+                TransformationMatrix(reference_frame=dishwasher_body)
+            ).event.marginal(SpatialVariables.yz)
+            container_footprint -= body_footprint
+            if container_footprint.is_empty():
+                return Event()
+
+        return container_footprint
+
+    def _fill_container_body(
+        self, container_footprint: Event, container_event: Event
+    ) -> Event:
+        """
+        Expand container footprint into 3d space and fill the space of the resulting container body.
+
+        :param container_footprint: The footprint of the container in the yz-plane.
+        :param container_event: The event representing the container.
+
+        :return: An event representing the container body with the footprint filled in the x-direction.
+        """
+
+        container_footprint.fill_missing_variables([SpatialVariables.x.value])
+
+        depth_interval = container_event.bounding_box()[SpatialVariables.x.value]
+        limiting_event = SimpleEvent(
+            {SpatialVariables.x.value: depth_interval}
+        ).as_composite_set()
+        limiting_event.fill_missing_variables(SpatialVariables.yz)
+
+        container_event |= container_footprint & limiting_event
+
+        return container_event
+
+#######################
+
+@dataclass
+class CounterTopFactory(
+    SemanticAnnotationFactory[CounterTop], HasDoorFactories, HasDrawerFactories, HasDishwasherFactories,
+):
+    """
+    Factory for creating a counterTop with drawers, doors and dishwashers.
+    """
+
+    container_factory: ContainerFactory = field(default=None)
+    """
+    The factory used to create the container of the counterTop.
+    """
+
+    def _create(self, world: World) -> World:
+        """
+        Return a world with a counterTop at its root. The countertop consists of a container, potentially drawers, and potentially doors.
+        Assumes that the number of drawers matches the number of drawer transforms.
+        """
+        assert len(self.drawers_factories) == len(
+            self.parent_T_drawers
+        ), "Number of drawers must match number of transforms"
+
+        counterTop_world = self._make_counterTop_world()
+        counterTop_world.name = world.name
+        return self._make_interior(counterTop_world)
+
+    def _make_counterTop_world(self) -> World:
+        """
+        Create a world with a counterTop semantic annotation that contains a container, drawers, doors and dishwashers, but no interior yet.
+        """
+        counterTop_world = self.container_factory.create()
+        with counterTop_world.modify_world():
+            semantic_container_annotation: Container = (
+                counterTop_world.get_semantic_annotations_by_type(Container)[0]
+            )
+
+            self.add_doors_to_world(counterTop_world)
+
+            self.add_drawers_to_world(counterTop_world)
+
+            self.add_dishwashers_to_world(counterTop_world)
+
+            semantic_counterTop_annotation = CounterTop(
+                name=self.name,
+                container=semantic_container_annotation,
+                drawers=counterTop_world.get_semantic_annotations_by_type(Drawer),
+                doors=counterTop_world.get_semantic_annotations_by_type(Door),
+                dishwashers=counterTop_world.get_semantic_annotations_by_type(Dishwasher),
+            )
+            counterTop_world.add_semantic_annotation(
+                semantic_counterTop_annotation
+            )
+            counterTop_world.name = self.name.name
+
+        return counterTop_world
+
+    def _make_interior(self, world: World) -> World:
+        """
+        Create the interior of the counterTop by subtracting the drawers, doors and the dishwashers from the container, and filling  with
+        the remaining space.
+
+        :param world: The world containing the counterTop body as its root.
+        """
+        counterTop_body: Body = world.root
+        container_event = counterTop_body.collision.as_bounding_box_collection_at_origin(
+            TransformationMatrix(reference_frame=counterTop_body)
+        ).event
+
+        container_footprint = self._subtract_bodies_from_container_footprint(
+            world, container_event
+        )
+
+        container_event = self._fill_container_body(
+            container_footprint, container_event
+        )
+
+        collision_shapes = BoundingBoxCollection.from_event(
+            counterTop_body, container_event
+        ).as_shapes()
+        counterTop_body.collision = collision_shapes
+        counterTop_body.visual = collision_shapes
+        return world
+
+    def _subtract_bodies_from_container_footprint(
+        self, world: World, container_event: Event
+    ) -> Event:
+        """
+        Subtract the bounding boxes of all bodies in the world from the container event,
+        except for the counterTop body itself. This creates a frontal footprint of the container
+
+        :param world: The world containing the counterTop body as its root.
+        :param container_event: The event representing the container.
+
+        :return: An event representing the footprint of the container after subtracting other bodies.
+        """
+        counterTop_body = world.root
+
+        container_footprint = container_event.marginal(SpatialVariables.yz)
+
+        for body in world.bodies_with_enabled_collision:
+            if body == counterTop_body:
+                continue
+            body_footprint = body.collision.as_bounding_box_collection_at_origin(
+                TransformationMatrix(reference_frame=counterTop_body)
+            ).event.marginal(SpatialVariables.yz)
+            container_footprint -= body_footprint
+            if container_footprint.is_empty():
+                return Event()
+
+        return container_footprint
+
+    def _fill_container_body(
+        self, container_footprint: Event, container_event: Event
+    ) -> Event:
+        """
+        Expand container footprint into 3d space and fill the space of the resulting container body.
+
+        :param container_footprint: The footprint of the container in the yz-plane.
+        :param container_event: The event representing the container.
+
+        :return: An event representing the container body with the footprint filled in the x-direction.
+        """
+
+        container_footprint.fill_missing_variables([SpatialVariables.x.value])
+
+        depth_interval = container_event.bounding_box()[SpatialVariables.x.value]
+        limiting_event = SimpleEvent(
+            {SpatialVariables.x.value: depth_interval}
+        ).as_composite_set()
+        limiting_event.fill_missing_variables(SpatialVariables.yz)
+
+        container_event |= container_footprint & limiting_event
+
+        return container_event
 
 @dataclass
 class RoomFactory(SemanticAnnotationFactory[Room]):
@@ -1272,6 +1928,7 @@ class RoomFactory(SemanticAnnotationFactory[Room]):
         world.add_semantic_annotation(floor)
         semantic_room_annotation = Room(name=self.name, floor=floor)
         world.add_semantic_annotation(semantic_room_annotation)
+
 
         return world
 

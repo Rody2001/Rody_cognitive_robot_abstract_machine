@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from .semantic_annotations import (
         Drawer,
         Door,
+        Dishwasher,
     )
 
 
@@ -70,6 +71,15 @@ class HasDoors(SemanticAnnotation):
     """
 
     doors: List[Door] = field(default_factory=list, hash=False, kw_only=True)
+
+
+@dataclass(eq=False)
+class HasDishwashers(SemanticAnnotation):
+    """
+    A mixin class for semantic annotations that have HasDishwashers.
+    """
+
+    dishwashers: List[Dishwasher] = field(default_factory=list, hash=False, kw_only=True)
 
 
 @dataclass(eq=False)
