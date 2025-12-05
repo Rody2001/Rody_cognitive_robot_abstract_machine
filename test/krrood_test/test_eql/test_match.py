@@ -87,7 +87,7 @@ def world_and_cabinets_and_specific_drawer(handles_and_containers_world):
 
 def test_match_any(world_and_cabinets_and_specific_drawer):
     world, cabinets, my_drawer = world_and_cabinets_and_specific_drawer
-    cabinet = an(entity_matching(Cabinet, cabinets)(drawers=match_any([my_drawer])))
+    cabinet = a(match(Cabinet)(drawers=match_any([my_drawer])).domain_from(cabinets))
     found_cabinets = list(cabinet.evaluate())
     assert len(found_cabinets) == 2
     assert cabinets[0] in found_cabinets
@@ -96,7 +96,7 @@ def test_match_any(world_and_cabinets_and_specific_drawer):
 
 def test_match_all(world_and_cabinets_and_specific_drawer):
     world, cabinets, my_drawer = world_and_cabinets_and_specific_drawer
-    cabinet = the(entity_matching(Cabinet, cabinets)(drawers=match_all([my_drawer])))
+    cabinet = the(match(Cabinet)(drawers=match_all([my_drawer])).domain_from(cabinets))
     found_cabinet = cabinet.evaluate()
     assert found_cabinet is cabinets[1]
 
@@ -113,7 +113,7 @@ def test_match_any_on_collection_returns_unique_parent_entities():
     cabinet2 = Cabinet(container=other_c, drawers=[drawer2])
     views = [drawer1, drawer2, cabinet1, cabinet2]
 
-    q = an(entity_matching(Cabinet, views)(drawers=match_any([drawer1, drawer2])))
+    q = a(match(Cabinet)(drawers=match_any([drawer1, drawer2])).domain_from(views))
 
     results = list(q.evaluate())
     # Expect exactly the two cabinets, no duplicates
