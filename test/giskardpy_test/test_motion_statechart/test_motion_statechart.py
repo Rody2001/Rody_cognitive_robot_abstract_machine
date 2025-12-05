@@ -48,6 +48,8 @@ from giskardpy.motion_statechart.tasks.align_planes import AlignPlanes
 from giskardpy.motion_statechart.tasks.cartesian_tasks import (
     CartesianPose,
     CartesianOrientation,
+    CartesianPosition,
+    CartesianVelocityLimit,
 )
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList, JointState
 from giskardpy.motion_statechart.tasks.pointing import Pointing, PointingCone
@@ -1392,36 +1394,92 @@ def test_align_planes(pr2_world: World):
     ), f"AlignPlanes failed: final angle {angle:.6f} rad > threshold {align_planes.threshold:.6f} rad"
 
 
-def test_cartesian_velocity_limit(pr2_world: World):
-    tip = pr2_world.get_kinematic_structure_entity_by_name("base_footprint")
-    root = pr2_world.get_kinematic_structure_entity_by_name("odom_combined")
-
+def _run_and_get_cycles(world: World, goal_node, limit_node):
+    """
+    Build a small MSC: goal_node -> limit_node -> EndMotion, compile into an Executor,
+    run until end and return (control_cycles, executor)
+    """
     msc = MotionStatechart()
-
-    point = Point3()
-    point.x = 1
-    point.y = 0
-    point.z = 0
-    point.reference_frame = tip
-    position = CartesianPosition(root_link=root, tip_link=tip, goal_point=point)
-
-    msc.add_node(position)
-
-    velocity_limit = CartesianVelocityLimit(
-        root_link=root,
-        tip_link=tip,
-        max_linear_velocity=0.1,
-        max_angular_velocity=0.1,
-    )
-
-    msc.add_node(velocity_limit)
+    msc.add_node(goal_node)
+    msc.add_node(limit_node)
 
     end = EndMotion()
     msc.add_node(end)
+    end.start_condition = goal_node.observation_variable
 
-    end.start_condition = position.observation_variable
+    kin_sim = Executor(
+        world=world, controller_config=QPControllerConfig.create_default_with_50hz()
+    )
+    kin_sim.compile(motion_statechart=msc)
+    kin_sim.tick_until_end()
 
-    giskard.execute(msc)
+    cycles = kin_sim.control_cycles
+
+    return cycles, kin_sim
+
+
+def test_cartesian_position_velocity_limit(pr2_world):
+    """
+    Test for the linear velocity limits.
+    """
+    tip = pr2_world.get_kinematic_structure_entity_by_name("base_footprint")
+    root = pr2_world.get_kinematic_structure_entity_by_name("odom_combined")
+
+    point = cas.Point3(1, 0, 0, reference_frame=tip)
+    position_goal = CartesianPosition(root_link=root, tip_link=tip, goal_point=point)
+
+    # Halving the velocity should at least double the execution time
+    usual_limit = CartesianVelocityLimit(root_link=root, tip_link=tip)
+    half_velocity_limit = CartesianVelocityLimit(
+        root_link=root,
+        tip_link=tip,
+        max_linear_velocity=(usual_limit.max_linear_velocity / 2.1),
+    )
+
+    loose_cycles, _ = _run_and_get_cycles(
+        goal_node=position_goal, limit_node=usual_limit, world=pr2_world
+    )
+    tight_cycles, _ = _run_and_get_cycles(
+        goal_node=position_goal, limit_node=half_velocity_limit, world=pr2_world
+    )
+
+    assert (
+        tight_cycles >= 2 * loose_cycles
+    ), f"tight ({tight_cycles}) should take >= loose ({2 * loose_cycles}) control cycles"
+
+
+def test_cartesian_rotation_velocity_limit(pr2_world):
+    """
+    Test for the angular velocity limits.
+    """
+    tip = pr2_world.get_kinematic_structure_entity_by_name("base_footprint")
+    root = pr2_world.get_kinematic_structure_entity_by_name("odom_combined")
+
+    rotation = cas.RotationMatrix.from_rpy(yaw=np.pi / 6, reference_frame=tip)
+    orientation = CartesianOrientation(
+        root_link=root, tip_link=tip, goal_orientation=rotation
+    )
+
+    # Halving the velocity should at least double the execution time
+    usual_limit = CartesianVelocityLimit(
+        root_link=root, tip_link=tip, max_angular_velocity=0.3
+    )
+    half_velocity_limit = CartesianVelocityLimit(
+        root_link=root,
+        tip_link=tip,
+        max_angular_velocity=(usual_limit.max_angular_velocity / 2.1),
+    )
+
+    loose_cycles, _ = _run_and_get_cycles(
+        goal_node=orientation, limit_node=usual_limit, world=pr2_world
+    )
+    tight_cycles, _ = _run_and_get_cycles(
+        goal_node=orientation, limit_node=half_velocity_limit, world=pr2_world
+    )
+
+    assert (
+        tight_cycles >= 2 * loose_cycles
+    ), f"tight ({tight_cycles}) should take >= loose ({2 * loose_cycles}) control cycles"
 
 
 def test_transition_triggers():
