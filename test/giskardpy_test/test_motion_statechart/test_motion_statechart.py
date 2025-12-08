@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 import semantic_digital_twin.spatial_types.spatial_types as cas
+from giskardpy.data_types.exceptions import DuplicateNameException
 from giskardpy.executor import Executor, SimulationPacer
 from giskardpy.model.collision_matrix_manager import CollisionRequest
 from giskardpy.model.collision_world_syncer import CollisionCheckerLib
@@ -62,6 +63,8 @@ from giskardpy.motion_statechart.test_nodes.test_nodes import (
     TestNestedGoal,
     ConstFalseNode,
 )
+from giskardpy.qp.constraint import EqualityConstraint, BaseConstraint
+from giskardpy.qp.constraint_collection import ConstraintCollection
 from giskardpy.qp.exceptions import HardConstraintsViolatedException
 from giskardpy.utils.math import angle_between_vector
 from semantic_digital_twin.adapters.world_entity_kwargs_tracker import (
@@ -76,7 +79,11 @@ from semantic_digital_twin.semantic_annotations.factories import (
     VerticalSemanticDirection,
 )
 from semantic_digital_twin.semantic_annotations.semantic_annotations import Handle
-from semantic_digital_twin.spatial_types import TransformationMatrix, Vector3
+from semantic_digital_twin.spatial_types import (
+    TransformationMatrix,
+    Vector3,
+    FloatVariable,
+)
 from semantic_digital_twin.spatial_types.derivatives import DerivativeMap
 from semantic_digital_twin.spatial_types.spatial_types import (
     trinary_logic_and,
@@ -2018,3 +2025,93 @@ class TestCollisionAvoidance:
         msc_copy.draw("muh.pdf")
         with pytest.raises(HardConstraintsViolatedException):
             kin_sim.tick_until_end()
+
+
+def test_constraint_collection(pr2_world: World):
+    """
+    Test the constraint collection naming behavior. Expected behavior is:
+    - Not naming constraints should result in automatically generated unique names
+    - Manually naming constraints the same name should result in an Exception
+    - Merging constraint collections should handle duplicates via prefix if they are in different collections
+    - Merge raises an Exception if a collection contains duplicates in itself
+    """
+    col = ConstraintCollection()
+    tip = pr2_world.get_kinematic_structure_entity_by_name("r_gripper_tool_frame")
+    root = pr2_world.get_kinematic_structure_entity_by_name("odom_combined")
+
+    expr = cas.Vector3.X(tip).angle_between(cas.Vector3.Y(root))
+
+    col.add_point_goal_constraints(
+        frame_P_current=cas.Point3(0, 0, 0, reference_frame=tip),
+        frame_P_goal=cas.Point3(0, 0, 0, reference_frame=tip),
+        reference_velocity=0.1,
+        weight=DefaultWeights.WEIGHT_BELOW_CA,
+    )
+    assert len(col.eq_constraints) >= 3
+
+    for i in range(3):
+        col.add_equality_constraint(
+            reference_velocity=0.1 * i,
+            equality_bound=0.0,
+            weight=DefaultWeights.WEIGHT_BELOW_CA,
+            task_expression=expr,
+        )
+
+    col.add_inequality_constraint(
+        name="same_name",
+        reference_velocity=0.2,
+        weight=DefaultWeights.WEIGHT_BELOW_CA,
+        task_expression=expr,
+        lower_error=0.1,
+        upper_error=0.2,
+    )
+
+    with pytest.raises(DuplicateNameException):
+        col.add_equality_constraint(
+            name="same_name",
+            reference_velocity=0.2,
+            equality_bound=0.0,
+            weight=DefaultWeights.WEIGHT_BELOW_CA,
+            task_expression=expr,
+        )
+
+    col2 = ConstraintCollection()
+    col2.add_equality_constraint(
+        name="same_name",
+        reference_velocity=0.2,
+        equality_bound=0.0,
+        weight=DefaultWeights.WEIGHT_BELOW_CA,
+        task_expression=expr,
+    )
+
+    col.merge("prefix", col2)
+    assert any(c.name.startswith("prefix/") for c in col._constraints)
+
+    with pytest.raises(DuplicateNameException):
+        col.merge("", col2)
+
+    col3 = ConstraintCollection()
+    col3.add_equality_constraint(
+        name="same_name",
+        reference_velocity=0.2,
+        equality_bound=0.0,
+        weight=DefaultWeights.WEIGHT_BELOW_CA,
+        task_expression=expr,
+    )
+    constraint = EqualityConstraint(
+        name="same_name",
+        expression=expr,
+        bound=0.0,
+        normalization_factor=0.1,
+        quadratic_weight=DefaultWeights.WEIGHT_BELOW_CA,
+        lower_slack_limit=-float("inf"),
+        upper_slack_limit=float("inf"),
+        linear_weight=0,
+    )
+    col3._constraints.append(constraint)
+
+    with pytest.raises(DuplicateNameException):
+        col3._are_names_unique()
+
+    with pytest.raises(DuplicateNameException):
+        col2.merge("", col3)

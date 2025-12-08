@@ -61,6 +61,11 @@ class ConstraintCollection:
 
     def add_constraint(self, constraint: BaseConstraint):
         constraint.name = constraint.name or f"{len(self._constraints)}"
+        existing_names = {c.name for c in self._constraints}
+        if constraint.name in existing_names:
+            raise DuplicateNameException(
+                f"Constraint named {constraint.name} already exists."
+            )
         self._constraints.append(constraint)
 
     def _are_names_unique(self):
@@ -131,10 +136,6 @@ class ConstraintCollection:
             upper_slack_limit=upper_slack_limit,
             linear_weight=0,
         )
-        if constraint.name in self._constraints:
-            raise DuplicateNameException(
-                f"Constraint named {constraint.name} already exists."
-            )
         self.add_constraint(constraint)
 
     def add_inequality_constraint(
@@ -184,11 +185,6 @@ class ConstraintCollection:
             upper_slack_limit=upper_slack_limit,
             linear_weight=0,
         )
-        if name in self._constraints:
-            raise DuplicateNameException(
-                f"A constraint with name '{name}' already exists. "
-                f"You need to set a name, if you add multiple constraints."
-            )
         self.add_constraint(constraint)
 
     def add_point_goal_constraints(
@@ -374,8 +370,6 @@ class ConstraintCollection:
             upper_slack_limit=upper_slack_limit,
             linear_weight=0,
         )
-        if constraint.name in self._constraints:
-            raise KeyError(f"a constraint with name '{name}' already exists")
         self.add_constraint(constraint)
 
     def add_velocity_eq_constraint(
@@ -411,8 +405,6 @@ class ConstraintCollection:
             upper_slack_limit=upper_slack_limit,
             linear_weight=0,
         )
-        if constraint.name in self._constraints:
-            raise KeyError(f"a constraint with name '{name}' already exists")
         self.add_constraint(constraint)
 
     def add_velocity_eq_constraint_vector(
