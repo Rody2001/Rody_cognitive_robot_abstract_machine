@@ -16,6 +16,7 @@ from .mixins import (
     HasRegion,
     HasDrawers,
     HasDoors,
+    HasDishwashers,
 )
 from ..datastructures.variables import SpatialVariables
 from ..reasoning.predicates import InsideOf
@@ -48,14 +49,20 @@ class Container(HasBody): ...
 
 
 @dataclass(eq=False)
-class Fridge(SemanticAnnotation):
+class Fridge(Furniture, HasDrawers, HasDoors):
     """
     A semantic annotation representing a fridge that has a door and a body.
     """
 
     container: Container
-    door: Door
 
+@dataclass(eq=False)
+class Dishwasher(Furniture, HasDrawers, HasDoors):
+    container: Container = field(kw_only=True)
+
+@dataclass(eq=False)
+class CounterTop(Furniture, HasDrawers, HasDoors, HasDishwashers):
+    container: Container = field(kw_only=True)
 
 @dataclass(eq=False)
 class Table(Furniture, HasBody):
