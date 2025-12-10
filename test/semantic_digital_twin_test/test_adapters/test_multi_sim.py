@@ -52,8 +52,8 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
-headless = os.environ.get("CI", "false").lower() == "true"
-# headless = True
+# headless = os.environ.get("CI", "false").lower() == "true"
+headless = True
 
 
 @unittest.skipIf(not multi_sim_found, "multisim could not be imported.")
