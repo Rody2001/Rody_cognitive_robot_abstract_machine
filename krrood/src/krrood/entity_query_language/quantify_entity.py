@@ -56,6 +56,6 @@ def _quantify_entity(
     :param quantifier_kwargs: Keyword arguments to pass to the quantifier.
     :return: The quantified entity.
     """
-    if isinstance(entity_, SelectableMatchExpression):
-        return entity_._quantify_(quantifier, **quantifier_kwargs)
+    if isinstance(entity_, Match):
+        return entity_.quantify(quantifier, **quantifier_kwargs)
     return quantifier(entity_, **quantifier_kwargs)

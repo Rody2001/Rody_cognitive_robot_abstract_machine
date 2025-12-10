@@ -59,7 +59,7 @@ class QuantifierData:
 
 
 @dataclass
-class SelectableMatchExpression(CanBehaveLikeAVariable[T], ABC):
+class SelectableMatchExpression(CanBehaveLikeAVariable[T]):
     """
     Base class for all match expressions.
 
@@ -78,7 +78,9 @@ class SelectableMatchExpression(CanBehaveLikeAVariable[T], ABC):
         """
         This is to avoid running __post_init__ of C
         """
-        ...
+        self._var_ = self._match_expression_.variable
+        self._node_ = self._var_._node_
+        self._id_ = self._var_._id_
 
     def evaluate(self):
         """
@@ -91,42 +93,8 @@ class SelectableMatchExpression(CanBehaveLikeAVariable[T], ABC):
             attr = Attribute(_child_=self._var_, _attr_name_=item, _owner_class_=self._match_expression_.type)
             attribute_expression = AttributeMatch(parent=self._match_expression_, attr_name=item, variable=attr)
             selectable_attribute_expression = SelectableMatchExpression(_match_expression_=attribute_expression)
-            selectable_attribute_expression._update_var_(attribute_expression.variable)
             self._attribute_match_expressions_[item] = selectable_attribute_expression
         return self._attribute_match_expressions_[item]
-
-    def __call__(self, *args, **kwargs) -> Union[Self, T, CanBehaveLikeAVariable[T]]:
-        """
-        Update the match with new keyword arguments to constrain the type we are matching with.
-
-        :param kwargs: The keyword arguments to match against.
-        :return: The current match instance after updating it with the new keyword arguments.
-        """
-        self._match_expression_.kwargs = kwargs
-        return self
-
-    def domain_from(self, domain: DomainType):
-        """
-        Record the domain to use for the variable created by the match.
-        """
-        self._match_expression_.domain = domain
-        return self
-
-    def _quantify_(
-            self, quantifier: Type[ResultQuantifier], **quantifier_kwargs
-    ) -> Union[ResultQuantifier[T], T]:
-        """
-        Record the quantifier to be applied to the result of the match.
-        """
-        self._match_expression_.quantifier_data = QuantifierData(quantifier, quantifier_kwargs)
-        self._match_expression_.resolve()
-        self._update_var_(self._match_expression_.variable)
-        return self
-
-    def _update_var_(self, var: Selectable[T]):
-        self._var_ = var
-        self._node_ = var._node_
-        self._id_ = var._id_
 
     def _evaluate__(self, sources: Optional[Dict[int, Any]] = None, parent: Optional[SymbolicExpression] = None) -> \
             Iterable[OperationResult]:
@@ -170,10 +138,6 @@ class AbstractMatchExpression(Generic[T], ABC):
     parent: Optional[Match] = field(init=False, default=None)
     """
     The parent match if this is a nested match.
-    """
-    attribute_matches: Dict[str, AttributeMatch] = field(init=False, default_factory=dict)
-    """
-    A dictionary mapping attribute names to their corresponding attribute assignments.
     """
     node: Optional[RWXNode] = field(init=False, default=None)
     """
@@ -265,6 +229,33 @@ class Match(AbstractMatchExpression[T]):
     A list of selected attributes.
     """
 
+    def __call__(self, *args, **kwargs) -> Union[Self, T, CanBehaveLikeAVariable[T]]:
+        """
+        Update the match with new keyword arguments to constrain the type we are matching with.
+
+        :param kwargs: The keyword arguments to match against.
+        :return: The current match instance after updating it with the new keyword arguments.
+        """
+        self.kwargs = kwargs
+        return self
+
+    def quantify(
+            self, quantifier: Type[ResultQuantifier], **quantifier_kwargs
+    ) -> Union[ResultQuantifier[T], T]:
+        """
+        Record the quantifier to be applied to the result of the match.
+        """
+        self.quantifier_data = QuantifierData(quantifier, quantifier_kwargs)
+        self.resolve()
+        return SelectableMatchExpression(_match_expression_=self)
+
+    def domain_from(self, domain: DomainType):
+        """
+        Record the domain to use for the variable created by the match.
+        """
+        self.domain = domain
+        return self
+
     def resolve(
             self,
             variable: Optional[Selectable] = None,
@@ -280,12 +271,11 @@ class Match(AbstractMatchExpression[T]):
         """
         self.update_fields(variable, parent)
         for attr_name, attr_assigned_value in self.kwargs.items():
-            if isinstance(attr_assigned_value, Selectable):
+            if isinstance(attr_assigned_value, SelectableMatchExpression):
                 attr_assigned_value = attr_assigned_value._match_expression_
             attr_match = AttributeMatch(
                 parent=self, attr_name=attr_name, assigned_value=attr_assigned_value
             )
-            self.attribute_matches[attr_name] = attr_match
             if attr_match.is_an_unresolved_match:
                 attr_match.resolve(self)
                 self.conditions.extend(attr_match.conditions)
@@ -518,7 +508,7 @@ def match_any(
     Equivalent to matching(type_) but for existential checks.
     """
     match_ = matching(type_)
-    match_._match_expression_.existential = True
+    match_.existential = True
     return match_
 
 
@@ -529,7 +519,7 @@ def match_all(
     Equivalent to matching(type_) but for universal checks.
     """
     match_ = matching(type_)
-    match_._match_expression_.universal = True
+    match_.universal = True
     return match_
 
 
@@ -546,7 +536,7 @@ def select(
 
 def entity_matching(
         type_: Union[Type[T], CanBehaveLikeAVariable[T]], domain: DomainType
-) -> Union[Type[T], CanBehaveLikeAVariable[T], SelectableMatchExpression[T]]:
+) -> Union[Type[T], CanBehaveLikeAVariable[T], Match[T]]:
     """
     Same as :py:func:`krrood.entity_query_language.match.match` but with a domain to use for the variable created
      by the match.
@@ -556,9 +546,7 @@ def entity_matching(
     :return: The MatchEntity instance.
     """
     if isinstance(type_, CanBehaveLikeAVariable):
-        match_expression =  Match(_type=type_._type_, domain=domain, variable=type_)
+        return Match(_type=type_._type_, domain=domain, variable=type_)
     elif type_ and not isinstance(type_, type):
-        match_expression = Match(_type=type_, domain=domain, variable=Literal(type_))
-    else:
-        match_expression = Match(_type=type_, domain=domain)
-    return SelectableMatchExpression(_match_expression_=match_expression)
+        return Match(_type=type_, domain=domain, variable=Literal(type_))
+    return Match(_type=type_, domain=domain)
