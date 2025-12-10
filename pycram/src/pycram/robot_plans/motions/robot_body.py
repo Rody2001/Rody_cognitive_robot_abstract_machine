@@ -48,8 +48,6 @@ class MoveJointsMotion(BaseMotion):
 
     def perform(self):
         return
-        pm_manager = ProcessModuleManager().get_manager(self.robot_view)
-        return pm_manager.move_joints().execute(self)
 
     @property
     def _motion_chart(self):
@@ -62,15 +60,22 @@ class LookingMotion(BaseMotion):
     """
     Lets the robot look at a point
     """
+
     target: PoseStamped
+    """
+    Target pose to look at
+    """
 
     def perform(self):
         return
-        pm_manager = ProcessModuleManager().get_manager(self.robot_view)
-        return pm_manager.looking().execute(self)
 
     @property
     def _motion_chart(self):
         camera = list(self.robot_view.sensors)[0]
         camera.forward_facing_axis.reference_frame = camera.root
-        return Pointing(root_link=self.robot_view.torso.root, tip_link=camera.root, goal_point=self.target.to_spatial_type().to_position(), pointing_axis=camera.forward_facing_axis)
+        return Pointing(
+            root_link=self.robot_view.torso.root,
+            tip_link=camera.root,
+            goal_point=self.target.to_spatial_type().to_position(),
+            pointing_axis=camera.forward_facing_axis,
+        )
