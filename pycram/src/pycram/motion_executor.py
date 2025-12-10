@@ -86,7 +86,6 @@ class MotionExecutor:
                 for node in self.motion_state_chart.nodes
             ]
             failed_nodes = list(filter(None, failed_nodes))
-            failed_nodes[1].why()
             logger.error(f"Failed Nodes: {failed_nodes}")
             raise e
 
