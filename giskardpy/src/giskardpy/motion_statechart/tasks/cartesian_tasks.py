@@ -320,10 +320,10 @@ class CartesianPositionVelocityLimit(Task):
     that evaluates whether the current translational speed is within the limit.
 
     .. warning::
-       Strict Cartesian velocity limits typically require many constraints to be
-       added to the optimization problem and can substantially slow down the
-       system. If runtime or responsiveness is important,
-       prefer a larger limit or a softer (lower-weight) constraint
+       Strict Cartesian velocity limits require as many constraints as the prediction
+       horizon size, making the optimization problem more complex. This can impact
+       solve time especially at high control frequencies. If computation time is critical,
+       consider using larger limits or reducing the prediction horizon.
     """
 
     root_link: KinematicStructureEntity = field(kw_only=True)
@@ -336,8 +336,8 @@ class CartesianPositionVelocityLimit(Task):
     tip-frame translational velocity does not exceed this value."""
     weight: float = field(default=DefaultWeights.WEIGHT_ABOVE_CA, kw_only=True)
     """Optimization weight determining how strongly the linear velocity
-    limit is enforced. Larger values increase enforcement priority at the
-    cost of potentially making the optimization problem harder to solve."""
+    limit is enforced. Higher weights give this constraint soft priority
+    over lower weighted constraints when conflicts occur."""
 
     def build(self, context: BuildContext) -> NodeArtifacts:
         artifacts = NodeArtifacts()
@@ -374,10 +374,10 @@ class CartesianRotationVelocityLimit(Task):
     compliance with the defined angular velocity limits.
 
     .. warning::
-       Strict Cartesian velocity limits typically require many constraints to be
-       added to the optimization problem and can substantially slow down the
-       system. If runtime or responsiveness is important,
-       prefer a larger limit or a softer (lower-weight) constraint
+       Strict Cartesian velocity limits require as many constraints as the prediction
+       horizon size, making the optimization problem more complex. This can impact
+       solve time especially at high control frequencies. If computation time is critical,
+       consider using larger limits or reducing the prediction horizon.
     """
 
     root_link: KinematicStructureEntity = field(kw_only=True)
@@ -390,8 +390,8 @@ class CartesianRotationVelocityLimit(Task):
     rotation rate does not exceed this threshold."""
     weight: float = field(default=DefaultWeights.WEIGHT_ABOVE_CA, kw_only=True)
     """Optimization weight determining how strongly the rotational velocity
-    limit is enforced. Larger values increase enforcement priority at the
-    cost of potentially making the optimization problem harder to solve."""
+    limit is enforced. Higher weights give this constraint soft priority
+    over lower weighted constraints when conflicts occur."""
 
     def build(self, context: BuildContext) -> NodeArtifacts:
         artifacts = NodeArtifacts()
@@ -428,10 +428,10 @@ class CartesianVelocityLimit(Parallel):
     and CartesianRotationVelocityLimit tasks in parallel.
 
     .. warning::
-       Strict Cartesian velocity limits typically require many constraints to be
-       added to the optimization problem and can substantially slow down the
-       system. If runtime or responsiveness is important,
-       prefer larger limits or softer (lower-weight) constraints
+       Strict Cartesian velocity limits require as many constraints as the prediction
+       horizon size, making the optimization problem more complex. This can impact
+       solve time especially at high control frequencies. If computation time is critical,
+       consider using larger limits or reducing the prediction horizon.
     """
 
     root_link: KinematicStructureEntity = field(kw_only=True)
@@ -448,8 +448,8 @@ class CartesianVelocityLimit(Parallel):
     rotation rate does not exceed this threshold."""
     weight: float = field(default=DefaultWeights.WEIGHT_ABOVE_CA, kw_only=True)
     """Optimization weight determining how strongly both velocity
-    limits are enforced. Larger values increase enforcement priority at the
-    cost of potentially making the optimization problem harder to solve."""
+    limits are enforced. Higher weights give these constraints soft priority
+    over lower weighted constraints when conflicts occur."""
     nodes: List[MotionStatechartNode] = field(default_factory=list, init=False)
     """List of motion nodes that run in parallel and enforce the velocity limits.
     Contains a CartesianPositionVelocityLimit and CartesianRotationVelocityLimit node 
