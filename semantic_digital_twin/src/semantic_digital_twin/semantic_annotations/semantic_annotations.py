@@ -346,7 +346,7 @@ class Cereal(Food, IsPerceivable):
 
 
 @dataclass(eq=False)
-class MilkContainer(Container, IsPerceivable):
+class Milk(Container, Food, IsPerceivable):
     """
     A container of milk.
     """

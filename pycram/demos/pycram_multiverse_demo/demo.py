@@ -8,7 +8,7 @@ from pycram.designators.object_designator import ObjectPart
 from pycram.process_module import simulated_robot
 from pycram.robot_plans import *
 from semantic_digital_twin.semantic_annotations.semantic_annotations import (
-    MilkContainer,
+    Milk,
     Spoon,
 )
 
@@ -21,7 +21,7 @@ apartment = Object("apartment", pycrap.Apartment, f"apartment{extension}")
 
 milk = Object(
     "milk",
-    MilkContainer,
+    Milk,
     f"milk.xml",
     pose=PoseStamped.from_list([2.4, 2, 1.02]),
     color=Color(1, 0, 0, 1),
@@ -54,7 +54,7 @@ with simulated_robot:
     milk_desig = (
         DetectAction(
             DetectionTechnique.TYPES,
-            object_designator_description=BelieveObject(types=[MilkContainer]),
+            object_designator_description=BelieveObject(types=[Milk]),
         )
         .resolve()
         .perform()[0]

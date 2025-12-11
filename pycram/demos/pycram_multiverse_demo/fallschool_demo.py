@@ -12,9 +12,7 @@ from pycrap.ontologies import PhysicalObject
 from pycram.datastructures.dataclasses import Color
 from pycram.process_module import with_simulated_robot, real_robot
 from pycram.robot_plans import *
-from semantic_digital_twin.semantic_annotations.semantic_annotations import (
-    MilkContainer,
-)
+from semantic_digital_twin.semantic_annotations.semantic_annotations import Milk
 from ..tf_transformations import quaternion_from_euler
 
 
@@ -54,7 +52,7 @@ WorldStateUpdater(
 apartment = Object("apartment", pycrap.Apartment, f"apartment.urdf")
 milk = Object(
     "milk",
-    MilkContainer,
+    Milk,
     milk_path,
     pose=PoseStamped.from_list([0.4, 2.6, 1.34], [1, 0, 0, 0]),
     color=Color(1, 0, 0, 1),
