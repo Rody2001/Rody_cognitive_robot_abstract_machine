@@ -11,6 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 class TextToImagePublisher:
+    """
+    Publishes a text message to the display of HSR.
+
+    create new Publisher land publish text ike this
+    text_pub = TextToImagePublisher()
+    text_pub.publish_text("Hello my name is Toya")
+    """
     def __init__(self, topic_name: str = "/head_display/text_to_image"):
         self.is_init = False
         self.topic_name = topic_name
@@ -33,11 +40,12 @@ class TextToImagePublisher:
         self.node = rclpy.create_node("text_publisher_node")
         self.publisher = self.node.create_publisher(String, self.topic_name, reliable_qos)
 
-        self.first_screen()
+        for i in range(3):
+            self.publish_text("")
         self.is_init = True
 
         # wait a few seconds to ensure the screen is initialized
-        time.sleep(3)
+        time.sleep(2)
 
         logger.info("TextImagePublisher initialized")
 
@@ -46,7 +54,6 @@ class TextToImagePublisher:
         """
         Publishes a text message to the display of HSR.
         """
-        self._init_interface()
 
         msg = String()
         msg.data = text
@@ -55,47 +62,3 @@ class TextToImagePublisher:
         time.sleep(1)
 
         logger.info("Published new text to image display")
-
-
-    def first_screen(self):
-        """
-        Triggers the first screen update.
-        The initial image takes a few seconds to appear.
-        """
-
-        if not self.publisher:
-            return
-
-        msg = String()
-        msg.data = ""
-
-        # first few images are not shown
-        for _ in range(6):
-            self.publisher.publish(msg)
-        time.sleep(1)
-
-
-    def shutdown(self):
-        """
-        Shuts down the ROS node.
-        """
-        if self.node:
-            self.node.destroy_node()
-
-        logger.info("TextImagePublisher shut down")
-
-
-def example_use():
-    # create new Publisher like this
-    text_pub = TextToImagePublisher()
-
-    # display Text like this
-    # if you spam text, it will only stay on the display for a second
-    # maybe add a time.sleep() before publishing the next image
-    text_pub.publish_text("Hello my name is Toya")
-    time.sleep(1)
-    text_pub.publish_text("What is your name?")
-    time.sleep(1)
-    text_pub.publish_text("This is a test")
-
-example_use()
