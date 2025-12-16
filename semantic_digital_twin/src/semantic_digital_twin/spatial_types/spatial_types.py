@@ -25,6 +25,7 @@ from krrood.symbolic_math.exceptions import (
     WrongDimensionsError,
     UnsupportedOperationError,
 )
+from krrood.symbolic_math.symbolic_math import Matrix, to_sx
 from ..adapters.world_entity_kwargs_tracker import (
     KinematicStructureEntityKwargsTracker,
 )
@@ -468,7 +469,9 @@ class RotationMatrix(sm.Expression, SpatialType, SubclassJSONSerializer):
         """
         if data is None:
             data = np.eye(4)
-        self._casadi_sx = sm.to_sx(data)
+        empty_data = to_sx(Matrix.eye(4))
+        empty_data[:3, :3] = sm.to_sx(data)[:3, :3]
+        self._casadi_sx = empty_data
         self.reference_frame = reference_frame
         if sanity_check:
             self._validate()

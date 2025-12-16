@@ -298,9 +298,9 @@ class ViewDependentSpatialRelation(SpatialRelation, ABC):
         front_world = ref_np[:3, index]
         front_norm = front_world / (np.linalg.norm(front_world) + self.eps)
         front_norm = Vector3(
-            x_init=front_norm[0],
-            y_init=front_norm[1],
-            z_init=front_norm[2],
+            x=front_norm[0],
+            y=front_norm[1],
+            z=front_norm[2],
             reference_frame=self.point_of_semantic_annotation.reference_frame,
         )
 

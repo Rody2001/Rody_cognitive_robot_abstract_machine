@@ -185,10 +185,10 @@ class InertialConverter:
         R_diag = Rotation.from_matrix(eigenvectors)  # type: ignore
         updated_quat = (R_orig * R_diag).as_quat(scalar_first=True)
         return Quaternion(
-            x_init=updated_quat[1],
-            y_init=updated_quat[2],
-            z_init=updated_quat[3],
-            w_init=updated_quat[0],
+            x=updated_quat[1],
+            y=updated_quat[2],
+            z=updated_quat[3],
+            w=updated_quat[0],
         )
 
 

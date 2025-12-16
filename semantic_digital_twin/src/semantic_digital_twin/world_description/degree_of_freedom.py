@@ -2,27 +2,29 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from uuid import UUID
 
-from krrood.adapters.json_serializer import SubclassJSONSerializer, from_json
 from typing_extensions import Dict, Any
 
-from .world_entity import WorldEntity, WorldEntityWithID
+import krrood.symbolic_math.symbolic_math as cas
+from krrood.adapters.json_serializer import SubclassJSONSerializer, from_json
+from .world_entity import WorldEntityWithID
 from ..datastructures.prefixed_name import PrefixedName
 from ..exceptions import UsageError
-import krrood.symbolic_math.symbolic_math as cas
 from ..spatial_types.derivatives import Derivatives, DerivativeMap
 
 
-@dataclass(eq=False)
+@dataclass(eq=False, init=False)
 class PositionVariable(cas.FloatVariable):
     """
     Describes the position of a degree of freedom.
     """
 
-    name: PrefixedName = field(kw_only=True)
     dof: DegreeOfFreedom = field(kw_only=True)
     """ Backreference """
+
+    def __init__(self, name: str, dof: DegreeOfFreedom):
+        super().__init__(name)
+        self.dof = dof
 
     def resolve(self) -> float:
         return self.dof._world.state[self.dof.id].position
@@ -34,9 +36,12 @@ class VelocityVariable(cas.FloatVariable):
     Describes the velocity of a degree of freedom.
     """
 
-    name: PrefixedName = field(kw_only=True)
     dof: DegreeOfFreedom = field(kw_only=True)
     """ Backreference """
+
+    def __init__(self, name: str, dof: DegreeOfFreedom):
+        super().__init__(name)
+        self.dof = dof
 
     def resolve(self) -> float:
         return self.dof._world.state[self.dof.id].velocity
@@ -48,9 +53,12 @@ class AccelerationVariable(cas.FloatVariable):
     Describes the acceleration of a degree of freedom.
     """
 
-    name: PrefixedName = field(kw_only=True)
     dof: DegreeOfFreedom = field(kw_only=True)
     """ Backreference """
+
+    def __init__(self, name: str, dof: DegreeOfFreedom):
+        super().__init__(name)
+        self.dof = dof
 
     def resolve(self) -> float:
         return self.dof._world.state[self.dof.id].acceleration
@@ -62,9 +70,12 @@ class JerkVariable(cas.FloatVariable):
     Describes the jerk of a degree of freedom.
     """
 
-    name: PrefixedName = field(kw_only=True)
     dof: DegreeOfFreedom = field(kw_only=True)
     """ Backreference """
+
+    def __init__(self, name: str, dof: DegreeOfFreedom):
+        super().__init__(name)
+        self.dof = dof
 
     def resolve(self) -> float:
         return self.dof._world.state[self.dof.id].jerk
@@ -114,16 +125,16 @@ class DegreeOfFreedom(WorldEntityWithID, SubclassJSONSerializer):
         """
         assert self._world is not None
         self.variables.data[Derivatives.position] = PositionVariable(
-            name=PrefixedName("position", prefix=str(self.name)), dof=self
+            name=str(PrefixedName("position", prefix=str(self.name))), dof=self
         )
         self.variables.data[Derivatives.velocity] = VelocityVariable(
-            name=PrefixedName("velocity", prefix=str(self.name)), dof=self
+            name=str(PrefixedName("velocity", prefix=str(self.name))), dof=self
         )
         self.variables.data[Derivatives.acceleration] = AccelerationVariable(
-            name=PrefixedName("acceleration", prefix=str(self.name)), dof=self
+            name=str(PrefixedName("acceleration", prefix=str(self.name))), dof=self
         )
         self.variables.data[Derivatives.jerk] = JerkVariable(
-            name=PrefixedName("jerk", prefix=str(self.name)), dof=self
+            name=str(PrefixedName("jerk", prefix=str(self.name))), dof=self
         )
 
     def has_position_limits(self) -> bool:

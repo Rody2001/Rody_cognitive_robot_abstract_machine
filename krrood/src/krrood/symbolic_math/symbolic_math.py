@@ -1226,28 +1226,28 @@ class Matrix(Expression):
         - Matrix with identical shape: allowed.
         Otherwise, raise WrongDimensionsError.
         """
-        # Scalars are always compatible
-        if isinstance(other, Scalar):
-            return other.casadi_sx
+        other_sx = to_sx(other)
+        if other_sx.is_scalar():
+            return other_sx
         # Exact same shape → no broadcasting required
-        if self.shape == other.shape:
-            return other.casadi_sx
+        if self.shape == other_sx.shape:
+            return other_sx
         # Vector row broadcasting: (1, n) with matching columns
         if (
             isinstance(other, Vector)
-            and other.shape[0] == 1
-            and other.shape[1] == self.shape[1]
+            and other_sx.shape[0] == 1
+            and other_sx.shape[1] == self.shape[1]
         ):
-            return ca.repmat(other.casadi_sx, self.shape[0], 1)
+            return ca.repmat(other_sx, self.shape[0], 1)
         # Vector column broadcasting: (n, 1) with matching rows
         if (
             isinstance(other, Vector)
-            and other.shape[1] == 1
-            and other.shape[0] == self.shape[0]
+            and other_sx.shape[1] == 1
+            and other_sx.shape[0] == self.shape[0]
         ):
-            return ca.repmat(other.casadi_sx, 1, self.shape[1])
+            return ca.repmat(other_sx, 1, self.shape[1])
         # If we reach here, shapes are incompatible
-        raise WrongDimensionsError(self.shape, other.shape)
+        raise WrongDimensionsError(self.shape, other_sx.shape)
 
     @classmethod
     def zeros(cls, rows: int, columns: int) -> Self:

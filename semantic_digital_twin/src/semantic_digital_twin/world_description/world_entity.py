@@ -208,9 +208,9 @@ class KinematicStructureEntity(WorldEntityWithID, SubclassJSONSerializer, ABC):
         com_local: np.ndarray[np.float64] = self.combined_mesh.center_mass  # (3,)
         # Transform to world frame using the body's global pose
         com = Point3(
-            x_init=com_local[0],
-            y_init=com_local[1],
-            z_init=com_local[2],
+            x=com_local[0],
+            y=com_local[1],
+            z=com_local[2],
             reference_frame=self,
         )
         world = self._world

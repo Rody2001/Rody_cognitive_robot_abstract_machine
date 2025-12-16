@@ -451,15 +451,15 @@ class Connection6DoF(Connection):
     def add_to_world(self, world: World):
         super().add_to_world(world)
         parent_P_child = cas.Point3(
-            x_init=self.x.variables.position,
-            y_init=self.y.variables.position,
-            z_init=self.z.variables.position,
+            x=self.x.variables.position,
+            y=self.y.variables.position,
+            z=self.z.variables.position,
         )
         parent_R_child = cas.Quaternion(
-            x_init=self.qx.variables.position,
-            y_init=self.qy.variables.position,
-            z_init=self.qz.variables.position,
-            w_init=self.qw.variables.position,
+            x=self.qx.variables.position,
+            y=self.qy.variables.position,
+            z=self.qz.variables.position,
+            w=self.qw.variables.position,
         ).to_rotation_matrix()
         self._kinematics = (
             cas.HomogeneousTransformationMatrix.from_point_rotation_matrix(

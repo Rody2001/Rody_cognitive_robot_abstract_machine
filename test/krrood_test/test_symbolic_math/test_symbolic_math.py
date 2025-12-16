@@ -1222,6 +1222,9 @@ class TestMatrix:
             result = op(m1, s1)
             assert isinstance(result, cas.Matrix), f"{op.__name__} result is not Matrix"
             assert np.allclose(result, expected), f"{op.__name__} result is wrong"
+            assert np.allclose(
+                result, op(m1, s1_float)
+            ), f"{op.__name__} result is wrong"
             assert (
                 result.shape == expected.shape
             ), f"{op.__name__} result shape is wrong"
