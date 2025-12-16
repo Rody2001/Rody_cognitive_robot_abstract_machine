@@ -184,7 +184,7 @@ class SubclassJSONSerializer:
             JSONSerializableTypeRegistry().get_external_serializer(target_cls)
         )
 
-        return external_json_deserializer.deserialize(data, clazz=target_cls, **kwargs)
+        return external_json_deserializer.from_json(data, clazz=target_cls, **kwargs)
 
 
 def from_json(data: Dict[str, Any], **kwargs) -> Union[SubclassJSONSerializer, Any]:
@@ -226,12 +226,32 @@ T = TypeVar("T")
 
 @dataclass
 class ExternalClassJSONSerializer(HasGeneric[T], ABC):
+    """
+    ABC for all added JSON de/serializers that are outside the control of your classes.
+
+    Create a new subclass of this class pointing to your original class whenever you can't change its inheritance path
+    to `SubclassJSONSerializer`.
+    """
 
     @classmethod
-    def to_json(cls, obj: Any) -> Dict[str, Any]: ...
+    def to_json(cls, obj: Any) -> Dict[str, Any]:
+        """
+        Convert an object to a JSON serializable dictionary.
+
+        :param obj: The object to convert.
+        :return: The JSON serializable dictionary.
+        """
 
     @classmethod
-    def deserialize(cls, data: Dict[str, Any], clazz: Type[T], **kwargs) -> Any: ...
+    def from_json(cls, data: Dict[str, Any], clazz: Type[T], **kwargs) -> Any:
+        """
+        Create a class instance from a JSON serializable dictionary.
+
+        :param data: The JSON serializable dictionary.
+        :param clazz: The class type to instantiate.
+        :param kwargs: Additional keyword arguments for instantiation.
+        :return: The instantiated class object.
+        """
 
 
 @dataclass
@@ -245,7 +265,7 @@ class UUIDJSONSerializer(ExternalClassJSONSerializer[uuid.UUID]):
         }
 
     @classmethod
-    def deserialize(
+    def from_json(
         cls, data: Dict[str, Any], clazz: Type[uuid.UUID], **kwargs
     ) -> uuid.UUID:
         return clazz(data["value"])
@@ -262,7 +282,7 @@ class EnumJSONSerializer(ExternalClassJSONSerializer[enum.Enum]):
         }
 
     @classmethod
-    def deserialize(
+    def from_json(
         cls, data: Dict[str, Any], clazz: Type[enum.Enum], **kwargs
     ) -> enum.Enum:
         return clazz[data["name"]]
