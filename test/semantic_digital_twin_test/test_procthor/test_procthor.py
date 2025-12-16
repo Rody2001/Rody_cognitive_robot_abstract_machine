@@ -5,10 +5,9 @@ from dataclasses import asdict
 
 import numpy as np
 from pkg_resources import resource_filename
-
-from krrood.ormatic.utils import create_engine
 from sqlalchemy.orm import Session
 
+from krrood.ormatic.utils import create_engine
 from semantic_digital_twin.adapters.procthor.procthor_parser import (
     ProcTHORParser,
     ProcthorRoom,
@@ -17,10 +16,10 @@ from semantic_digital_twin.adapters.procthor.procthor_parser import (
     ProcthorWall,
     ProcthorObject,
 )
-from semantic_digital_twin.adapters.procthor.procthor_semantic_annotations import (
+from semantic_digital_twin.adapters.procthor.procthor_resolver import (
     ProcthorResolver,
-    Bread,
 )
+from semantic_digital_twin.semantic_annotations.semantic_annotations import Bread
 from semantic_digital_twin.spatial_types.spatial_types import (
     HomogeneousTransformationMatrix,
 )
