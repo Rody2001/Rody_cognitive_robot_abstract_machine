@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from typing_extensions import Any, Dict, TYPE_CHECKING
+from typing_extensions import TYPE_CHECKING
 
-from krrood.adapters.json_serializer import JSON_TYPE_NAME, JSONSerializableTypeRegistry
 from krrood.symbolic_math.symbolic_math import FloatVariable, Scalar
-from krrood.utils import get_full_class_name
 
 if TYPE_CHECKING:
     from giskardpy.motion_statechart.graph_node import (
@@ -114,19 +112,3 @@ class NonObservationVariableError(InvalidConditionError):
     def __post_init__(self):
         self.reason = f'Contains "{self.non_observation_variable}", which is not an observation variable.'
         super().__post_init__()
-
-
-def serialize_exception(obj: Exception) -> Dict[str, Any]:
-    return {
-        JSON_TYPE_NAME: get_full_class_name(type(obj)),
-        "value": str(obj),
-    }
-
-
-def deserialize_exception(data: Dict[str, Any], **kwargs) -> Exception:
-    return Exception(data["value"])
-
-
-JSONSerializableTypeRegistry().register(
-    Exception, serialize_exception, deserialize_exception
-)

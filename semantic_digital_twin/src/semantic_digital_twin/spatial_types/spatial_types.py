@@ -1,10 +1,10 @@
 from __future__ import annotations
-import numpy as np
+
 from copy import deepcopy, copy
 from dataclasses import dataclass, field
-from enum import IntEnum
 
 import casadi as ca
+import numpy as np
 from typing_extensions import (
     Any,
     TYPE_CHECKING,
@@ -19,8 +19,8 @@ from typing_extensions import (
     TypeVar,
 )
 
-from krrood.adapters.json_serializer import SubclassJSONSerializer, from_json, to_json
 import krrood.symbolic_math.symbolic_math as sm
+from krrood.adapters.json_serializer import SubclassJSONSerializer, from_json, to_json
 from krrood.symbolic_math.exceptions import (
     WrongDimensionsError,
     UnsupportedOperationError,
@@ -108,7 +108,7 @@ class SpatialType:
                     continue
                 if reference_frame != spatial_object.reference_frame:
                     raise SpatialTypesError(
-                        f"Reference frames of input parameters don't match ({reference_frame} != {spatial_object.reference_frame})."
+                        message=f"Reference frames of input parameters don't match ({reference_frame} != {spatial_object.reference_frame})."
                     )
         return reference_frame
 
@@ -656,7 +656,9 @@ class RotationMatrix(sm.Expression, SpatialType, SubclassJSONSerializer):
         - x, y, and z provided: all three used directly
         """
         if x is None and y is None and z is None:
-            raise SpatialTypesError("from_vectors requires at least two vectors")
+            raise SpatialTypesError(
+                message="from_vectors requires at least two vectors"
+            )
         if x is not None and y is not None and z is None:
             z = x.cross(y)
         elif x is not None and y is None and z is not None:

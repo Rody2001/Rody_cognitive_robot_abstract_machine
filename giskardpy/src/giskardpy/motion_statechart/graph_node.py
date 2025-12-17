@@ -17,7 +17,6 @@ from typing_extensions import (
 )
 
 import krrood.symbolic_math.symbolic_math as sm
-import krrood.symbolic_math.symbolic_math as cas
 from giskardpy.motion_statechart.context import BuildContext, ExecutionContext
 from giskardpy.motion_statechart.data_types import (
     LifeCycleValues,
