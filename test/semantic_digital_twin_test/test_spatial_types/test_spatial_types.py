@@ -1197,7 +1197,7 @@ class TestTransformationMatrix:
 
         t = HomogeneousTransformationMatrix.from_point_rotation_matrix(p, r)
         assert t.reference_frame == reference_frame
-        assert t.child_frame == None
+        assert t.child_frame is None
 
         with pytest.raises(SpatialTypesError):
             t = HomogeneousTransformationMatrix.from_point_rotation_matrix(
