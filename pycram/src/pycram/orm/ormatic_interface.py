@@ -81,192 +81,199 @@ class Base(DeclarativeBase):
 executiondatadao_added_world_modifications_association = Table(
     "executiondatadao_added_world_modifications_association",
     Base.metadata,
-    Column("executiondatadao_id", ForeignKey("ExecutionDataDAO.database_id")),
+    Column("source_executiondatadao_id", ForeignKey("ExecutionDataDAO.database_id")),
     Column(
-        "worldmodelmodificationblockdao_id",
+        "target_worldmodelmodificationblockdao_id",
         ForeignKey("WorldModelModificationBlockDAO.database_id"),
     ),
 )
 hasdrawersdao_drawers_association = Table(
     "hasdrawersdao_drawers_association",
     Base.metadata,
-    Column("hasdrawersdao_id", ForeignKey("HasDrawersDAO.database_id")),
-    Column("drawerdao_id", ForeignKey("DrawerDAO.database_id")),
+    Column("source_hasdrawersdao_id", ForeignKey("HasDrawersDAO.database_id")),
+    Column("target_drawerdao_id", ForeignKey("DrawerDAO.database_id")),
 )
 movetcpwaypointsmotiondao_waypoints_association = Table(
     "movetcpwaypointsmotiondao_waypoints_association",
     Base.metadata,
     Column(
-        "movetcpwaypointsmotiondao_id",
+        "source_movetcpwaypointsmotiondao_id",
         ForeignKey("MoveTCPWaypointsMotionDAO.database_id"),
     ),
-    Column("posestampeddao_id", ForeignKey("PoseStampedDAO.database_id")),
+    Column("target_posestampeddao_id", ForeignKey("PoseStampedDAO.database_id")),
 )
 planmappingdao_nodes_association = Table(
     "planmappingdao_nodes_association",
     Base.metadata,
-    Column("planmappingdao_id", ForeignKey("PlanMappingDAO.database_id")),
-    Column("plannodemappingdao_id", ForeignKey("PlanNodeMappingDAO.database_id")),
+    Column("source_planmappingdao_id", ForeignKey("PlanMappingDAO.database_id")),
+    Column(
+        "target_plannodemappingdao_id", ForeignKey("PlanNodeMappingDAO.database_id")
+    ),
 )
 planmappingdao_edges_association = Table(
     "planmappingdao_edges_association",
     Base.metadata,
-    Column("planmappingdao_id", ForeignKey("PlanMappingDAO.database_id")),
-    Column("planedgedao_id", ForeignKey("PlanEdgeDAO.database_id")),
+    Column("source_planmappingdao_id", ForeignKey("PlanMappingDAO.database_id")),
+    Column("target_planedgedao_id", ForeignKey("PlanEdgeDAO.database_id")),
 )
 hasaperturesdao_apertures_association = Table(
     "hasaperturesdao_apertures_association",
     Base.metadata,
-    Column("hasaperturesdao_id", ForeignKey("HasAperturesDAO.database_id")),
-    Column("aperturedao_id", ForeignKey("ApertureDAO.database_id")),
+    Column("source_hasaperturesdao_id", ForeignKey("HasAperturesDAO.database_id")),
+    Column("target_aperturedao_id", ForeignKey("ApertureDAO.database_id")),
 )
 hasdoorsdao_doors_association = Table(
     "hasdoorsdao_doors_association",
     Base.metadata,
-    Column("hasdoorsdao_id", ForeignKey("HasDoorsDAO.database_id")),
-    Column("doordao_id", ForeignKey("DoorDAO.database_id")),
+    Column("source_hasdoorsdao_id", ForeignKey("HasDoorsDAO.database_id")),
+    Column("target_doordao_id", ForeignKey("DoorDAO.database_id")),
 )
 shapecollectiondao_shapes_association = Table(
     "shapecollectiondao_shapes_association",
     Base.metadata,
-    Column("shapecollectiondao_id", ForeignKey("ShapeCollectionDAO.database_id")),
-    Column("shapedao_id", ForeignKey("ShapeDAO.database_id")),
+    Column(
+        "source_shapecollectiondao_id", ForeignKey("ShapeCollectionDAO.database_id")
+    ),
+    Column("target_shapedao_id", ForeignKey("ShapeDAO.database_id")),
 )
 worldmappingdao_kinematic_structure_entities_association = Table(
     "worldmappingdao_kinematic_structure_entities_association",
     Base.metadata,
-    Column("worldmappingdao_id", ForeignKey("WorldMappingDAO.database_id")),
+    Column("source_worldmappingdao_id", ForeignKey("WorldMappingDAO.database_id")),
     Column(
-        "kinematicstructureentitydao_id",
+        "target_kinematicstructureentitydao_id",
         ForeignKey("KinematicStructureEntityDAO.database_id"),
     ),
 )
 worldmappingdao_connections_association = Table(
     "worldmappingdao_connections_association",
     Base.metadata,
-    Column("worldmappingdao_id", ForeignKey("WorldMappingDAO.database_id")),
-    Column("connectiondao_id", ForeignKey("ConnectionDAO.database_id")),
+    Column("source_worldmappingdao_id", ForeignKey("WorldMappingDAO.database_id")),
+    Column("target_connectiondao_id", ForeignKey("ConnectionDAO.database_id")),
 )
 worldmappingdao_semantic_annotations_association = Table(
     "worldmappingdao_semantic_annotations_association",
     Base.metadata,
-    Column("worldmappingdao_id", ForeignKey("WorldMappingDAO.database_id")),
-    Column("semanticannotationdao_id", ForeignKey("SemanticAnnotationDAO.database_id")),
+    Column("source_worldmappingdao_id", ForeignKey("WorldMappingDAO.database_id")),
+    Column(
+        "target_semanticannotationdao_id",
+        ForeignKey("SemanticAnnotationDAO.database_id"),
+    ),
 )
 worldmappingdao_degrees_of_freedom_association = Table(
     "worldmappingdao_degrees_of_freedom_association",
     Base.metadata,
-    Column("worldmappingdao_id", ForeignKey("WorldMappingDAO.database_id")),
+    Column("source_worldmappingdao_id", ForeignKey("WorldMappingDAO.database_id")),
     Column(
-        "degreeoffreedommappingdao_id",
+        "target_degreeoffreedommappingdao_id",
         ForeignKey("DegreeOfFreedomMappingDAO.database_id"),
     ),
 )
 doubledoordao_doors_association = Table(
     "doubledoordao_doors_association",
     Base.metadata,
-    Column("doubledoordao_id", ForeignKey("DoubleDoorDAO.database_id")),
-    Column("doordao_id", ForeignKey("DoorDAO.database_id")),
+    Column("source_doubledoordao_id", ForeignKey("DoubleDoorDAO.database_id")),
+    Column("target_doordao_id", ForeignKey("DoorDAO.database_id")),
 )
 cabinetdao_doors_association = Table(
     "cabinetdao_doors_association",
     Base.metadata,
-    Column("cabinetdao_id", ForeignKey("CabinetDAO.database_id")),
-    Column("doordao_id", ForeignKey("DoorDAO.database_id")),
+    Column("source_cabinetdao_id", ForeignKey("CabinetDAO.database_id")),
+    Column("target_doordao_id", ForeignKey("DoorDAO.database_id")),
 )
 cabinetdao_drawers_association = Table(
     "cabinetdao_drawers_association",
     Base.metadata,
-    Column("cabinetdao_id", ForeignKey("CabinetDAO.database_id")),
-    Column("drawerdao_id", ForeignKey("DrawerDAO.database_id")),
+    Column("source_cabinetdao_id", ForeignKey("CabinetDAO.database_id")),
+    Column("target_drawerdao_id", ForeignKey("DrawerDAO.database_id")),
 )
 cupboarddao_doors_association = Table(
     "cupboarddao_doors_association",
     Base.metadata,
-    Column("cupboarddao_id", ForeignKey("CupboardDAO.database_id")),
-    Column("doordao_id", ForeignKey("DoorDAO.database_id")),
+    Column("source_cupboarddao_id", ForeignKey("CupboardDAO.database_id")),
+    Column("target_doordao_id", ForeignKey("DoorDAO.database_id")),
 )
 dresserdao_doors_association = Table(
     "dresserdao_doors_association",
     Base.metadata,
-    Column("dresserdao_id", ForeignKey("DresserDAO.database_id")),
-    Column("doordao_id", ForeignKey("DoorDAO.database_id")),
+    Column("source_dresserdao_id", ForeignKey("DresserDAO.database_id")),
+    Column("target_doordao_id", ForeignKey("DoorDAO.database_id")),
 )
 dresserdao_drawers_association = Table(
     "dresserdao_drawers_association",
     Base.metadata,
-    Column("dresserdao_id", ForeignKey("DresserDAO.database_id")),
-    Column("drawerdao_id", ForeignKey("DrawerDAO.database_id")),
+    Column("source_dresserdao_id", ForeignKey("DresserDAO.database_id")),
+    Column("target_drawerdao_id", ForeignKey("DrawerDAO.database_id")),
 )
 fridgedao_drawers_association = Table(
     "fridgedao_drawers_association",
     Base.metadata,
-    Column("fridgedao_id", ForeignKey("FridgeDAO.database_id")),
-    Column("drawerdao_id", ForeignKey("DrawerDAO.database_id")),
+    Column("source_fridgedao_id", ForeignKey("FridgeDAO.database_id")),
+    Column("target_drawerdao_id", ForeignKey("DrawerDAO.database_id")),
 )
 fridgedao_doors_association = Table(
     "fridgedao_doors_association",
     Base.metadata,
-    Column("fridgedao_id", ForeignKey("FridgeDAO.database_id")),
-    Column("doordao_id", ForeignKey("DoorDAO.database_id")),
+    Column("source_fridgedao_id", ForeignKey("FridgeDAO.database_id")),
+    Column("target_doordao_id", ForeignKey("DoorDAO.database_id")),
 )
 wardrobedao_doors_association = Table(
     "wardrobedao_doors_association",
     Base.metadata,
-    Column("wardrobedao_id", ForeignKey("WardrobeDAO.database_id")),
-    Column("doordao_id", ForeignKey("DoorDAO.database_id")),
+    Column("source_wardrobedao_id", ForeignKey("WardrobeDAO.database_id")),
+    Column("target_doordao_id", ForeignKey("DoorDAO.database_id")),
 )
 wardrobedao_drawers_association = Table(
     "wardrobedao_drawers_association",
     Base.metadata,
-    Column("wardrobedao_id", ForeignKey("WardrobeDAO.database_id")),
-    Column("drawerdao_id", ForeignKey("DrawerDAO.database_id")),
+    Column("source_wardrobedao_id", ForeignKey("WardrobeDAO.database_id")),
+    Column("target_drawerdao_id", ForeignKey("DrawerDAO.database_id")),
 )
 walldao_apertures_association = Table(
     "walldao_apertures_association",
     Base.metadata,
-    Column("walldao_id", ForeignKey("WallDAO.database_id")),
-    Column("aperturedao_id", ForeignKey("ApertureDAO.database_id")),
+    Column("source_walldao_id", ForeignKey("WallDAO.database_id")),
+    Column("target_aperturedao_id", ForeignKey("ApertureDAO.database_id")),
 )
 abstractrobotdao_manipulators_association = Table(
     "abstractrobotdao_manipulators_association",
     Base.metadata,
-    Column("abstractrobotdao_id", ForeignKey("AbstractRobotDAO.database_id")),
-    Column("manipulatordao_id", ForeignKey("ManipulatorDAO.database_id")),
+    Column("source_abstractrobotdao_id", ForeignKey("AbstractRobotDAO.database_id")),
+    Column("target_manipulatordao_id", ForeignKey("ManipulatorDAO.database_id")),
 )
 abstractrobotdao_sensors_association = Table(
     "abstractrobotdao_sensors_association",
     Base.metadata,
-    Column("abstractrobotdao_id", ForeignKey("AbstractRobotDAO.database_id")),
-    Column("sensordao_id", ForeignKey("SensorDAO.database_id")),
+    Column("source_abstractrobotdao_id", ForeignKey("AbstractRobotDAO.database_id")),
+    Column("target_sensordao_id", ForeignKey("SensorDAO.database_id")),
 )
 abstractrobotdao_manipulator_chains_association = Table(
     "abstractrobotdao_manipulator_chains_association",
     Base.metadata,
-    Column("abstractrobotdao_id", ForeignKey("AbstractRobotDAO.database_id")),
-    Column("kinematicchaindao_id", ForeignKey("KinematicChainDAO.database_id")),
+    Column("source_abstractrobotdao_id", ForeignKey("AbstractRobotDAO.database_id")),
+    Column("target_kinematicchaindao_id", ForeignKey("KinematicChainDAO.database_id")),
 )
 abstractrobotdao_sensor_chains_association = Table(
     "abstractrobotdao_sensor_chains_association",
     Base.metadata,
-    Column("abstractrobotdao_id", ForeignKey("AbstractRobotDAO.database_id")),
-    Column("kinematicchaindao_id", ForeignKey("KinematicChainDAO.database_id")),
+    Column("source_abstractrobotdao_id", ForeignKey("AbstractRobotDAO.database_id")),
+    Column("target_kinematicchaindao_id", ForeignKey("KinematicChainDAO.database_id")),
 )
 kinematicchaindao_sensors_association = Table(
     "kinematicchaindao_sensors_association",
     Base.metadata,
-    Column("kinematicchaindao_id", ForeignKey("KinematicChainDAO.database_id")),
-    Column("sensordao_id", ForeignKey("SensorDAO.database_id")),
+    Column("source_kinematicchaindao_id", ForeignKey("KinematicChainDAO.database_id")),
+    Column("target_sensordao_id", ForeignKey("SensorDAO.database_id")),
 )
 worldmodelmodificationblockdao_modifications_association = Table(
     "worldmodelmodificationblockdao_modifications_association",
     Base.metadata,
     Column(
-        "worldmodelmodificationblockdao_id",
+        "source_worldmodelmodificationblockdao_id",
         ForeignKey("WorldModelModificationBlockDAO.database_id"),
     ),
     Column(
-        "worldmodelmodificationdao_id",
+        "target_worldmodelmodificationdao_id",
         ForeignKey("WorldModelModificationDAO.database_id"),
     ),
 )
@@ -810,6 +817,8 @@ class ExecutionDataDAO(
         relationship(
             "WorldModelModificationBlockDAO",
             secondary="executiondatadao_added_world_modifications_association",
+            primaryjoin="ExecutionDataDAO.database_id == executiondatadao_added_world_modifications_association.c.source_executiondatadao_id",
+            secondaryjoin="WorldModelModificationBlockDAO.database_id == executiondatadao_added_world_modifications_association.c.target_worldmodelmodificationblockdao_id",
             cascade="save-update, merge",
         )
     )
@@ -988,6 +997,8 @@ class HasDrawersDAO(
     drawers: Mapped[typing.List[DrawerDAO]] = relationship(
         "DrawerDAO",
         secondary="hasdrawersdao_drawers_association",
+        primaryjoin="HasDrawersDAO.database_id == hasdrawersdao_drawers_association.c.source_hasdrawersdao_id",
+        secondaryjoin="DrawerDAO.database_id == hasdrawersdao_drawers_association.c.target_drawerdao_id",
         cascade="save-update, merge",
     )
 
@@ -1507,6 +1518,8 @@ class MoveTCPWaypointsMotionDAO(
     waypoints: Mapped[typing.List[PoseStampedDAO]] = relationship(
         "PoseStampedDAO",
         secondary="movetcpwaypointsmotiondao_waypoints_association",
+        primaryjoin="MoveTCPWaypointsMotionDAO.database_id == movetcpwaypointsmotiondao_waypoints_association.c.source_movetcpwaypointsmotiondao_id",
+        secondaryjoin="PoseStampedDAO.database_id == movetcpwaypointsmotiondao_waypoints_association.c.target_posestampeddao_id",
         cascade="save-update, merge",
     )
 
@@ -1824,11 +1837,15 @@ class PlanMappingDAO(Base, DataAccessObject[pycram.orm.model.PlanMapping]):
     nodes: Mapped[typing.List[PlanNodeMappingDAO]] = relationship(
         "PlanNodeMappingDAO",
         secondary="planmappingdao_nodes_association",
+        primaryjoin="PlanMappingDAO.database_id == planmappingdao_nodes_association.c.source_planmappingdao_id",
+        secondaryjoin="PlanNodeMappingDAO.database_id == planmappingdao_nodes_association.c.target_plannodemappingdao_id",
         cascade="save-update, merge",
     )
     edges: Mapped[typing.List[PlanEdgeDAO]] = relationship(
         "PlanEdgeDAO",
         secondary="planmappingdao_edges_association",
+        primaryjoin="PlanMappingDAO.database_id == planmappingdao_edges_association.c.source_planmappingdao_id",
+        secondaryjoin="PlanEdgeDAO.database_id == planmappingdao_edges_association.c.target_planedgedao_id",
         cascade="save-update, merge",
     )
 
@@ -2680,6 +2697,8 @@ class HasAperturesDAO(
     apertures: Mapped[typing.List[ApertureDAO]] = relationship(
         "ApertureDAO",
         secondary="hasaperturesdao_apertures_association",
+        primaryjoin="HasAperturesDAO.database_id == hasaperturesdao_apertures_association.c.source_hasaperturesdao_id",
+        secondaryjoin="ApertureDAO.database_id == hasaperturesdao_apertures_association.c.target_aperturedao_id",
         cascade="save-update, merge",
     )
 
@@ -2705,6 +2724,8 @@ class HasDoorsDAO(
     doors: Mapped[typing.List[DoorDAO]] = relationship(
         "DoorDAO",
         secondary="hasdoorsdao_doors_association",
+        primaryjoin="HasDoorsDAO.database_id == hasdoorsdao_doors_association.c.source_hasdoorsdao_id",
+        secondaryjoin="DoorDAO.database_id == hasdoorsdao_doors_association.c.target_doordao_id",
         cascade="save-update, merge",
     )
 
@@ -2855,24 +2876,12 @@ class SemanticPositionDescriptionDAO(
         typing.List[
             semantic_digital_twin.semantic_annotations.mixins.HorizontalSemanticDirection
         ]
-    ] = mapped_column(
-        krrood.ormatic.custom_types.EnumListType(
-            semantic_digital_twin.semantic_annotations.mixins.HorizontalSemanticDirection
-        ),
-        nullable=False,
-        use_existing_column=True,
-    )
+    ] = mapped_column(JSON, nullable=False, use_existing_column=True)
     vertical_direction_chain: Mapped[
         typing.List[
             semantic_digital_twin.semantic_annotations.mixins.VerticalSemanticDirection
         ]
-    ] = mapped_column(
-        krrood.ormatic.custom_types.EnumListType(
-            semantic_digital_twin.semantic_annotations.mixins.VerticalSemanticDirection
-        ),
-        nullable=False,
-        use_existing_column=True,
-    )
+    ] = mapped_column(JSON, nullable=False, use_existing_column=True)
 
 
 class SequentialNodeDAO(
@@ -3130,6 +3139,8 @@ class ShapeCollectionDAO(
     shapes: Mapped[typing.List[ShapeDAO]] = relationship(
         "ShapeDAO",
         secondary="shapecollectiondao_shapes_association",
+        primaryjoin="ShapeCollectionDAO.database_id == shapecollectiondao_shapes_association.c.source_shapecollectiondao_id",
+        secondaryjoin="ShapeDAO.database_id == shapecollectiondao_shapes_association.c.target_shapedao_id",
         cascade="save-update, merge",
     )
     reference_frame: Mapped[KinematicStructureEntityDAO] = relationship(
@@ -3771,22 +3782,30 @@ class WorldMappingDAO(
         relationship(
             "KinematicStructureEntityDAO",
             secondary="worldmappingdao_kinematic_structure_entities_association",
+            primaryjoin="WorldMappingDAO.database_id == worldmappingdao_kinematic_structure_entities_association.c.source_worldmappingdao_id",
+            secondaryjoin="KinematicStructureEntityDAO.database_id == worldmappingdao_kinematic_structure_entities_association.c.target_kinematicstructureentitydao_id",
             cascade="save-update, merge",
         )
     )
     connections: Mapped[typing.List[ConnectionDAO]] = relationship(
         "ConnectionDAO",
         secondary="worldmappingdao_connections_association",
+        primaryjoin="WorldMappingDAO.database_id == worldmappingdao_connections_association.c.source_worldmappingdao_id",
+        secondaryjoin="ConnectionDAO.database_id == worldmappingdao_connections_association.c.target_connectiondao_id",
         cascade="save-update, merge",
     )
     semantic_annotations: Mapped[typing.List[SemanticAnnotationDAO]] = relationship(
         "SemanticAnnotationDAO",
         secondary="worldmappingdao_semantic_annotations_association",
+        primaryjoin="WorldMappingDAO.database_id == worldmappingdao_semantic_annotations_association.c.source_worldmappingdao_id",
+        secondaryjoin="SemanticAnnotationDAO.database_id == worldmappingdao_semantic_annotations_association.c.target_semanticannotationdao_id",
         cascade="save-update, merge",
     )
     degrees_of_freedom: Mapped[typing.List[DegreeOfFreedomMappingDAO]] = relationship(
         "DegreeOfFreedomMappingDAO",
         secondary="worldmappingdao_degrees_of_freedom_association",
+        primaryjoin="WorldMappingDAO.database_id == worldmappingdao_degrees_of_freedom_association.c.source_worldmappingdao_id",
+        secondaryjoin="DegreeOfFreedomMappingDAO.database_id == worldmappingdao_degrees_of_freedom_association.c.target_degreeoffreedommappingdao_id",
         cascade="save-update, merge",
     )
     state: Mapped[WorldStateMappingDAO] = relationship(
@@ -4154,6 +4173,8 @@ class DoubleDoorDAO(
     doors: Mapped[typing.List[DoorDAO]] = relationship(
         "DoorDAO",
         secondary="doubledoordao_doors_association",
+        primaryjoin="DoubleDoorDAO.database_id == doubledoordao_doors_association.c.source_doubledoordao_id",
+        secondaryjoin="DoorDAO.database_id == doubledoordao_doors_association.c.target_doordao_id",
         cascade="save-update, merge",
     )
     left_door: Mapped[DoorDAO] = relationship(
@@ -5344,11 +5365,15 @@ class CabinetDAO(
     doors: Mapped[typing.List[DoorDAO]] = relationship(
         "DoorDAO",
         secondary="cabinetdao_doors_association",
+        primaryjoin="CabinetDAO.database_id == cabinetdao_doors_association.c.source_cabinetdao_id",
+        secondaryjoin="DoorDAO.database_id == cabinetdao_doors_association.c.target_doordao_id",
         cascade="save-update, merge",
     )
     drawers: Mapped[typing.List[DrawerDAO]] = relationship(
         "DrawerDAO",
         secondary="cabinetdao_drawers_association",
+        primaryjoin="CabinetDAO.database_id == cabinetdao_drawers_association.c.source_cabinetdao_id",
+        secondaryjoin="DrawerDAO.database_id == cabinetdao_drawers_association.c.target_drawerdao_id",
         cascade="save-update, merge",
     )
 
@@ -5376,6 +5401,8 @@ class CupboardDAO(
     doors: Mapped[typing.List[DoorDAO]] = relationship(
         "DoorDAO",
         secondary="cupboarddao_doors_association",
+        primaryjoin="CupboardDAO.database_id == cupboarddao_doors_association.c.source_cupboarddao_id",
+        secondaryjoin="DoorDAO.database_id == cupboarddao_doors_association.c.target_doordao_id",
         cascade="save-update, merge",
     )
 
@@ -5442,11 +5469,15 @@ class DresserDAO(
     doors: Mapped[typing.List[DoorDAO]] = relationship(
         "DoorDAO",
         secondary="dresserdao_doors_association",
+        primaryjoin="DresserDAO.database_id == dresserdao_doors_association.c.source_dresserdao_id",
+        secondaryjoin="DoorDAO.database_id == dresserdao_doors_association.c.target_doordao_id",
         cascade="save-update, merge",
     )
     drawers: Mapped[typing.List[DrawerDAO]] = relationship(
         "DrawerDAO",
         secondary="dresserdao_drawers_association",
+        primaryjoin="DresserDAO.database_id == dresserdao_drawers_association.c.source_dresserdao_id",
+        secondaryjoin="DrawerDAO.database_id == dresserdao_drawers_association.c.target_drawerdao_id",
         cascade="save-update, merge",
     )
 
@@ -5474,10 +5505,16 @@ class FridgeDAO(
     drawers: Mapped[typing.List[DrawerDAO]] = relationship(
         "DrawerDAO",
         secondary="fridgedao_drawers_association",
+        primaryjoin="FridgeDAO.database_id == fridgedao_drawers_association.c.source_fridgedao_id",
+        secondaryjoin="DrawerDAO.database_id == fridgedao_drawers_association.c.target_drawerdao_id",
         cascade="save-update, merge",
     )
     doors: Mapped[typing.List[DoorDAO]] = relationship(
-        "DoorDAO", secondary="fridgedao_doors_association", cascade="save-update, merge"
+        "DoorDAO",
+        secondary="fridgedao_doors_association",
+        primaryjoin="FridgeDAO.database_id == fridgedao_doors_association.c.source_fridgedao_id",
+        secondaryjoin="DoorDAO.database_id == fridgedao_doors_association.c.target_doordao_id",
+        cascade="save-update, merge",
     )
 
     __mapper_args__ = {
@@ -5504,11 +5541,15 @@ class WardrobeDAO(
     doors: Mapped[typing.List[DoorDAO]] = relationship(
         "DoorDAO",
         secondary="wardrobedao_doors_association",
+        primaryjoin="WardrobeDAO.database_id == wardrobedao_doors_association.c.source_wardrobedao_id",
+        secondaryjoin="DoorDAO.database_id == wardrobedao_doors_association.c.target_doordao_id",
         cascade="save-update, merge",
     )
     drawers: Mapped[typing.List[DrawerDAO]] = relationship(
         "DrawerDAO",
         secondary="wardrobedao_drawers_association",
+        primaryjoin="WardrobeDAO.database_id == wardrobedao_drawers_association.c.source_wardrobedao_id",
+        secondaryjoin="DrawerDAO.database_id == wardrobedao_drawers_association.c.target_drawerdao_id",
         cascade="save-update, merge",
     )
 
@@ -6051,6 +6092,8 @@ class WallDAO(
     apertures: Mapped[typing.List[ApertureDAO]] = relationship(
         "ApertureDAO",
         secondary="walldao_apertures_association",
+        primaryjoin="WallDAO.database_id == walldao_apertures_association.c.source_walldao_id",
+        secondaryjoin="ApertureDAO.database_id == walldao_apertures_association.c.target_aperturedao_id",
         cascade="save-update, merge",
     )
 
@@ -6240,21 +6283,29 @@ class AbstractRobotDAO(
     manipulators: Mapped[typing.List[ManipulatorDAO]] = relationship(
         "ManipulatorDAO",
         secondary="abstractrobotdao_manipulators_association",
+        primaryjoin="AbstractRobotDAO.database_id == abstractrobotdao_manipulators_association.c.source_abstractrobotdao_id",
+        secondaryjoin="ManipulatorDAO.database_id == abstractrobotdao_manipulators_association.c.target_manipulatordao_id",
         cascade="save-update, merge",
     )
     sensors: Mapped[typing.List[SensorDAO]] = relationship(
         "SensorDAO",
         secondary="abstractrobotdao_sensors_association",
+        primaryjoin="AbstractRobotDAO.database_id == abstractrobotdao_sensors_association.c.source_abstractrobotdao_id",
+        secondaryjoin="SensorDAO.database_id == abstractrobotdao_sensors_association.c.target_sensordao_id",
         cascade="save-update, merge",
     )
     manipulator_chains: Mapped[typing.List[KinematicChainDAO]] = relationship(
         "KinematicChainDAO",
         secondary="abstractrobotdao_manipulator_chains_association",
+        primaryjoin="AbstractRobotDAO.database_id == abstractrobotdao_manipulator_chains_association.c.source_abstractrobotdao_id",
+        secondaryjoin="KinematicChainDAO.database_id == abstractrobotdao_manipulator_chains_association.c.target_kinematicchaindao_id",
         cascade="save-update, merge",
     )
     sensor_chains: Mapped[typing.List[KinematicChainDAO]] = relationship(
         "KinematicChainDAO",
         secondary="abstractrobotdao_sensor_chains_association",
+        primaryjoin="AbstractRobotDAO.database_id == abstractrobotdao_sensor_chains_association.c.source_abstractrobotdao_id",
+        secondaryjoin="KinematicChainDAO.database_id == abstractrobotdao_sensor_chains_association.c.target_kinematicchaindao_id",
         cascade="save-update, merge",
     )
     default_collision_config: Mapped[CollisionCheckingConfigDAO] = relationship(
@@ -6362,6 +6413,8 @@ class KinematicChainDAO(
     sensors: Mapped[typing.List[SensorDAO]] = relationship(
         "SensorDAO",
         secondary="kinematicchaindao_sensors_association",
+        primaryjoin="KinematicChainDAO.database_id == kinematicchaindao_sensors_association.c.source_kinematicchaindao_id",
+        secondaryjoin="SensorDAO.database_id == kinematicchaindao_sensors_association.c.target_sensordao_id",
         cascade="save-update, merge",
     )
 
@@ -7167,6 +7220,8 @@ class WorldModelModificationBlockDAO(
     modifications: Mapped[typing.List[WorldModelModificationDAO]] = relationship(
         "WorldModelModificationDAO",
         secondary="worldmodelmodificationblockdao_modifications_association",
+        primaryjoin="WorldModelModificationBlockDAO.database_id == worldmodelmodificationblockdao_modifications_association.c.source_worldmodelmodificationblockdao_id",
+        secondaryjoin="WorldModelModificationDAO.database_id == worldmodelmodificationblockdao_modifications_association.c.target_worldmodelmodificationdao_id",
         cascade="save-update, merge",
     )
 
