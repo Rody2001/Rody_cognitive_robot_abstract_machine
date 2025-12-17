@@ -2,10 +2,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from krrood.adapters.json_serializer import JSON_TYPE_NAME, JSONSerializableTypeRegistry
+from krrood.symbolic_math.symbolic_math import Expression, FloatVariable
 from krrood.utils import get_full_class_name
 from typing_extensions import Any, Dict, TYPE_CHECKING
 
-from semantic_digital_twin.spatial_types import FloatVariable, Expression
 
 if TYPE_CHECKING:
     from giskardpy.motion_statechart.graph_node import (

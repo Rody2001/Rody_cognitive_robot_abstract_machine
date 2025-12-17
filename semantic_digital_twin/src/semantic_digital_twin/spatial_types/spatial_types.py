@@ -986,6 +986,12 @@ class Point3(sm.Expression, SpatialType, SubclassJSONSerializer):
         result.reference_frame = self.reference_frame
         return result
 
+    def to_generic_vector(self) -> sm.Vector:
+        return sm.Vector.from_casadi_sx(self.casadi_sx[:3])
+
+    def euclidean_distance(self, other: Self) -> sm.Scalar:
+        return self.to_generic_vector().euclidean_distance(other.to_generic_vector())
+
 
 @dataclass(eq=False, init=False)
 class Vector3(sm.Expression, SpatialType, SubclassJSONSerializer):
@@ -1267,7 +1273,7 @@ class Vector3(sm.Expression, SpatialType, SubclassJSONSerializer):
             else_result=project_on_cone_boundary,
         )
 
-    def angle_between(self, other: Vector3) -> sm.Expression:
+    def angle_between(self, other: Vector3) -> sm.Scalar:
         return sm.acos(
             sm.limit(
                 self @ other / (self.norm() * other.norm()),

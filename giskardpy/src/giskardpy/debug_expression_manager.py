@@ -4,7 +4,7 @@ from typing import Dict, Optional, List, Union
 import numpy as np
 from line_profiler import profile
 
-import semantic_digital_twin.spatial_types.spatial_types as cas
+import krrood.symbolic_math.symbolic_math as cas
 from giskardpy.middleware import get_middleware
 from giskardpy.model.trajectory import Trajectory
 from semantic_digital_twin.world_description.geometry import Color

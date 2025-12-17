@@ -10,7 +10,7 @@ from krrood.adapters.json_serializer import SubclassJSONSerializer
 from line_profiler.explicit_profiler import profile
 from typing_extensions import List, MutableMapping, ClassVar, Self, Type
 
-import semantic_digital_twin.spatial_types.spatial_types as cas
+import krrood.symbolic_math.symbolic_math as cas
 from giskardpy.motion_statechart.context import BuildContext, ExecutionContext
 from giskardpy.motion_statechart.data_types import (
     LifeCycleValues,
@@ -118,22 +118,22 @@ class LifeCycleState(State):
             state_symbol = node.life_cycle_variable
 
             not_started_transitions = cas.if_else(
-                condition=node.start_condition == cas.TrinaryTrue,
+                condition=node.start_condition == cas.Scalar.const_true(),
                 if_result=cas.Expression(LifeCycleValues.RUNNING),
                 else_result=cas.Expression(LifeCycleValues.NOT_STARTED),
             )
             running_transitions = cas.if_cases(
                 cases=[
                     (
-                        node.reset_condition == cas.TrinaryTrue,
+                        node.reset_condition == cas.Scalar.const_true(),
                         cas.Expression(LifeCycleValues.NOT_STARTED),
                     ),
                     (
-                        node.end_condition == cas.TrinaryTrue,
+                        node.end_condition == cas.Scalar.const_true(),
                         cas.Expression(LifeCycleValues.DONE),
                     ),
                     (
-                        node.pause_condition == cas.TrinaryTrue,
+                        node.pause_condition == cas.Scalar.const_true(),
                         cas.Expression(LifeCycleValues.PAUSED),
                     ),
                 ],
@@ -142,22 +142,22 @@ class LifeCycleState(State):
             pause_transitions = cas.if_cases(
                 cases=[
                     (
-                        node.reset_condition == cas.TrinaryTrue,
+                        node.reset_condition == cas.Scalar.const_true(),
                         cas.Expression(LifeCycleValues.NOT_STARTED),
                     ),
                     (
-                        node.end_condition == cas.TrinaryTrue,
+                        node.end_condition == cas.Scalar.const_true(),
                         cas.Expression(LifeCycleValues.DONE),
                     ),
                     (
-                        node.pause_condition == cas.TrinaryFalse,
+                        node.pause_condition == cas.Scalar.const_false(),
                         cas.Expression(LifeCycleValues.RUNNING),
                     ),
                 ],
                 else_result=cas.Expression(LifeCycleValues.PAUSED),
             )
             ended_transitions = cas.if_else(
-                condition=node.reset_condition == cas.TrinaryTrue,
+                condition=node.reset_condition == cas.Scalar.const_true(),
                 if_result=cas.Expression(LifeCycleValues.NOT_STARTED),
                 else_result=cas.Expression(LifeCycleValues.DONE),
             )
@@ -219,10 +219,10 @@ class ObservationState(State):
                     ),
                     (
                         int(LifeCycleValues.NOT_STARTED),
-                        cas.TrinaryUnknown,
+                        cas.Scalar.const_trinary_unknown(),
                     ),
                 ],
-                else_result=cas.Expression(node.observation_variable),
+                else_result=cas.Scalar(node.observation_variable),
             )
             observation_state_updater.append(state_f)
         self._compiled_updater = cas.Expression(observation_state_updater).compile(

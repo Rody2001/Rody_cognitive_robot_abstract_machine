@@ -1084,6 +1084,15 @@ class TestVector:
         expected = e_np[filter_]
         assert np.allclose(actual, expected)
 
+    def test_concatenate(self):
+        v1 = cas.Vector([1, 2, 3])
+        v2 = cas.Vector([4, 5, 6, 7])
+        assert np.allclose(v1.concatenate(v2), np.concatenate([v1, v2]))
+
+    def test_concatenate2(self):
+        v1 = cas.Vector([1, 2, 3])
+        assert np.allclose(cas.concatenate(v1, v1, v1), np.concatenate([v1, v1, v1]))
+
 
 class TestMatrix:
     def test_trace(self):

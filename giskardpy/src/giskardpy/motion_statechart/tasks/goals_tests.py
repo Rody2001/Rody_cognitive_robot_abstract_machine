@@ -2,29 +2,35 @@ from dataclasses import dataclass
 
 import numpy as np
 
-import semantic_digital_twin.spatial_types.spatial_types as cas
+import krrood.symbolic_math.symbolic_math as cas
 from giskardpy.motion_statechart.graph_node import Task
+from semantic_digital_twin.spatial_types import (
+    Point3,
+    Quaternion,
+    Vector3,
+    HomogeneousTransformationMatrix,
+)
 from semantic_digital_twin.world_description.connections import ActiveConnection1DOF
 
 
 @dataclass
 class DebugGoal(Task):
     def __post_init__(self):
-        q = cas.Quaternion(reference_frame=context.world.root)
+        q = Quaternion(reference_frame=context.world.root)
         context.add_debug_expression("q", q)
 
-        p = cas.Point3(1, 0, 0, reference_frame=context.world.root)
+        p = Point3(1, 0, 0, reference_frame=context.world.root)
         context.add_debug_expression("p", p)
 
-        pose = cas.HomogeneousTransformationMatrix.from_xyz_rpy(
+        pose = HomogeneousTransformationMatrix.from_xyz_rpy(
             y=1, reference_frame=context.world.root
         )
         context.add_debug_expression("pose", pose)
 
-        v = cas.Vector3(1, 0, 0, reference_frame=context.world.root)
+        v = Vector3(1, 0, 0, reference_frame=context.world.root)
         context.add_debug_expression("v", v)
 
-        r = cas.Quaternion(reference_frame=context.world.root).to_rotation_matrix()
+        r = Quaternion(reference_frame=context.world.root).to_rotation_matrix()
         context.add_debug_expression("r", r)
 
         e1 = cas.Expression(np.eye(3))

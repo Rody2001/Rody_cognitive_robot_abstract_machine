@@ -845,61 +845,46 @@ class Scalar(Expression):
         return Scalar.from_casadi_sx(ca.logic_not(self.casadi_sx))
 
     def __and__(self, other: Scalar | FloatVariable) -> Scalar:
-        if self.is_const_false():
+        if is_const_false(self):
             return self
-        if other.is_const_false():
+        if is_const_false(other):
             return other
-        return Scalar.from_casadi_sx(ca.logic_or(self.casadi_sx, other.casadi_sx))
+        return Scalar.from_casadi_sx(ca.logic_and(to_sx(self), to_sx(other)))
 
     def __or__(self, other: Scalar | FloatVariable) -> Scalar:
-        if self.is_const_true():
+        if is_const_true(self):
             return self
-        if other.is_const_true():
+        if is_const_true(other):
             return other
-        return Scalar.from_casadi_sx(ca.logic_or(self.casadi_sx, other.casadi_sx))
+        return Scalar.from_casadi_sx(ca.logic_or(to_sx(self), to_sx(other)))
 
     # %% Comparison operations
     def _compare(
-        self, other: Scalar | FloatVariable | NumericalScalar | bool, op: str
+        self, other: Scalar | FloatVariable | NumericalScalar | bool, op_f: Callable
     ) -> Scalar | bool:
-        if self.is_constant() and (
-            isinstance(other, NumericalScalar)
-            or isinstance(other, bool)
-            or (isinstance(other, Scalar) and other.is_constant())
-        ):
-            left = float(self)
-            right = float(other)
-            if op == "eq":
-                return left == right
-            if op == "le":
-                return left <= right
-            if op == "lt":
-                return left < right
-            if op == "ge":
-                return left >= right
-            if op == "gt":
-                return left > right
-        if isinstance(other, (Scalar, FloatVariable)):
-            cas = getattr(self.casadi_sx, f"__{op}__")(other.casadi_sx)
-            return Scalar.from_casadi_sx(cas)
-        return NotImplemented
+        left = to_sx(self)
+        right = to_sx(other)
+        result = op_f(left, right)
+        if result.is_constant():
+            return bool(result)
+        return Scalar.from_casadi_sx(result)
 
     def __eq__(
         self, other: Scalar | FloatVariable | NumericalScalar | bool
     ) -> Scalar | bool:
-        return self._compare(other, "eq")
+        return self._compare(other, operator.eq)
 
     def __le__(self, other: Scalar | FloatVariable) -> Scalar | bool:
-        return self._compare(other, "le")
+        return self._compare(other, operator.le)
 
     def __lt__(self, other: Scalar | FloatVariable) -> Scalar | bool:
-        return self._compare(other, "lt")
+        return self._compare(other, operator.lt)
 
     def __ge__(self, other: Scalar | FloatVariable) -> Scalar | bool:
-        return self._compare(other, "ge")
+        return self._compare(other, operator.ge)
 
     def __gt__(self, other: Scalar | FloatVariable) -> Scalar | bool:
-        return self._compare(other, "gt")
+        return self._compare(other, operator.gt)
 
     # %% Arithmatic operations
     def __float__(self):
@@ -1030,6 +1015,14 @@ class Vector(Expression):
             data = []
         self.casadi_sx = to_sx(data)
 
+    @classmethod
+    def zeros(cls, size: int) -> Self:
+        return cls(np.zeros(size))
+
+    @classmethod
+    def ones(cls, size: int) -> Self:
+        return cls(np.ones(size))
+
     def __iter__(self):
         """
         Iterate over the elements of the vector, yielding Scalar objects.
@@ -1114,6 +1107,16 @@ class Vector(Expression):
         """
         return self.safe_division(self.norm()) * a
 
+    def concatenate(self, other: Vector) -> Vector:
+        """
+        Concatenates the calling vector object with another vector, resulting in
+        a single unified vector.
+
+        :param other: The vector to concatenate with the current vector.
+        :return: A new vector object representing the combined result of the two vectors.
+        """
+        return Vector.from_casadi_sx(ca.vertcat(to_sx(self), to_sx(other)))
+
 
 @dataclass(eq=False)
 class Matrix(Expression):
@@ -1140,11 +1143,23 @@ class Matrix(Expression):
         other_sx = self._broadcast_like_self(other)
         return Matrix.from_casadi_sx(self.casadi_sx + other_sx)
 
+    def __radd__(self, other: Scalar | Vector | Matrix) -> Self:
+        other_sx = self._broadcast_like_self(other)
+        return Matrix.from_casadi_sx(self.casadi_sx + other_sx)
+
     def __sub__(self, other: Scalar | Vector | Matrix) -> Self:
         other_sx = self._broadcast_like_self(other)
         return Matrix.from_casadi_sx(self.casadi_sx - other_sx)
 
+    def __rsub__(self, other: Scalar | Vector | Matrix) -> Self:
+        other_sx = self._broadcast_like_self(other)
+        return Matrix.from_casadi_sx(self.casadi_sx - other_sx)
+
     def __mul__(self, other: Scalar | Vector | Matrix) -> Self:
+        other_sx = self._broadcast_like_self(other)
+        return Matrix.from_casadi_sx(self.casadi_sx * other_sx)
+
+    def __rmul__(self, other: Scalar | Vector | Matrix) -> Self:
         other_sx = self._broadcast_like_self(other)
         return Matrix.from_casadi_sx(self.casadi_sx * other_sx)
 
@@ -1504,20 +1519,28 @@ def diag_stack(args: VectorData | MatrixData) -> Matrix:
     return Matrix.diag_stack(args)
 
 
+def concatenate(*vectors: Vector) -> Vector:
+    return Vector.from_casadi_sx(ca.vertcat(*[to_sx(v) for v in vectors]))
+
+
 # %% basic math
 abs = _unary_function_wrapper(ca.fabs)
 
 
-def max(arg1: Expression, arg2: Optional[Scalar] = None) -> Scalar:
-    if isinstance(arg1, (Vector, Matrix)):
+def max(
+    arg1: GenericSymbolicType, arg2: Optional[GenericSymbolicType] = None
+) -> GenericSymbolicType:
+    if arg2 is None:
         return Scalar.from_casadi_sx(ca.mmax(to_sx(arg1)))
-    return Scalar.from_casadi_sx(ca.fmax(to_sx(arg1), to_sx(arg2)))
+    return _create_return_type(arg1).from_casadi_sx(ca.fmax(to_sx(arg1), to_sx(arg2)))
 
 
-def min(arg1: Expression, arg2: Optional[Scalar] = None) -> Scalar:
-    if isinstance(arg1, (Vector, Matrix)):
+def min(
+    arg1: GenericSymbolicType, arg2: Optional[GenericSymbolicType] = None
+) -> GenericSymbolicType:
+    if arg2 is None:
         return Scalar.from_casadi_sx(ca.mmin(to_sx(arg1)))
-    return Scalar.from_casadi_sx(ca.fmin(to_sx(arg1), to_sx(arg2)))
+    return _create_return_type(arg1).from_casadi_sx(ca.fmin(to_sx(arg1), to_sx(arg2)))
 
 
 def limit(
@@ -1652,6 +1675,12 @@ def gauss(n: ScalarData) -> Scalar:
 
 
 # %% binary logic
+def is_const_true(expression: Scalar) -> bool:
+    return bool(expression == 1)
+
+
+def is_const_false(expression: Scalar) -> bool:
+    return bool(expression == 0)
 
 
 def logic_and(left: ScalarData, right: ScalarData) -> Scalar:
@@ -1958,7 +1987,7 @@ def if_eq_cases(
         b_sx = to_sx(b)
         b_result_sx = to_sx(b_result)
         result_sx = ca.if_else(ca.eq(a_sx, b_sx), b_result_sx, result_sx)
-    return _create_return_type(a).from_casadi_sx(result_sx)
+    return _create_return_type(else_result).from_casadi_sx(result_sx)
 
 
 def if_cases(
@@ -2003,7 +2032,7 @@ def if_less_eq_cases(
         b_sx = to_sx(b_result_cases[i][0])
         b_result_sx = to_sx(b_result_cases[i][1])
         result_sx = ca.if_else(ca.le(a_sx, b_sx), b_result_sx, result_sx)
-    return _create_return_type(a).from_casadi_sx(result_sx)
+    return _create_return_type(else_result).from_casadi_sx(result_sx)
 
 
 # %% type hints
