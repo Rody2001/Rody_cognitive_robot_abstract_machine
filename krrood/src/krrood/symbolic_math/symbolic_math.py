@@ -1491,7 +1491,7 @@ def to_sx(
     if isinstance(data, ca.SX):
         return data
     if isinstance(data, SymbolicMathType):
-        return copy.copy(data.casadi_sx)
+        return data.casadi_sx
     if isinstance(data, NumericalScalar):
         return ca.SX(data)
     return array_like_to_casadi_sx(data)
@@ -1511,22 +1511,40 @@ def array_like_to_casadi_sx(data: VectorData) -> ca.SX:
     x = len(data)
     if x == 0:
         return ca.SX()
-    if (
-        isinstance(data[0], list)
-        or isinstance(data[0], tuple)
-        or isinstance(data[0], np.ndarray)
-    ):
-        y = len(data[0])
-    else:
-        y = 1
-    casadi_sx = ca.SX(x, y)
-    for i in range(casadi_sx.shape[0]):
-        if y > 1:
-            for j in range(casadi_sx.shape[1]):
-                casadi_sx[i, j] = to_sx(data[i][j])
+    first = data[0]
+    is_row_like = isinstance(first, (list, tuple, np.ndarray))
+    y = len(first) if is_row_like else 1
+    try:
+        # Attempt to convert to a numeric numpy array. This raises if mixed/object.
+        # Note: np.array(..., dtype=float) will fail on symbolic entries.
+        if is_row_like:
+            arr = np.array(data, dtype=float)
+            if arr.ndim != 2:
+                # Fall back if irregular nesting
+                raise ValueError
         else:
-            casadi_sx[i] = to_sx(data[i])
-    return casadi_sx
+            arr = np.array(data, dtype=float).reshape((-1, 1))
+        # Verify that conversion did not introduce non-finite values (e.g., from symbolic SX)
+        if not np.isfinite(arr).all():
+            raise ValueError
+        # CasADi fast conversion: DM -> SX
+        return ca.SX(ca.DM(arr))
+    except Exception:
+        # Mixed/symbolic path
+        pass
+    if is_row_like:
+        # Flatten in column-major order to align with CasADi reshape semantics
+        # This ensures that element [i][j] from input ends up at (i, j) in the SX matrix.
+        flat = []
+        for j in range(y):
+            for i in range(x):
+                flat.append(to_sx(data[i][j]))
+        stacked = ca.vertcat(*flat) if flat else ca.SX()
+        return ca.reshape(stacked, x, y)
+    else:
+        # Column vector
+        flat = [to_sx(data[i]) for i in range(x)]
+        return ca.vertcat(*flat) if flat else ca.SX(x, 1)
 
 
 def _unary_function_wrapper(

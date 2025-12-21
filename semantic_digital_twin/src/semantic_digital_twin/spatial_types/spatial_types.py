@@ -231,9 +231,9 @@ class HomogeneousTransformationMatrix(
                 child_frame=child_frame,
             )
         if point is not None:
-            a_T_b[0, 3] = point.x
-            a_T_b[1, 3] = point.y
-            a_T_b[2, 3] = point.z
+            a_T_b._casadi_sx[0, 3] = point._casadi_sx[0]
+            a_T_b._casadi_sx[1, 3] = point._casadi_sx[1]
+            a_T_b._casadi_sx[2, 3] = point._casadi_sx[2]
         return a_T_b
 
     @classmethod
