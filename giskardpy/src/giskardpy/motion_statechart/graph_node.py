@@ -14,6 +14,7 @@ from typing_extensions import (
     TYPE_CHECKING,
     List,
     TypeVar,
+    Tuple,
 )
 
 import krrood.symbolic_math.symbolic_math as sm
@@ -469,6 +470,167 @@ class MotionStatechartNode(SubclassJSONSerializer):
                 self._reset_condition = transition
             case _:
                 raise ValueError(f"Unknown transition kind: {transition.kind}")
+
+    def create_lifecycle_transitions(
+        self,
+    ) -> Tuple[
+        cas.GenericSymbolicType,
+        cas.GenericSymbolicType,
+        cas.GenericSymbolicType,
+        cas.GenericSymbolicType,
+    ]:
+        """
+        Create the life cycle transitions for this node.
+        :return: A tuple of (not_started_transitions, running_transitions, pause_transitions, ended_transitions)
+        """
+        end_or_chain = self._create_true_or_condition_chain(TransitionKind.END)
+        reset_or_chain = self._create_true_or_condition_chain(TransitionKind.RESET)
+
+        not_started_transitions = self._create_not_started_transitions()
+        running_transitions = self._create_running_transitions(
+            end_or_chain=end_or_chain,
+            reset_or_chain=reset_or_chain,
+        )
+        pause_transitions = self._create_pause_transitions(
+            end_or_chain=end_or_chain, reset_or_chain=reset_or_chain
+        )
+        ended_transitions = self._create_ended_transitions(
+            reset_or_chain=reset_or_chain
+        )
+
+        return (
+            not_started_transitions,
+            running_transitions,
+            pause_transitions,
+            ended_transitions,
+        )
+
+    def _create_true_or_condition_chain(
+        self,
+        transition_kind: TransitionKind,
+    ) -> cas.Expression:
+        """
+        Create a combined condition by traversing up the parent nodes starting from `self`.
+        The combined condition is created by applying `trinary_logic_or` on the conditions of each parent node.
+        The expected value of each nodes condition is `TrinaryTrue`.
+        :param self: The node to start traversing from.
+        :param transition_kind: The kind of transition whose condition to combine. e.g. RESET for reset_condition
+        :return: The combined condition.
+        """
+
+        match transition_kind:
+            case TransitionKind.START:
+                condition_getter = lambda n: n.start_condition
+            case TransitionKind.PAUSE:
+                condition_getter = lambda n: n.pause_condition
+            case TransitionKind.END:
+                condition_getter = lambda n: n.end_condition
+            case TransitionKind.RESET:
+                condition_getter = lambda n: n.reset_condition
+            case _:
+                raise ValueError(f"Unknown transition kind: {transition_kind}")
+
+        current_node = self
+        condition = condition_getter(current_node) == cas.TrinaryTrue
+        while current_node.parent_node is not None:
+            parent_cond = condition_getter(current_node.parent_node)
+            cond_expr = parent_cond == cas.TrinaryTrue
+            condition = cas.trinary_logic_or(condition, cond_expr)
+            current_node = current_node.parent_node
+        return condition
+
+    def _create_ended_transitions(
+        self, reset_or_chain: cas.Expression
+    ) -> cas.GenericSymbolicType:
+        """
+        Create the ended transitions of the LifeCycleState for this node.
+        """
+        return cas.if_else(
+            condition=reset_or_chain,
+            if_result=cas.Expression(LifeCycleValues.NOT_STARTED),
+            else_result=cas.Expression(LifeCycleValues.DONE),
+        )
+
+    def _create_pause_transitions(
+        self,
+        end_or_chain: cas.Expression,
+        reset_or_chain: cas.Expression,
+    ) -> cas.GenericSymbolicType:
+        """
+        Create the pause transitions of the LifeCycleState for this node.
+        """
+        unpause_condition = cas.trinary_logic_or(
+            self.pause_condition == cas.TrinaryFalse,
+            self.pause_condition == cas.TrinaryUnknown,
+        )
+        current = self
+        while current.parent_node is not None:
+            parent = current.parent_node
+            unpause_condition = cas.trinary_logic_and(
+                unpause_condition,
+                cas.trinary_logic_or(
+                    parent.pause_condition == cas.TrinaryUnknown,
+                    parent.pause_condition == cas.TrinaryFalse,
+                ),
+            )
+            current = parent
+
+        return cas.if_cases(
+            cases=[
+                (
+                    reset_or_chain,
+                    cas.Expression(LifeCycleValues.NOT_STARTED),
+                ),
+                (end_or_chain, cas.Expression(LifeCycleValues.DONE)),
+                (
+                    unpause_condition,
+                    cas.Expression(LifeCycleValues.RUNNING),
+                ),
+            ],
+            else_result=cas.Expression(LifeCycleValues.PAUSED),
+        )
+
+    def _create_running_transitions(
+        self,
+        end_or_chain: cas.Expression,
+        reset_or_chain: cas.Expression,
+    ) -> cas.GenericSymbolicType:
+        """
+        Create the running transitions of the LifeCycleState for this node.
+        """
+        pause_or_chain = self._create_true_or_condition_chain(TransitionKind.PAUSE)
+        return cas.if_cases(
+            cases=[
+                (
+                    reset_or_chain,
+                    cas.Expression(LifeCycleValues.NOT_STARTED),
+                ),
+                (end_or_chain, cas.Expression(LifeCycleValues.DONE)),
+                (pause_or_chain, cas.Expression(LifeCycleValues.PAUSED)),
+            ],
+            else_result=cas.Expression(LifeCycleValues.RUNNING),
+        )
+
+    def _create_not_started_transitions(self) -> cas.GenericSymbolicType:
+        """
+        Create the not started transitions of the LifeCycleState for this node.
+        """
+        not_started_condition = self.start_condition == cas.TrinaryTrue
+        current = self
+        while current.parent_node is not None:
+            parent = current.parent_node
+            not_started_condition = cas.trinary_logic_and(
+                not_started_condition,
+                cas.trinary_logic_not(parent.end_condition),
+                parent.start_condition == cas.TrinaryTrue,
+            )
+            current = parent
+
+        return cas.if_else(
+            condition=not_started_condition,
+            if_result=cas.Expression(LifeCycleValues.RUNNING),
+            else_result=cas.Expression(LifeCycleValues.NOT_STARTED),
+        )
 
     @property
     def life_cycle_variable(self) -> LifeCycleVariable:
