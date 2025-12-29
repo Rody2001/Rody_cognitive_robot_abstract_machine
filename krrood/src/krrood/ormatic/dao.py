@@ -813,9 +813,6 @@ class DataAccessObject(HasGeneric[T]):
             self._build_base_keyword_arguments_for_alternative_parent(
                 argument_names, state
             )
-            self._populate_remaining_relationships(
-                domain_object, mapper, argument_names, state
-            )
             return domain_object
 
         scalar_keyword_arguments = self._collect_scalar_keyword_arguments(
@@ -1003,7 +1000,7 @@ class DataAccessObject(HasGeneric[T]):
         circular_references: Dict[str, Any] = {}
 
         for relationship in mapper.relationships:
-            if relationship.key in argument_names:
+            if state.discovery_mode or relationship.key in argument_names:
                 self._collect_relationship_kwarg(
                     relationship,
                     relationship_keyword_arguments,
