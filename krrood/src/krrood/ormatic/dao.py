@@ -236,6 +236,13 @@ class FromDataAccessObjectState(DataAccessObjectState[FromDataAccessObjectWorkIt
     Whether the state is currently in the processing loop.
     """
 
+    synthetic_parent_daos: Dict[
+        Tuple[int, Type[DataAccessObject]], DataAccessObject
+    ] = field(default_factory=dict)
+    """
+    Cache for synthetic parent DAOs to maintain identity across discovery and filling phases.
+    """
+
     def is_initialized(self, dao_instance: DataAccessObject) -> bool:
         """
         Check if the given DAO instance has been fully initialized.
@@ -1064,11 +1071,12 @@ class DataAccessObject(HasGeneric[T]):
         if not self.uses_alternative_mapping(base_clazz):
             return {}
 
-        if not hasattr(self, "_parent_daos"):
-            self._parent_daos = {}
-        if base_clazz not in self._parent_daos:
-            self._parent_daos[base_clazz] = self._create_filled_parent_dao(base_clazz)
-        parent_dao = self._parent_daos[base_clazz]
+        cache_key = (id(self), base_clazz)
+        if cache_key not in state.synthetic_parent_daos:
+            state.synthetic_parent_daos[cache_key] = self._create_filled_parent_dao(
+                base_clazz
+            )
+        parent_dao = state.synthetic_parent_daos[cache_key]
 
         base_result = parent_dao.from_dao(state=state)
 
