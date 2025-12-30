@@ -22,6 +22,8 @@ import krrood.entity_query_language.predicate
 import krrood.entity_query_language.symbol_graph
 import krrood.ormatic.alternative_mappings
 import krrood.ormatic.custom_types
+import semantic_digital_twin.world_description.connections
+import semantic_digital_twin.world_description.world_entity
 import sqlalchemy.sql.sqltypes
 import test.krrood_test.dataset.example_classes
 import typing
@@ -165,6 +167,31 @@ vectorswithpropertymappeddao_vectors_association = Table(
 )
 
 
+class BodyDAO(
+    SymbolDAO,
+    DataAccessObject[semantic_digital_twin.world_description.world_entity.Body],
+):
+
+    __tablename__ = "BodyDAO"
+
+    database_id: Mapped[builtins.int] = mapped_column(
+        ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
+    )
+
+    index: Mapped[typing.Optional[builtins.int]] = mapped_column(
+        use_existing_column=True
+    )
+
+    id: Mapped[sqlalchemy.sql.sqltypes.UUID] = mapped_column(
+        sqlalchemy.sql.sqltypes.UUID, nullable=False, use_existing_column=True
+    )
+
+    __mapper_args__ = {
+        "polymorphic_identity": "BodyDAO",
+        "inherit_condition": database_id == SymbolDAO.database_id,
+    }
+
+
 class CallableWrapperDAO(
     Base, DataAccessObject[test.krrood_test.dataset.example_classes.CallableWrapper]
 ):
@@ -184,6 +211,25 @@ class CallableWrapperDAO(
     func: Mapped[FunctionMappingDAO] = relationship(
         "FunctionMappingDAO", uselist=False, foreign_keys=[func_id], post_update=True
     )
+
+
+class FixedConnectionDAO(
+    SymbolDAO,
+    DataAccessObject[
+        semantic_digital_twin.world_description.connections.FixedConnection
+    ],
+):
+
+    __tablename__ = "FixedConnectionDAO"
+
+    database_id: Mapped[builtins.int] = mapped_column(
+        ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
+    )
+
+    __mapper_args__ = {
+        "polymorphic_identity": "FixedConnectionDAO",
+        "inherit_condition": database_id == SymbolDAO.database_id,
+    }
 
 
 class InheritanceBaseWithoutSymbolButAlternativelyMappedMappingDAO(
@@ -499,6 +545,35 @@ class MultipleInheritanceDAO(
     __mapper_args__ = {
         "polymorphic_identity": "MultipleInheritanceDAO",
         "inherit_condition": database_id == PrimaryBaseDAO.database_id,
+    }
+
+
+class PrismaticConnectionDAO(
+    SymbolDAO,
+    DataAccessObject[
+        semantic_digital_twin.world_description.connections.PrismaticConnection
+    ],
+):
+
+    __tablename__ = "PrismaticConnectionDAO"
+
+    database_id: Mapped[builtins.int] = mapped_column(
+        ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
+    )
+
+    frozen_for_collision_avoidance: Mapped[builtins.bool] = mapped_column(
+        use_existing_column=True
+    )
+    multiplier: Mapped[builtins.float] = mapped_column(use_existing_column=True)
+    offset: Mapped[builtins.float] = mapped_column(use_existing_column=True)
+
+    dof_id: Mapped[sqlalchemy.sql.sqltypes.UUID] = mapped_column(
+        sqlalchemy.sql.sqltypes.UUID, nullable=False, use_existing_column=True
+    )
+
+    __mapper_args__ = {
+        "polymorphic_identity": "PrismaticConnectionDAO",
+        "inherit_condition": database_id == SymbolDAO.database_id,
     }
 
 

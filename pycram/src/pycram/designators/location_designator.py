@@ -277,7 +277,7 @@ class CostmapLocation(LocationDesignatorDescription):
         ground_pose.position.z = 0
 
         occupancy = OccupancyCostmap(
-            distance_to_obstacle=0.32,
+            distance_to_obstacle=0.3,
             world=self.world,
             robot_view=self.robot_view,
             width=200,

@@ -35,6 +35,11 @@ from .test_eql.conf.world.doors_and_drawers import DoorsAndDrawersWorld
 from .test_eql.conf.world.handles_and_containers import (
     HandlesAndContainersWorld,
 )
+from semantic_digital_twin.world_description.world_entity import Body
+from semantic_digital_twin.world_description.connections import (
+    FixedConnection,
+    PrismaticConnection,
+)
 
 
 def generate_sqlalchemy_interface():
@@ -57,6 +62,8 @@ def generate_sqlalchemy_interface():
     all_classes |= set(classes_of_module(krrood.entity_query_language.symbol_graph))
     all_classes |= set(classes_of_module(example_classes))
     all_classes |= {Symbol}
+
+    all_classes |= {FixedConnection, PrismaticConnection, Body, World}
 
     # remove classes that don't need persistence
     all_classes -= {HasType, HasTypes, ContainsType}
