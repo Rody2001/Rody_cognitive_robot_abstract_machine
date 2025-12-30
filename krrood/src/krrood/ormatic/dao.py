@@ -215,11 +215,6 @@ class FromDataAccessObjectState(DataAccessObjectState[FromDataAccessObjectWorkIt
     State for converting Data Access Objects back to domain objects.
     """
 
-    in_progress: InProgressDict = field(default_factory=dict)
-    """
-    Dictionary that marks objects as currently being processed by the from_dao method.
-    """
-
     discovery_mode: bool = False
     """
     Whether the state is currently in discovery mode.
@@ -783,7 +778,6 @@ class DataAccessObject(HasGeneric[T]):
         self._fill_domain_objects(state, discovery_order)
 
         state.is_processing = False
-        state.in_progress.clear()
 
         return state.get(self)
 
