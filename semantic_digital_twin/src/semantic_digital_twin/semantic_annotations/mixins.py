@@ -22,7 +22,7 @@ from typing_extensions import (
 from krrood.ormatic.utils import classproperty
 from ..datastructures.prefixed_name import PrefixedName
 from ..datastructures.variables import SpatialVariables
-from ..spatial_types import Point3, TransformationMatrix, Vector3
+from ..spatial_types import Point3, HomogeneousTransformationMatrix, Vector3
 from ..spatial_types.derivatives import DerivativeMap
 from ..utils import Direction
 from ..world import World
@@ -87,7 +87,7 @@ class HasRootBody(SemanticAnnotation, ABC):
         name: PrefixedName,
         world: World,
         parent: KinematicStructureEntity,
-        parent_T_self: Optional[TransformationMatrix] = None,
+        parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
         **kwargs,
     ) -> Self:
         """
@@ -110,7 +110,9 @@ class HasRootBody(SemanticAnnotation, ABC):
     ):
         self_instance = cls(name=name, body=body)
         parent_T_self = (
-            parent_T_self if parent_T_self is not None else TransformationMatrix()
+            parent_T_self
+            if parent_T_self is not None
+            else HomogeneousTransformationMatrix()
         )
 
         with world.modify_world():
@@ -140,7 +142,7 @@ class HasRootRegion(SemanticAnnotation, ABC):
         name: PrefixedName,
         world: World,
         parent: KinematicStructureEntity,
-        parent_T_self: Optional[TransformationMatrix] = None,
+        parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
         **kwargs,
     ) -> Self:
         """
@@ -158,7 +160,9 @@ class HasRootRegion(SemanticAnnotation, ABC):
     ):
         self_instance = cls(name=name, region=region)
         parent_T_self = (
-            parent_T_self if parent_T_self is not None else TransformationMatrix()
+            parent_T_self
+            if parent_T_self is not None
+            else HomogeneousTransformationMatrix()
         )
 
         with world.modify_world():
@@ -192,7 +196,7 @@ class SemanticAssociation(ABC):
     def get_new_parent_T_self(
         self: HasRootBody | Self,
         parent_kinematic_structure_entity: KinematicStructureEntity,
-    ) -> TransformationMatrix:
+    ) -> HomogeneousTransformationMatrix:
         return (
             parent_kinematic_structure_entity.global_pose.inverse()
             @ self.body.global_pose
@@ -215,7 +219,7 @@ class SemanticAssociation(ABC):
     def get_self_T_new_child(
         self: HasRootBody | Self,
         child_kinematic_structure_entity: KinematicStructureEntity,
-    ) -> TransformationMatrix:
+    ) -> HomogeneousTransformationMatrix:
         return (
             self.body.global_pose.inverse()
             @ child_kinematic_structure_entity.global_pose
@@ -479,7 +483,7 @@ class HasLeftRightDoor(HasDoors):
     def add_door_to_world(
         self,
         door_factory: Door,
-        parent_T_door: TransformationMatrix,
+        parent_T_door: HomogeneousTransformationMatrix,
         opening_axis: Vector3,
         parent_world: World,
     ):
@@ -660,7 +664,7 @@ class HasCaseAsMainBody(HasSupportingSurface, ABC):
         name: PrefixedName,
         world: World,
         parent: KinematicStructureEntity,
-        parent_T_self: Optional[TransformationMatrix] = None,
+        parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
         *,
         scale: Scale = Scale(),
         wall_thickness: float = 0.01,

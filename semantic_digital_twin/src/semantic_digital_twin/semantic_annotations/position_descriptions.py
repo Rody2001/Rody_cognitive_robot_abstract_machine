@@ -15,7 +15,7 @@ from random_events.product_algebra import SimpleEvent, Event
 from random_events.variable import Continuous
 
 from semantic_digital_twin.datastructures.variables import SpatialVariables
-from semantic_digital_twin.spatial_types import TransformationMatrix
+from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
 
 
 class IntervalConstants:
@@ -151,4 +151,4 @@ class SemanticPositionDescription:
         return event_circuit.sample(amount=1)[0]
 
 
-HandlePosition = Union[SemanticPositionDescription, TransformationMatrix]
+HandlePosition = Union[SemanticPositionDescription, HomogeneousTransformationMatrix]

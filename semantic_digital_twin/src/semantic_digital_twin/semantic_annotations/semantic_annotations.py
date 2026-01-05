@@ -29,7 +29,7 @@ from ..datastructures.prefixed_name import PrefixedName
 from ..datastructures.variables import SpatialVariables
 from ..exceptions import InvalidPlaneDimensions
 from ..reasoning.predicates import InsideOf
-from ..spatial_types import Point3, TransformationMatrix
+from ..spatial_types import Point3, HomogeneousTransformationMatrix
 from ..utils import Direction
 from ..world import World
 from ..world_description.geometry import Scale
@@ -51,7 +51,7 @@ class Handle(HasRootBody):
         name: PrefixedName,
         world: World,
         parent: KinematicStructureEntity,
-        parent_T_self: Optional[TransformationMatrix] = None,
+        parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
         *,
         scale: Scale = Scale(0.1, 0.02, 0.02),
         thickness: float = 0.005,
@@ -130,7 +130,7 @@ class Aperture(HasRootRegion):
         name: PrefixedName,
         world: World,
         parent: KinematicStructureEntity,
-        parent_T_self: Optional[TransformationMatrix] = None,
+        parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
         *,
         scale: Scale = Scale(),
     ) -> Self:
@@ -156,7 +156,7 @@ class Aperture(HasRootRegion):
         world: World,
         parent: KinematicStructureEntity,
         body: Body,
-        parent_T_self: Optional[TransformationMatrix] = None,
+        parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
     ) -> Self:
         body_scale = (
             body.collision.as_bounding_box_collection_in_frame(body)
@@ -194,7 +194,7 @@ class Door(HasRootBody, HasHandle, HasHinge):
         name: PrefixedName,
         world: World,
         parent: KinematicStructureEntity,
-        parent_T_self: Optional[TransformationMatrix] = None,
+        parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
         *,
         scale: Scale = Scale(0.03, 1, 2),
     ) -> Self:
@@ -278,7 +278,7 @@ class Floor(HasSupportingSurface):
         name: PrefixedName,
         world: World,
         parent: KinematicStructureEntity,
-        parent_T_self: Optional[TransformationMatrix] = None,
+        parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
         *,
         scale: Scale = Scale(),
     ) -> Self:
@@ -332,7 +332,7 @@ class Wall(HasRootBody, HasApertures):
         name: PrefixedName,
         world: World,
         parent: KinematicStructureEntity,
-        parent_T_self: Optional[TransformationMatrix] = None,
+        parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
         *,
         scale: Scale = Scale(),
     ) -> Self:
