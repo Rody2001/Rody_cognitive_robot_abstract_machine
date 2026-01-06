@@ -5,7 +5,6 @@ from typing import Union
 from abc import ABC, abstractmethod
 
 import krrood.symbolic_math.symbolic_math as sm
-import numpy as np
 
 from giskardpy.motion_statechart.context import BuildContext
 from giskardpy.motion_statechart.data_types import DefaultWeights
@@ -28,13 +27,21 @@ class FeatureFunctionGoal(Task, ABC):
     """
 
     tip_link: KinematicStructureEntity = field(kw_only=True)
-    """The link where the controlled feature is attached. Defines the moving frame of reference."""
+    """
+    The link where the controlled feature is attached. Defines the moving frame of reference.
+    """
     root_link: KinematicStructureEntity = field(kw_only=True)
-    """The static reference link. Defines the fixed frame of reference."""
+    """
+    The static reference link. Defines the fixed frame of reference.
+    """
     controlled_feature: Union[Point3, Vector3] = field(init=False)
-    """The geometric feature (point or vector) that is being controlled, expressed in the tip link frame."""
+    """
+    The geometric feature (point or vector) that is being controlled, expressed in the tip link frame.
+    """
     reference_feature: Union[Point3, Vector3] = field(init=False)
-    """The geometric feature (point or vector) that serves as reference, expressed in the root link frame."""
+    """
+    The geometric feature (point or vector) that serves as reference, expressed in the root link frame.
+    """
 
     @abstractmethod
     def get_controlled_and_reference_features(
@@ -115,20 +122,34 @@ class AlignPerpendicular(FeatureFunctionGoal):
     """
 
     tip_link: KinematicStructureEntity = field(kw_only=True)
-    """The link where the controlled normal vector is attached."""
+    """
+    The link where the controlled normal vector is attached.
+    """
     root_link: KinematicStructureEntity = field(kw_only=True)
-    """The reference link defining the fixed coordinate frame."""
+    """
+    The reference link defining the fixed coordinate frame.
+    """
     tip_normal: Vector3 = field(kw_only=True)
-    """The normal vector to be controlled, defined in the tip link frame."""
+    """
+    The normal vector to be controlled, defined in the tip link frame.
+    """
     reference_normal: Vector3 = field(kw_only=True)
-    """The reference normal vector to align against, defined in the root link frame."""
+    """
+    The reference normal vector to align against, defined in the root link frame.
+    """
     weight: float = field(default=DefaultWeights.WEIGHT_BELOW_CA, kw_only=True)
-    """Priority weight for the alignment constraint in the optimization problem."""
+    """
+    Priority weight for the alignment constraint in the optimization problem.
+    """
     max_vel: float = field(default=0.2, kw_only=True)
-    """Maximum allowed angular velocity for the alignment motion in radians per second."""
+    """
+    Maximum allowed angular velocity for the alignment motion in radians per second.
+    """
     threshold: float = field(default=0.01, kw_only=True)
-    """Tolerance threshold in radians. The goal is considered achieved when the absolute
-    difference between the current angle and 90 degrees is below this value."""
+    """
+    Tolerance threshold in radians. The goal is considered achieved when the absolute
+    difference between the current angle and 90 degrees is below this value.
+    """
 
     def get_controlled_and_reference_features(self):
         return self.tip_normal, self.reference_normal
@@ -249,17 +270,29 @@ class AngleGoal(FeatureFunctionGoal):
     """
 
     root_link: KinematicStructureEntity = field(kw_only=True)
-    """root link of the kinematic chain."""
+    """
+    root link of the kinematic chain.
+    """
     tip_link: KinematicStructureEntity = field(kw_only=True)
-    """tip link of the kinematic chain."""
+    """
+    tip link of the kinematic chain.
+    """
     tip_vector: Vector3 = field(kw_only=True)
-    """Tip vector to be controlled."""
+    """
+    Tip vector to be controlled.
+    """
     reference_vector: Vector3 = field(kw_only=True)
-    """Reference vector to measure the angle against."""
+    """
+    Reference vector to measure the angle against.
+    """
     lower_angle: float = field(kw_only=True)
-    """Lower limit to control the angle between the tip_vector and the reference_vector."""
+    """
+    Lower limit to control the angle between the tip_vector and the reference_vector.
+    """
     upper_angle: float = field(kw_only=True)
-    """Upper limit to control the angle between the tip_vector and the reference_vector."""
+    """
+    Upper limit to control the angle between the tip_vector and the reference_vector.
+    """
     weight: float = field(default=DefaultWeights.WEIGHT_BELOW_CA, kw_only=True)
     max_vel: float = field(default=0.2, kw_only=True)
 
