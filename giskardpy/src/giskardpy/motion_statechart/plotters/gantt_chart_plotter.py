@@ -5,6 +5,7 @@ from typing import Dict, TYPE_CHECKING, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 
 from giskardpy.middleware import get_middleware
 from giskardpy.motion_statechart.context import ExecutionContext
@@ -104,20 +105,11 @@ class HistoryGanttChartPlotter:
 
         ordered_nodes = self._sort_nodes_by_parents()
 
-        # Create two subplots: main timeline and final-state-only column
-        fig, (ax_main, ax_final) = plt.subplots(
-            1,
-            2,
-            gridspec_kw={"width_ratios": [10, 1]},
-            sharey=True,
-            figsize=(self.figure_width, self.figure_height),
-        )
-        ax_main.grid(True, axis="x", zorder=-1)
+        ax_main, ax_final = self._build_subplots()
 
         for node_idx, node in enumerate(ordered_nodes):
             self._plot_lifecycle_bar(ax=ax_main, node=node, node_idx=node_idx)
             self._plot_observation_bar(ax=ax_main, node=node, node_idx=node_idx)
-
             # Draw the final-state-only blocks on the right axis
             self._plot_final_state_column(ax=ax_final, node=node, node_idx=node_idx)
 
@@ -125,6 +117,72 @@ class HistoryGanttChartPlotter:
             ax_main=ax_main, ax_final=ax_final, ordered_nodes=ordered_nodes
         )
         self._save_figure(file_name=file_name)
+
+    def _build_subplots(self):
+        # Build figure so that axes widths are fixed in physical units (inches)
+        # Main axis width = length_in_units * second_width_in_cm; Final axis width = 1 * second_width_in_cm
+        inches_per_unit = self.second_width_in_cm / 2.54
+        length_in_units = (
+            self.time_span_seconds
+            if self.use_seconds_for_x_axis
+            else self.total_control_cycles
+        )
+        main_w_inches = inches_per_unit * float(length_in_units)
+        # Make the final-state column width independent of second_width_in_cm
+        final_w_inches = 1.0  # inches
+        pad_inches = 0.25
+        # Margins in inches (tune as needed to fit labels)
+        left_margin_inches = 0.6
+        right_margin_inches = 1.2
+        bottom_margin_inches = 0.5
+        top_margin_inches = 0.2
+        fig_w_inches = (
+            left_margin_inches
+            + main_w_inches
+            + pad_inches
+            + final_w_inches
+            + right_margin_inches
+        )
+        fig_h_inches = self.figure_height
+
+        fig, ax_main = plt.subplots(
+            figsize=(fig_w_inches, fig_h_inches), constrained_layout=False
+        )
+        # Apply margins explicitly
+        fig.subplots_adjust(
+            left=left_margin_inches / fig_w_inches,
+            right=1 - right_margin_inches / fig_w_inches,
+            bottom=bottom_margin_inches / fig_h_inches,
+            top=1 - top_margin_inches / fig_h_inches,
+        )
+
+        # Compute inner area (after margins) and set main axis position to exact width
+        inner_left = left_margin_inches / fig_w_inches
+        inner_bottom = bottom_margin_inches / fig_h_inches
+        inner_top = 1 - top_margin_inches / fig_h_inches
+        inner_h_norm = inner_top - inner_bottom
+        main_w_norm_of_fig = main_w_inches / fig_w_inches
+        ax_main.set_position(
+            [
+                inner_left,
+                inner_bottom,
+                main_w_norm_of_fig,
+                inner_h_norm,
+            ]
+        )
+
+        ax_main.grid(True, axis="x", zorder=-1)
+
+        # Append a fixed-width final-state axis on the right with a fixed pad
+        divider = make_axes_locatable(ax_main)
+        ax_final = divider.append_axes(
+            "right",
+            size=axes_size.Fixed(final_w_inches),
+            pad=axes_size.Fixed(pad_inches),
+            sharey=ax_main,
+            axes_class=ax_main.__class__,
+        )
+        return ax_main, ax_final
 
     def _sort_nodes_by_parents(self) -> List[MotionStatechartNode]:
 
@@ -331,8 +389,6 @@ class HistoryGanttChartPlotter:
         ax_final.tick_params(
             axis="y", right=True, labelright=True, left=False, labelleft=False
         )
-
-        plt.tight_layout()
 
     def _make_label(self, node: MotionStatechartNode, prev_depth: int) -> str:
         depth = node.depth
