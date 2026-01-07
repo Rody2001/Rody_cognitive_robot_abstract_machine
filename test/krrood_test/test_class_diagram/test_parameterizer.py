@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import pytest
 from dataclasses import dataclass
-from enum import Enum
 from typing_extensions import List, Optional
 
 from krrood.class_diagrams.parameterizer import Parameterizer
