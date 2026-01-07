@@ -160,7 +160,7 @@ class Wall(SemanticAnnotation):
         query = an(entity(door), InsideOf(self.body, door.entry_way.region)() > 0.1)
         return query.evaluate()
 
-
+@dataclass(eq=False)
 class Drink(SemanticAnnotation):
     """
     A Semantic annotation representing a drink item.

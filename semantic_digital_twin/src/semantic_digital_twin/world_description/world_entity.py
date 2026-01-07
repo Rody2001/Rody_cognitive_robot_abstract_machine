@@ -861,8 +861,8 @@ class Human(Agent):
     This class exists primarily for semantic distinction, so that algorithms
     can treat human agents differently from robots if needed.
     """
-    favourite_drink: Optional[Type["Drink"]] = field(default=None)
-    ...
+    favourite_drink: Optional[Type[Drink]] = field(default=None, kw_only=True)
+
 
 @dataclass(eq=False)
 class SemanticEnvironmentAnnotation(RootedSemanticAnnotation):
