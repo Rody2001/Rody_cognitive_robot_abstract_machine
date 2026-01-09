@@ -74,6 +74,7 @@ class TopicPublisherNode(MotionStatechartNode, Generic[MsgType]):
     Superclass for all nodes that publish to a ROS topic.
     This node will automatically create a publisher on build.
     """
+
     topic_name: str = field(kw_only=True)
     """Name of the ROS topic to publish to."""
     msg_type: Type[MsgType] = field(kw_only=True)
@@ -112,6 +113,7 @@ class PublishOnStart(TopicPublisherNode[MsgType]):
     This node will publish its message when on_start is called.
     This is not repeated on every tick, but will be repeated after a reset, if the node is started again.
     """
+
     msg: MsgType = field(kw_only=True)
     """Message to publish."""
     msg_type: Type[MsgType] = field(init=False)

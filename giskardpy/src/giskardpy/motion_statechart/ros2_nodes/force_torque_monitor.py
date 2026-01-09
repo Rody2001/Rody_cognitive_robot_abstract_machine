@@ -11,6 +11,9 @@ from ..data_types import ObservationStateValues
 
 @dataclass(eq=False, repr=False)
 class ForceTorqueNode(TopicSubscriberNode[WrenchStamped]):
+    """
+    Superclass for all nodes that subscribe to a ROS topic that contains force and torque data.
+    """
     msg_type: WrenchStamped = field(init=False, default=WrenchStamped)
 
     def force_as_np(self) -> np.ndarray:
@@ -41,7 +44,7 @@ class ForceTorqueNode(TopicSubscriberNode[WrenchStamped]):
 @dataclass(eq=False, repr=False)
 class ForceImpactMonitor(ForceTorqueNode):
     """
-    This node checks if the message goes above a threshold.
+    This node checks if the force magnitude is above a threshold.
     """
 
     threshold: float = field(kw_only=True)
