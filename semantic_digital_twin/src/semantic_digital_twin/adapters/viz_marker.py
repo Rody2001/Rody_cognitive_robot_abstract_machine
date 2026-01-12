@@ -53,7 +53,7 @@ class VizMarkerPublisher(StateChangeCallback):
     The reference frame of the visualization marker.
     """
 
-    throttle_state_updates: int = 15
+    throttle_state_updates: int = 5
     """
     Only published every n-th state update.
     """

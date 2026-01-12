@@ -10,6 +10,7 @@ from semantic_digital_twin.world import World
 from simulation_setup import setup_hsrb_in_environment
 from pycram.src.pycram.robot_plans import SimplePouringActionDescription
 from src.pycram.robot_plans import ParkArmsActionDescription
+from pycram.src.pycram.alternative_motion_mappings import hsrb_motion_mapping
 
 result = setup_hsrb_in_environment(load_environment=load_environment, with_viz=True)
 world: World
@@ -26,7 +27,7 @@ world, robot_view, context, viz = (
 
 plan = SequentialPlan(
     context,
-    # ParkArmsActionDescription(Arms.BOTH),
+    ParkArmsActionDescription(Arms.BOTH),
     # MoveTorsoActionDescription(TorsoState.HIGH),
     # PouringActionDescription(world.get_body_by_name("milk.stl")),
     SimplePouringActionDescription(world.get_body_by_name("milk.stl"), Arms.LEFT),
