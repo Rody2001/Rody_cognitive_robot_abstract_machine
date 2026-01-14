@@ -675,3 +675,4 @@ class OfficeRoom(Room):
     """
     A kitchen room.
     """
+    ...
