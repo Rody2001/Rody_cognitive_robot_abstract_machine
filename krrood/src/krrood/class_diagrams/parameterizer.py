@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime
 from typing_extensions import List, Optional
@@ -59,7 +58,7 @@ class Parameterizer:
             return self._parameterize_relationship(wrapped_field, field_name)
 
         variable = self._create_variable_from_field(wrapped_field, field_name)
-        return [variable] if variable else []
+        return [variable]
 
     def _parameterize_relationship(
         self, wrapped_field: WrappedField, field_name: str
