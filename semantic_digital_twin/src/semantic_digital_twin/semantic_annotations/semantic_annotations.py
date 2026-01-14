@@ -651,3 +651,27 @@ class Water(Drink):
 @dataclass(eq=False)
 class Beer(Drink):
     ...
+
+@dataclass(eq=False)
+class KitchenRoom(Room):
+    """
+    A kitchen room.
+    """
+
+@dataclass(eq=False)
+class BedRoom(Room):
+    """
+    A kitchen room.
+    """
+
+@dataclass(eq=False)
+class LivingRoom(Room):
+    """
+    A kitchen room.
+    """
+
+@dataclass(eq=False)
+class OfficeRoom(Room):
+    """
+    A kitchen room.
+    """
