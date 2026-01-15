@@ -689,8 +689,9 @@ class SemanticAnnotation(WorldEntityWithID, SubclassJSONSerializer):
         """
         .. warn::
 
-           This will not work if any of this classes fields have a type UUID or some container this will not work.
-           Whenever this happens, the UUIDs are resolved to WorldEntityWithID objects, which leads to fail-states.
+            This will not work if any of the classes' fields have a type UUID or some container of UUID.
+            Whenever this happens, the UUIDs are resolved to WorldEntityWithID objects, which leads to undefined
+            behavior.
         """
         result = {
             **super().to_json(),
@@ -723,8 +724,9 @@ class SemanticAnnotation(WorldEntityWithID, SubclassJSONSerializer):
         """
         .. warn::
 
-           This will not work if any of this classes fields have a type UUID or some container this will not work.
-           Whenever this happens, the UUIDs are resolved to WorldEntityWithID objects, which leads to fail-states.
+            This will not work if any of the classes' fields have a type UUID or some container of UUID.
+            Whenever this happens, the UUIDs are resolved to WorldEntityWithID objects, which leads to undefined
+            behavior.
         """
         semantic_annotation_fields = {f.name: f for f in fields(cls)}
 
