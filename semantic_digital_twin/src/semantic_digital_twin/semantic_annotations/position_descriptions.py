@@ -22,12 +22,12 @@ class IntervalConstants:
     Predefined intervals for semantic directions.
     """
 
-    ZERO_DIRAC = (0, 0, Bound.CLOSED, Bound.CLOSED)
+    ZERO = (0, 0, Bound.CLOSED, Bound.CLOSED)
     ZERO_TO_ONE_THIRD = (0, 1 / 3, Bound.CLOSED, Bound.CLOSED)
     ONE_THIRD_TO_TWO_THIRD = (1 / 3, 2 / 3, Bound.OPEN, Bound.OPEN)
-    HALF_DIRAC = (0.5, 0.5, Bound.CLOSED, Bound.CLOSED)
+    HALF = (0.5, 0.5, Bound.CLOSED, Bound.CLOSED)
     TWO_THIRD_TO_ONE = (2 / 3, 1, Bound.CLOSED, Bound.CLOSED)
-    ONE_DIRAC = (1, 1, Bound.CLOSED, Bound.CLOSED)
+    ONE = (1, 1, Bound.CLOSED, Bound.CLOSED)
 
 
 class SemanticDirection(Enum): ...
@@ -38,12 +38,12 @@ class HorizontalSemanticDirection(SimpleInterval, SemanticDirection):
     Semantic directions for horizontal positioning.
     """
 
-    FULLY_LEFT = IntervalConstants.ZERO_DIRAC
+    FULLY_LEFT = IntervalConstants.ZERO
     LEFT = IntervalConstants.ZERO_TO_ONE_THIRD
     CENTER = IntervalConstants.ONE_THIRD_TO_TWO_THIRD
-    FULLY_CENTER = IntervalConstants.HALF_DIRAC
+    FULLY_CENTER = IntervalConstants.HALF
     RIGHT = IntervalConstants.TWO_THIRD_TO_ONE
-    FULLY_RIGHT = IntervalConstants.ONE_DIRAC
+    FULLY_RIGHT = IntervalConstants.ONE
 
 
 class VerticalSemanticDirection(SimpleInterval, SemanticDirection):
@@ -51,12 +51,12 @@ class VerticalSemanticDirection(SimpleInterval, SemanticDirection):
     Semantic directions for vertical positioning.
     """
 
-    FULLY_BOTTOM = IntervalConstants.ZERO_DIRAC
+    FULLY_BOTTOM = IntervalConstants.ZERO
     BOTTOM = IntervalConstants.ZERO_TO_ONE_THIRD
     CENTER = IntervalConstants.ONE_THIRD_TO_TWO_THIRD
-    FULLY_CENTER = IntervalConstants.HALF_DIRAC
+    FULLY_CENTER = IntervalConstants.HALF
     TOP = IntervalConstants.TWO_THIRD_TO_ONE
-    FULLY_TOP = IntervalConstants.ONE_DIRAC
+    FULLY_TOP = IntervalConstants.ONE
 
 
 @dataclass

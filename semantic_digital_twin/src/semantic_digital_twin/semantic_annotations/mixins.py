@@ -755,7 +755,7 @@ class HasSupportingSurface(HasRootBody, ABC):
         self.supporting_surface = supporting_surface
         return supporting_surface
 
-    def points_on_surface(self, amount: int = 100) -> List[Point3]:
+    def points_on_supporting_surface(self, amount: int = 100) -> List[Point3]:
         """
         Get points that are on the surface.
 

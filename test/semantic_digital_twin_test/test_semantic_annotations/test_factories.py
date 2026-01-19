@@ -526,7 +526,7 @@ class TestFactories(unittest.TestCase):
             table.root, table_scale.to_simple_event().as_composite_set()
         ).as_shapes()
 
-        points = table.points_on_surface(amount=10)
+        points = table.points_on_supporting_surface(amount=10)
         self.assertEqual(len(points), 10)
         for p in points:
             self.assertEqual(p.reference_frame, table.root)
