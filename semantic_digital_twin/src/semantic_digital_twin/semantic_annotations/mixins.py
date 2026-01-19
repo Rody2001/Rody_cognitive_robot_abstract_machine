@@ -861,7 +861,7 @@ class HasCaseAsRootBody(HasSupportingSurface, ABC):
 
 
 @dataclass(eq=False)
-class CanStoreObjects(HasRootBody, ABC):
+class HasStorageSpace(HasRootBody, ABC):
     """
     A mixin class for semantic annotations that represent storage spaces.
     """

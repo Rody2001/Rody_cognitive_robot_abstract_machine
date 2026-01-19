@@ -23,7 +23,7 @@ from .mixins import (
     HasApertures,
     IsPerceivable,
     HasRootBody,
-    CanStoreObjects,
+    HasStorageSpace,
 )
 from ..datastructures.prefixed_name import PrefixedName
 from ..datastructures.variables import SpatialVariables
@@ -304,7 +304,7 @@ class DoubleDoor(SemanticAnnotation):
 
 
 @dataclass(eq=False)
-class Drawer(Furniture, HasCaseAsRootBody, HasHandle, HasSlider, CanStoreObjects):
+class Drawer(Furniture, HasCaseAsRootBody, HasHandle, HasSlider, HasStorageSpace):
 
     @property
     def opening_direction(self) -> Direction:
@@ -322,7 +322,7 @@ class Table(Furniture, HasSupportingSurface):
 
 
 @dataclass(eq=False)
-class Cabinet(Furniture, CanStoreObjects, HasCaseAsRootBody):
+class Cabinet(Furniture, HasStorageSpace, HasCaseAsRootBody):
     @property
     def opening_direction(self) -> Direction:
         return Direction.NEGATIVE_X

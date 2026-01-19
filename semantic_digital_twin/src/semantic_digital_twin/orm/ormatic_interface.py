@@ -2310,7 +2310,7 @@ class WineBottleDAO(
 
 class CanStoreObjectsDAO(
     HasRootBodyDAO,
-    DataAccessObject[semantic_digital_twin.semantic_annotations.mixins.CanStoreObjects],
+    DataAccessObject[semantic_digital_twin.semantic_annotations.mixins.HasStorageSpace],
 ):
 
     __tablename__ = "CanStoreObjectsDAO"
