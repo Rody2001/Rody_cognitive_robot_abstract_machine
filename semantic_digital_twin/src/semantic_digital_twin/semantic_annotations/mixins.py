@@ -164,39 +164,38 @@ class HasRootKinematicStructureEntity(SemanticAnnotation, ABC):
         self_instance = cls(name=name, root=kinematic_structure_entity)
         world_root_T_self = world_root_T_self or HomogeneousTransformationMatrix()
 
-        with world.modify_world():
-            world.add_kinematic_structure_entity(kinematic_structure_entity)
-            if issubclass(connection_type, ActiveConnection1DOF):
-                limits = connection_limits or cls._generate_default_dof_limits(
-                    connection_type
-                )
-                if limits.lower_limit.position >= limits.upper_limit.position:
-                    raise InvalidConnectionLimits(name, limits)
-                dof = DegreeOfFreedom(
-                    name=PrefixedName("dof", str(name)),
-                    upper_limits=limits.upper_limit,
-                    lower_limits=limits.lower_limit,
-                )
-                world.add_degree_of_freedom(dof)
-                world_root_C_self = cls._parent_connection_type(
-                    parent=world.root,
-                    child=kinematic_structure_entity,
-                    parent_T_connection_expression=world_root_T_self,
-                    multiplier=connection_multiplier,
-                    offset=connection_offset,
-                    axis=active_axis,
-                    dof_id=dof.id,
-                )
-            elif connection_type == FixedConnection:
-                world_root_C_self = FixedConnection(
-                    parent=world.root,
-                    child=kinematic_structure_entity,
-                    parent_T_connection_expression=world_root_T_self,
-                )
-            else:
-                assert_never(connection_type)
-            world.add_connection(world_root_C_self)
-            world.add_semantic_annotation(self_instance)
+        world.add_kinematic_structure_entity(kinematic_structure_entity)
+        if issubclass(connection_type, ActiveConnection1DOF):
+            limits = connection_limits or cls._generate_default_dof_limits(
+                connection_type
+            )
+            if limits.lower_limit.position >= limits.upper_limit.position:
+                raise InvalidConnectionLimits(name, limits)
+            dof = DegreeOfFreedom(
+                name=PrefixedName("dof", str(name)),
+                upper_limits=limits.upper_limit,
+                lower_limits=limits.lower_limit,
+            )
+            world.add_degree_of_freedom(dof)
+            world_root_C_self = cls._parent_connection_type(
+                parent=world.root,
+                child=kinematic_structure_entity,
+                parent_T_connection_expression=world_root_T_self,
+                multiplier=connection_multiplier,
+                offset=connection_offset,
+                axis=active_axis,
+                dof_id=dof.id,
+            )
+        elif connection_type == FixedConnection:
+            world_root_C_self = FixedConnection(
+                parent=world.root,
+                child=kinematic_structure_entity,
+                parent_T_connection_expression=world_root_T_self,
+            )
+        else:
+            assert_never(connection_type)
+        world.add_connection(world_root_C_self)
+        world.add_semantic_annotation(self_instance)
 
         return self_instance
 
@@ -258,20 +257,23 @@ class HasRootKinematicStructureEntity(SemanticAnnotation, ABC):
             return
 
         world = self._world
-        new_parent_T_self = (
-            new_parent_entity.global_pose.inverse() @ self.root.global_pose
+
+        root_T_self = self._offline_root_T_entity(self.root)
+        root_T_new_parent = self._offline_root_T_entity(new_parent_entity)
+
+        new_parent_T_self = root_T_new_parent.inverse() @ root_T_self
+
+        parent_C_self = self.root.parent_connection
+        world.remove_connection(parent_C_self)
+
+        new_parent_C_self = FixedConnection(
+            parent=new_parent_entity,
+            child=self.root,
+            parent_T_connection_expression=HomogeneousTransformationMatrix(
+                new_parent_T_self.evaluate()
+            ),
         )
-
-        with world.modify_world():
-            parent_C_self = self.root.parent_connection
-            world.remove_connection(parent_C_self)
-
-            new_parent_C_self = FixedConnection(
-                parent=new_parent_entity,
-                child=self.root,
-                parent_T_connection_expression=new_parent_T_self,
-            )
-            world.add_connection(new_parent_C_self)
+        world.add_connection(new_parent_C_self)
 
     def _attach_child_entity_in_kinematic_structure(
         self,
@@ -289,21 +291,39 @@ class HasRootKinematicStructureEntity(SemanticAnnotation, ABC):
             return
 
         world = self._world
-        self_T_new_child = (
-            self.root.global_pose.inverse()
-            @ child_kinematic_structure_entity.global_pose
+        # world._forward_kinematic_manager.recompile()
+        # world._forward_kinematic_manager.recompute()
+        root_T_self = self._offline_root_T_entity(self.root)
+        root_T_new_child = self._offline_root_T_entity(child_kinematic_structure_entity)
+
+        self_T_new_child = root_T_self.inverse() @ root_T_new_child
+
+        parent_C_new_child = child_kinematic_structure_entity.parent_connection
+        world.remove_connection(parent_C_new_child)
+
+        self_C_new_child = FixedConnection(
+            parent=self.root,
+            child=child_kinematic_structure_entity,
+            parent_T_connection_expression=HomogeneousTransformationMatrix(
+                self_T_new_child.evaluate()
+            ),
         )
+        world.add_connection(self_C_new_child)
 
-        with world.modify_world():
-            parent_C_new_child = child_kinematic_structure_entity.parent_connection
-            world.remove_connection(parent_C_new_child)
-
-            self_C_new_child = FixedConnection(
-                parent=self.root,
-                child=child_kinematic_structure_entity,
-                parent_T_connection_expression=self_T_new_child,
+    def _offline_root_T_entity(
+        self, entity: KinematicStructureEntity
+    ) -> HomogeneousTransformationMatrix:
+        world = entity._world
+        future_root_T_self = entity.parent_connection.origin_expression
+        parent_entity = entity.parent_kinematic_structure_entity
+        while True:
+            if parent_entity == world.root:
+                break
+            future_root_T_self = (
+                parent_entity.parent_connection.origin_expression @ future_root_T_self
             )
-            world.add_connection(self_C_new_child)
+            parent_entity = parent_entity.parent_kinematic_structure_entity
+        return future_root_T_self
 
 
 @dataclass(eq=False)
@@ -450,6 +470,9 @@ class HasApertures(HasRootBody, ABC):
 
         :param aperture: The aperture whose geometry should be removed.
         """
+        world = self._world
+        world._forward_kinematic_manager.recompile()
+        world._forward_kinematic_manager.recompute()
         hole_event = aperture.root.area.as_bounding_box_collection_in_frame(
             self.root
         ).event

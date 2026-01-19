@@ -512,15 +512,17 @@ def test_attribute_updates(rclpy_node):
     root = Body(name=PrefixedName("root"))
     with world1.modify_world():
         world1.add_body(root)
-    fridge = Fridge.create_with_new_body_in_world(
-        name=PrefixedName("case"),
-        world=world1,
-        scale=Scale(1, 1, 2.0),
-    )
-    door = Door.create_with_new_body_in_world(
-        name=PrefixedName("left_door"),
-        world=world1,
-    )
+    time.sleep(1)
+    with world1.modify_world():
+        fridge = Fridge.create_with_new_body_in_world(
+            name=PrefixedName("case"),
+            world=world1,
+            scale=Scale(1, 1, 2.0),
+        )
+        door = Door.create_with_new_body_in_world(
+            name=PrefixedName("left_door"),
+            world=world1,
+        )
     time.sleep(1)
     assert [hash(sa) for sa in world1.semantic_annotations] == [
         hash(sa) for sa in world2.semantic_annotations

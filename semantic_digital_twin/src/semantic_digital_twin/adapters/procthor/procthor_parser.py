@@ -222,28 +222,30 @@ class ProcthorDoor:
         world_T_handle = world_T_door @ door_T_handle
 
         handle_name = PrefixedName(f"{name.name}_handle", name.prefix)
-        handle = Handle.create_with_new_body_in_world(
-            name=handle_name,
-            world=world,
-            world_root_T_self=world_T_handle,
-        )
+        with world.modify_world():
+            handle = Handle.create_with_new_body_in_world(
+                name=handle_name,
+                world=world,
+                world_root_T_self=world_T_handle,
+            )
 
-        door = Door.create_with_new_body_in_world(
-            name=name,
-            world=world,
-            scale=scale,
-            world_root_T_self=world_T_door,
-        )
-        door.add_handle(handle)
+            door = Door.create_with_new_body_in_world(
+                name=name,
+                world=world,
+                scale=scale,
+                world_root_T_self=world_T_door,
+            )
+            door.add_handle(handle)
 
-        world_T_hinge = door.calculate_world_T_hinge_based_on_handle(Vector3.Z())
-        hinge = Hinge.create_with_new_body_in_world(
-            name=PrefixedName(f"{name.name}_hinge", name.prefix),
-            world=world,
-            world_root_T_self=world_T_hinge,
-        )
+        with world.modify_world():
+            world_T_hinge = door.calculate_world_T_hinge_based_on_handle(Vector3.Z())
+            hinge = Hinge.create_with_new_body_in_world(
+                name=PrefixedName(f"{name.name}_hinge", name.prefix),
+                world=world,
+                world_root_T_self=world_T_hinge,
+            )
 
-        door.add_hinge(hinge)
+            door.add_hinge(hinge)
         return door
 
     def add_to_world(self, world: World) -> Union[Door, DoubleDoor]:
@@ -402,12 +404,13 @@ class ProcthorWall:
         """
         Returns a World instance with this wall at its root.
         """
-        wall = Wall.create_with_new_body_in_world(
-            name=self.name,
-            scale=self.scale,
-            world=world,
-            world_root_T_self=self.world_T_wall,
-        )
+        with world.modify_world():
+            wall = Wall.create_with_new_body_in_world(
+                name=self.name,
+                scale=self.scale,
+                world=world,
+                world_root_T_self=self.world_T_wall,
+            )
 
         for door_dict in self.door_dicts:
             procthor_door = ProcthorDoor(
@@ -416,14 +419,14 @@ class ProcthorWall:
                 world_T_parent_wall=self.world_T_wall,
             )
             door = procthor_door.add_to_world(world)
-
-            if isinstance(door, Door):
-                wall.add_aperture(door.entry_way)
-            elif isinstance(door, DoubleDoor):
-                wall.add_aperture(door.left_door.entry_way)
-                wall.add_aperture(door.right_door.entry_way)
-            else:
-                assert_never(door)
+            with world.modify_world():
+                if isinstance(door, Door):
+                    wall.add_aperture(door.entry_way)
+                elif isinstance(door, DoubleDoor):
+                    wall.add_aperture(door.left_door.entry_way)
+                    wall.add_aperture(door.right_door.entry_way)
+                else:
+                    assert_never(door)
 
         return wall
 
@@ -489,12 +492,13 @@ class ProcthorRoom:
         Returns a World instance with this room as a Region at its root.
         """
         floor_name = PrefixedName(f"{self.name.name}_floor", self.name.prefix)
-        floor = Floor.create_with_new_body_from_polytope_in_world(
-            name=floor_name,
-            world=world,
-            floor_polytope=self.centered_polytope,
-            world_root_T_self=self.world_T_room,
-        )
+        with world.modify_world():
+            floor = Floor.create_with_new_body_from_polytope_in_world(
+                name=floor_name,
+                world=world,
+                floor_polytope=self.centered_polytope,
+                world_root_T_self=self.world_T_room,
+            )
         room = Room(name=self.name, floor=floor)
         with world.modify_world():
             world.add_semantic_annotation(room)

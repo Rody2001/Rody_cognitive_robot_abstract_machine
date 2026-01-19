@@ -162,6 +162,9 @@ class Aperture(HasRootRegion):
         body: Body,
         parent_T_self: Optional[HomogeneousTransformationMatrix] = None,
     ) -> Self:
+
+        world._forward_kinematic_manager.recompile()
+        world._forward_kinematic_manager.recompute()
         body_scale = (
             body.collision.as_bounding_box_collection_in_frame(body)
             .bounding_box()
@@ -233,9 +236,6 @@ class Door(HasHandle, HasHinge):
         collision = bounding_box_collection.as_shapes()
         door_body.collision = collision
         door_body.visual = collision
-        door = cls._create_with_connection_in_world(
-            FixedConnection, name, world, door_body, world_root_T_self
-        )
 
         entry_way_name = PrefixedName(name.name + "entry_way", name.prefix)
         entry_way_region_name = PrefixedName(
@@ -243,14 +243,17 @@ class Door(HasHandle, HasHinge):
         )
         entry_way_region = Region(
             name=entry_way_region_name,
-            area=ShapeCollection([TriangleMesh(mesh=door.root.combined_mesh)]),
+            area=ShapeCollection([TriangleMesh(mesh=door_body.combined_mesh)]),
         )
-        # entry_way = EntryWay(name=entry_way_name, root=entry_way_region)
-        # with world.modify_world():
-        #     world.add_region(entry_way.root)
-        #     world.add_connection(FixedConnection(door.root, entry_way.root))
-        #     world.add_semantic_annotation(entry_way)
-        # door.entry_way = entry_way
+        entry_way = EntryWay(name=entry_way_name, root=entry_way_region)
+        world.add_region(entry_way.root)
+        world.add_connection(FixedConnection(door_body, entry_way.root))
+        world.add_semantic_annotation(entry_way)
+
+        door = cls._create_with_connection_in_world(
+            FixedConnection, name, world, door_body, world_root_T_self
+        )
+        door.entry_way = entry_way
         return door
 
     def calculate_world_T_hinge_based_on_handle(

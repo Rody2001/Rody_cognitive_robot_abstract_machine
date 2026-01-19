@@ -34,21 +34,26 @@ def drawer_from_body_in_world(drawer_body: Body, world: World) -> Drawer:
         .scale
     )
 
-    drawer = Drawer.create_with_new_body_in_world(
-        name=drawer_body.name,
-        scale=drawer_scale,
-        world=world,
-    )
-    world_T_drawer = drawer_body.global_pose
-    drawer_T_handle = HomogeneousTransformationMatrix.from_xyz_rpy(x=drawer_scale.x / 2)
-    world_T_handle = world_T_drawer @ drawer_T_handle
-    handle = Handle.create_with_new_body_in_world(
-        name=PrefixedName(drawer_body.name.name + "_handle", drawer_body.name.prefix),
-        scale=Scale(0.05, 0.1, 0.02),
-        world=world,
-        world_root_T_self=world_T_handle,
-    )
-    drawer.add_handle(handle)
+    with world.modify_world():
+        drawer = Drawer.create_with_new_body_in_world(
+            name=drawer_body.name,
+            scale=drawer_scale,
+            world=world,
+        )
+        world_T_drawer = drawer_body.global_pose
+        drawer_T_handle = HomogeneousTransformationMatrix.from_xyz_rpy(
+            x=drawer_scale.x / 2
+        )
+        world_T_handle = world_T_drawer @ drawer_T_handle
+        handle = Handle.create_with_new_body_in_world(
+            name=PrefixedName(
+                drawer_body.name.name + "_handle", drawer_body.name.prefix
+            ),
+            scale=Scale(0.05, 0.1, 0.02),
+            world=world,
+            world_root_T_self=world_T_handle,
+        )
+        drawer.add_handle(handle)
 
     return drawer
 
@@ -59,15 +64,6 @@ def door_from_body_in_world(door_body: Body, world: World) -> Door:
     This function assumes that the door body has a bounding box that can be used to determine its
     scale and that a handle can be created with a standard size.
     """
-    door = Door.create_with_new_body_in_world(
-        name=door_body.name,
-        scale=door_body.collision.as_bounding_box_collection_at_origin(
-            HomogeneousTransformationMatrix(reference_frame=door_body._world.root)
-        )
-        .bounding_boxes[0]
-        .scale,
-        world=world,
-    )
 
     semantic_handle_position = SemanticPositionDescription(
         horizontal_direction_chain=[
@@ -86,20 +82,32 @@ def door_from_body_in_world(door_body: Body, world: World) -> Door:
     world_T_door = door_body.global_pose
     world_T_handle = world_T_door @ door_T_handle
 
-    handle = Handle.create_with_new_body_in_world(
-        name=PrefixedName(door_body.name.name + "_handle", door_body.name.prefix),
-        scale=Scale(0.05, 0.1, 0.02),
-        world=world,
-        world_root_T_self=world_T_handle,
-    )
-    door.add_handle(handle)
-    world_T_hinge = door.calculate_world_T_hinge_based_on_handle(Vector3.Z())
-    hinge = Hinge.create_with_new_body_in_world(
-        name=PrefixedName(door_body.name.name + "_hinge", door_body.name.prefix),
-        world=world,
-        world_root_T_self=world_T_hinge,
-    )
-    door.add_hinge(hinge)
+    with world.modify_world():
+        door = Door.create_with_new_body_in_world(
+            name=door_body.name,
+            scale=door_body.collision.as_bounding_box_collection_at_origin(
+                HomogeneousTransformationMatrix(reference_frame=door_body._world.root)
+            )
+            .bounding_boxes[0]
+            .scale,
+            world=world,
+        )
+
+        handle = Handle.create_with_new_body_in_world(
+            name=PrefixedName(door_body.name.name + "_handle", door_body.name.prefix),
+            scale=Scale(0.05, 0.1, 0.02),
+            world=world,
+            world_root_T_self=world_T_handle,
+        )
+        door.add_handle(handle)
+    with world.modify_world():
+        world_T_hinge = door.calculate_world_T_hinge_based_on_handle(Vector3.Z())
+        hinge = Hinge.create_with_new_body_in_world(
+            name=PrefixedName(door_body.name.name + "_hinge", door_body.name.prefix),
+            world=world,
+            world_root_T_self=world_T_hinge,
+        )
+        door.add_hinge(hinge)
 
     return door
 
@@ -114,24 +122,25 @@ def dresser_from_body_in_world(dresser: Body, world: World) -> Dresser:
     """
     drawer_pattern = re.compile(r"^.*_drawer_.*$")
     door_pattern = re.compile(r"^.*_door_.*$")
-    dresser = Dresser.create_with_new_body_in_world(
-        name=dresser.name,
-        scale=dresser.collision.as_bounding_box_collection_at_origin(
-            HomogeneousTransformationMatrix(reference_frame=dresser._world.root)
+    with world.modify_world():
+        dresser = Dresser.create_with_new_body_in_world(
+            name=dresser.name,
+            scale=dresser.collision.as_bounding_box_collection_at_origin(
+                HomogeneousTransformationMatrix(reference_frame=dresser._world.root)
+            )
+            .bounding_boxes[0]
+            .scale,
+            world=world,
         )
-        .bounding_boxes[0]
-        .scale,
-        world=world,
-    )
-    for child in dresser._world.compute_child_kinematic_structure_entities(
-        dresser.root
-    ):
-        child: Body
-        if bool(drawer_pattern.fullmatch(child.name.name)):
-            drawer = drawer_from_body_in_world(child, world)
-            dresser.add_drawer(drawer)
-        elif bool(door_pattern.fullmatch(child.name.name)):
-            door = door_from_body_in_world(child, world)
-            dresser.add_door(door)
+        for child in dresser._world.compute_child_kinematic_structure_entities(
+            dresser.root
+        ):
+            child: Body
+            if bool(drawer_pattern.fullmatch(child.name.name)):
+                drawer = drawer_from_body_in_world(child, world)
+                dresser.add_drawer(drawer)
+            elif bool(door_pattern.fullmatch(child.name.name)):
+                door = door_from_body_in_world(child, world)
+                dresser.add_door(door)
 
     return dresser
