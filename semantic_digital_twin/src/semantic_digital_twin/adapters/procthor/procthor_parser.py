@@ -190,8 +190,8 @@ class ProcthorDoor:
 
         double_door = DoubleDoor(
             name=self.name,
-            left_door=doors[0],
-            right_door=doors[1],
+            door_0=doors[0],
+            door_1=doors[1],
         )
         with world.modify_world():
             world.add_semantic_annotation(double_door)
@@ -243,6 +243,7 @@ class ProcthorDoor:
                 name=PrefixedName(f"{name.name}_hinge", name.prefix),
                 world=world,
                 world_root_T_self=world_T_hinge,
+                active_axis=Vector3.Z(),
             )
 
             door.add_hinge(hinge)
@@ -423,8 +424,8 @@ class ProcthorWall:
                 if isinstance(door, Door):
                     wall.add_aperture(door.entry_way)
                 elif isinstance(door, DoubleDoor):
-                    wall.add_aperture(door.left_door.entry_way)
-                    wall.add_aperture(door.right_door.entry_way)
+                    wall.add_aperture(door.door_0.entry_way)
+                    wall.add_aperture(door.door_1.entry_way)
                 else:
                     assert_never(door)
 

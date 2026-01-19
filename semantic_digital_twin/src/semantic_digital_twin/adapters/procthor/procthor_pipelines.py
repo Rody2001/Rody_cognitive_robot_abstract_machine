@@ -106,6 +106,7 @@ def door_from_body_in_world(door_body: Body, world: World) -> Door:
             name=PrefixedName(door_body.name.name + "_hinge", door_body.name.prefix),
             world=world,
             world_root_T_self=world_T_hinge,
+            active_axis=Vector3.Z(),
         )
         door.add_hinge(hinge)
 
