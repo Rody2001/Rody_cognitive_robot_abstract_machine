@@ -66,7 +66,7 @@ class Parameterizer:
         """
         field_name = f"{prefix}.{wrapped_field.name}"
 
-        if self._should_skip_field(wrapped_field):
+        if self.skip_field(wrapped_field):
             return []
 
         if wrapped_field.is_one_to_one_relationship and not wrapped_field.is_enum:
@@ -76,17 +76,11 @@ class Parameterizer:
 
         return [variable]
 
-    def _should_skip_field(self, wrapped_field: WrappedField) -> bool:
+    def skip_field(self, wrapped_field: WrappedField) -> bool:
         """
-        Determine if a field should be skipped during parameterization.
-
-        :return: True if the field should be skipped, False otherwise.
+        Currently skipping the 'datetime' fields.
         """
-        return (
-            wrapped_field.type_endpoint is datetime
-            or wrapped_field.is_type_type
-            or wrapped_field.is_one_to_many_relationship
-        )
+        return wrapped_field.type_endpoint is datetime
 
     def _parameterize_relationship(
         self, wrapped_field: WrappedField, field_name: str

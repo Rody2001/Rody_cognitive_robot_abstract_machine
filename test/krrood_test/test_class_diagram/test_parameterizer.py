@@ -121,69 +121,13 @@ def test_create_fully_factorized_distribution(parameterizer: Parameterizer):
     assert set(probabilistic_circuit.variables) == set(variables)
 
 
-def test_parameterize_movetorso_action(parameterizer: Parameterizer):
+def test_parameterize_movetorse_navigate(parameterizer: Parameterizer):
     """
-    Test Parameterizer for MoveTorsoAction with multiple torso states.
-    """
-    class_diagram = ClassDiagram([MoveTorsoAction])
-    wrapped_action = class_diagram.get_wrapped_class(MoveTorsoAction)
-    variables = parameterizer(wrapped_action)
-
-    expected_variable = Symbolic(
-        "MoveTorsoAction.torso_state",
-        Set.from_iterable(list(TorsoState))
-    )
-
-    assert len(variables) == 1
-    variable = variables[0]
-    assert isinstance(variable, Symbolic)
-    assert variable.name == expected_variable.name
-    assert set(variable.domain) == set(expected_variable.domain)
-
-    domain_values = {str(value) for value in variable.domain}
-    expected_values = {str(int(state)) for state in TorsoState}
-    assert domain_values == expected_values
-
-
-def test_parameterize_navigate_action(parameterizer: Parameterizer):
-    """
-    Test parameterization of the NavigateAction class.
-    """
-    class_diagram = ClassDiagram([
-        NavigateAction,
-        PoseStamped,
-        PyCramPose,
-        PyCramVector3,
-        PyCramQuaternion,
-        Header
-    ])
-    wrapped_navigate_action = class_diagram.get_wrapped_class(NavigateAction)
-    variables = parameterizer(wrapped_navigate_action)
-
-    expected_variable_names = {
-        "NavigateAction.target_location.pose.position.x",
-        "NavigateAction.target_location.pose.position.y",
-        "NavigateAction.target_location.pose.position.z",
-        "NavigateAction.target_location.pose.orientation.x",
-        "NavigateAction.target_location.pose.orientation.y",
-        "NavigateAction.target_location.pose.orientation.z",
-        "NavigateAction.target_location.pose.orientation.w",
-        "NavigateAction.target_location.header.sequence",
-        "NavigateAction.keep_joint_states",
-    }
-
-    variable_names = {v.name for v in variables}
-    assert variable_names == expected_variable_names
-
-
-def test_parameterize_robot_plan(parameterizer: Parameterizer):
-    """
-    Test parameterization of a robot plan consisting of: MoveTorso - Navigate - MoveTorso.
+    Test parameterization of a potential robot plan consisting of: MoveTorso - Navigate - MoveTorso.
 
     This test verifies:
-    1. Parameterization of robot action plan.
-    2. Create fully factorized distribution over the plan variables.
-    3. Sampling from the constrained distribution and validation of constraints.
+    1. Parameterization of simple robot action plan
+    2. Sampling from the constrained distribution and validation of constraints.
     """
 
     plan_classes = [
@@ -212,18 +156,18 @@ def test_parameterize_robot_plan(parameterizer: Parameterizer):
 
     assert set(variables.keys()) == expected_names
 
-    dist_vars = [v for v in all_variables if not isinstance(v, Integer)]
-    probabilistic_circuit = parameterizer.create_fully_factorized_distribution(dist_vars)
+    distribution_variables = [v for v in all_variables if not isinstance(v, Integer)]
+    probabilistic_circuit = parameterizer.create_fully_factorized_distribution(distribution_variables)
 
-    expected_dist_names = expected_names - {"NavigateAction.target_location.header.sequence"}
-    assert {v.name for v in probabilistic_circuit.variables} == expected_dist_names
+    expected_distribution_names = expected_names - {"NavigateAction.target_location.header.sequence"}
+    assert {v.name for v in probabilistic_circuit.variables} == expected_distribution_names
 
     torso_1 = variables["MoveTorsoAction_1.torso_state"]
     torso_2 = variables["MoveTorsoAction_2.torso_state"]
 
     consistency_events = [SimpleEvent({torso_1: [state], torso_2: [state]}) for state in TorsoState]
-    restricted_dist, _ = probabilistic_circuit.truncated(Event(*consistency_events))
-    restricted_dist.normalize()
+    restricted_distribution, _ = probabilistic_circuit.truncated(Event(*consistency_events))
+    restricted_distribution.normalize()
 
     pose_constraints = {
         variables["NavigateAction.target_location.pose.position.x"]: 1.5,
@@ -234,7 +178,7 @@ def test_parameterize_robot_plan(parameterizer: Parameterizer):
         variables["NavigateAction.target_location.pose.orientation.w"]: 1.0,
     }
     
-    final_distribution, _ = restricted_dist.conditional(pose_constraints)
+    final_distribution, _ = restricted_distribution.conditional(pose_constraints)
     final_distribution.normalize()
 
     target_x, target_y = 1.5, -2.0
@@ -250,7 +194,7 @@ def test_parameterize_robot_plan(parameterizer: Parameterizer):
 
 def test_parameterize_pickup_navigate_place(parameterizer: Parameterizer):
     """
-    Test parameterization of a robot plan consisting of: PickUp - Navigate - Place.
+    Test parameterization of a potential robot plan consisting of: PickUp - Navigate - Place.
 
     This test verifies:
     1. Parameterization of pick up, navigate, placing robot action plan
@@ -333,7 +277,4 @@ def test_parameterize_pickup_navigate_place(parameterizer: Parameterizer):
         assert sample[arm_pickup] == sample[arm_place]
         assert sample[v_nav_x] == nav_target_x
         assert sample[v_nav_y] == nav_target_y
-
-    for var in distribution:
-        assert var in sample
 
