@@ -55,7 +55,7 @@ from .world_description.connections import (
     ActiveConnection,
 )
 from .world_description.connections import HasUpdateState
-from .world_description.degree_of_freedom import DegreeOfFreedom
+from .world_description.degree_of_freedom import DegreeOfFreedom, DegreeOfFreedomLimits
 from .world_description.visitors import CollisionBodyCollector, ConnectionCollector
 from .world_description.world_entity import (
     Connection,
@@ -1931,8 +1931,10 @@ class World:
             for dof in self.degrees_of_freedom:
                 new_dof = DegreeOfFreedom(
                     name=dof.name,
-                    lower_limits=dof.lower_limits,
-                    upper_limits=dof.upper_limits,
+                    limits=DegreeOfFreedomLimits(
+                        lower=dof.limits.lower,
+                        upper=dof.limits.upper,
+                    ),
                     id=dof.id,
                 )
                 new_world.add_degree_of_freedom(new_dof)

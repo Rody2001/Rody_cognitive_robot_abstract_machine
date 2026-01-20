@@ -110,8 +110,8 @@ class JointPositionList(Task):
     def apply_limits_to_target(
         self, target: float, connection: ActiveConnection1DOF
     ) -> sm.Scalar:
-        ul_pos = connection.dof.upper_limits.position
-        ll_pos = connection.dof.lower_limits.position
+        ul_pos = connection.dof.limits.upper.position
+        ll_pos = connection.dof.limits.lower.position
         if ll_pos is not None:
             target = sm.limit(target, ll_pos, ul_pos)
         return target
@@ -119,8 +119,8 @@ class JointPositionList(Task):
     def apply_limits_to_velocity(
         self, velocity: float, connection: ActiveConnection1DOF
     ) -> sm.Scalar:
-        ul_vel = connection.dof.upper_limits.velocity
-        ll_vel = connection.dof.lower_limits.velocity
+        ul_vel = connection.dof.limits.upper.velocity
+        ll_vel = connection.dof.limits.lower.velocity
         return sm.limit(velocity, ll_vel, ul_vel)
 
 
@@ -146,8 +146,8 @@ class MirrorJointPosition(Task):
             self.connections.append(connection)
             target_connection = context.world.get_connection_by_name(target_joint_name)
 
-            ll_vel = connection.dof.lower_limits
-            ul_vel = connection.dof.upper_limits
+            ll_vel = connection.dof.lower
+            ul_vel = connection.dof.upper
             velocity_limit = sm.limit(self.max_velocity, ll_vel, ul_vel)
             self.current_positions.append(connection.position)
             self.goal_positions.append(target_connection.position)

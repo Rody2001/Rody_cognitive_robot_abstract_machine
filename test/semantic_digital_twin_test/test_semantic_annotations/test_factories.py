@@ -656,7 +656,7 @@ class TestFactories(unittest.TestCase):
         lower.position = -0.5
         upper = DerivativeMap[float]()
         upper.position = 0.5
-        limits = DegreeOfFreedomLimits(lower_limit=lower, upper_limit=upper)
+        limits = DegreeOfFreedomLimits(lower=lower, upper=upper)
 
         with world.modify_world():
             world.add_body(root)
@@ -669,8 +669,8 @@ class TestFactories(unittest.TestCase):
             )
 
         dof = world.degrees_of_freedom[0]
-        self.assertEqual(dof.lower_limits.position, -0.5)
-        self.assertEqual(dof.upper_limits.position, 0.5)
+        self.assertEqual(dof.limits.lower.position, -0.5)
+        self.assertEqual(dof.limits.upper.position, 0.5)
 
     def test_create_with_invalid_connection_limits(self):
         world = World()
@@ -681,7 +681,7 @@ class TestFactories(unittest.TestCase):
         lower.position = 0.5
         upper = DerivativeMap[float]()
         upper.position = -0.5
-        limits = DegreeOfFreedomLimits(lower_limit=lower, upper_limit=upper)
+        limits = DegreeOfFreedomLimits(lower=lower, upper=upper)
 
         with self.assertRaises(InvalidConnectionLimits), world.modify_world():
             Hinge.create_with_new_body_in_world(

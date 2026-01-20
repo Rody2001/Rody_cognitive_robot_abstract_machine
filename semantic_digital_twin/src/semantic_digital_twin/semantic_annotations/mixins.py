@@ -165,38 +165,27 @@ class HasRootKinematicStructureEntity(SemanticAnnotation, ABC):
         self_instance = cls(name=name, root=kinematic_structure_entity)
         world_root_T_self = world_root_T_self or HomogeneousTransformationMatrix()
 
-        world.add_kinematic_structure_entity(kinematic_structure_entity)
-        if issubclass(connection_type, ActiveConnection1DOF):
-            if active_axis is None:
-                raise MissingActiveAxis(cls)
-            limits = connection_limits or cls._generate_default_dof_limits(
-                connection_type
-            )
-            if limits.lower_limit.position >= limits.upper_limit.position:
-                raise InvalidConnectionLimits(name, limits)
-            dof = DegreeOfFreedom(
-                name=PrefixedName("dof", str(name)),
-                upper_limits=limits.upper_limit,
-                lower_limits=limits.lower_limit,
-            )
-            world.add_degree_of_freedom(dof)
-            world_root_C_self = cls._parent_connection_type(
-                parent=world.root,
-                child=kinematic_structure_entity,
-                parent_T_connection_expression=world_root_T_self,
-                multiplier=connection_multiplier,
-                offset=connection_offset,
-                axis=active_axis,
-                dof_id=dof.id,
-            )
-        elif connection_type == FixedConnection:
+        if connection_type == FixedConnection:
             world_root_C_self = FixedConnection(
                 parent=world.root,
                 child=kinematic_structure_entity,
                 parent_T_connection_expression=world_root_T_self,
             )
         else:
-            assert_never(connection_type)
+            connection_limits = connection_limits or cls._generate_default_dof_limits(
+                connection_type
+            )
+            world_root_C_self = connection_type.create_with_dofs(
+                world=world,
+                parent=world.root,
+                child=kinematic_structure_entity,
+                parent_T_connection_expression=world_root_T_self,
+                multiplier=connection_multiplier,
+                offset=connection_offset,
+                axis=active_axis,
+                dof_limits=connection_limits,
+            )
+
         world.add_connection(world_root_C_self)
         world.add_semantic_annotation(self_instance)
 
@@ -204,26 +193,28 @@ class HasRootKinematicStructureEntity(SemanticAnnotation, ABC):
 
     @classmethod
     def _generate_default_dof_limits(
-        cls, active_connection_type: Type[ActiveConnection1DOF]
-    ) -> DegreeOfFreedomLimits:
+        cls, connection_type: Type[Connection]
+    ) -> Optional[DegreeOfFreedomLimits]:
         """
         Generate default degree of freedom limits for a given connection type.
 
-        :param active_connection_type: The type of connection to generate limits for.
+        :param connection_type: The type of connection to generate limits for.
         :return: The generated degree of freedom limits.
         """
+        if not issubclass(connection_type, ActiveConnection1DOF):
+            return None
         lower_limits = DerivativeMap[float]()
         upper_limits = DerivativeMap[float]()
-        if active_connection_type == PrismaticConnection:
+        if connection_type == PrismaticConnection:
             lower_limits.position = -np.inf
             upper_limits.position = np.inf
-        elif active_connection_type == RevoluteConnection:
+        elif connection_type == RevoluteConnection:
             lower_limits.position = -2 * np.pi
             upper_limits.position = 2 * np.pi
         else:
-            assert_never(active_connection_type)
+            assert_never(connection_type)
 
-        return DegreeOfFreedomLimits(lower_limit=lower_limits, upper_limit=upper_limits)
+        return DegreeOfFreedomLimits(lower=lower_limits, upper=upper_limits)
 
     def get_new_grandparent(
         self,

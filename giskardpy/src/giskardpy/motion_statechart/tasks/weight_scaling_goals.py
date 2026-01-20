@@ -41,7 +41,7 @@ class BaseArmWeightScaling(Task):
             for name in self.arm_joints:
                 vs = context.world.get_connection_by_name(name).active_dofs
                 for v in vs:
-                    v_gain = self.gain * (scaling_exp / v.upper_limits.velocity).norm()
+                    v_gain = self.gain * (scaling_exp / v.upper.velocity).norm()
                     arm_v = v
                     gains[Derivatives.velocity][v] = v_gain
                     gains[Derivatives.acceleration][v] = v_gain
@@ -54,7 +54,7 @@ class BaseArmWeightScaling(Task):
                         self.gain
                         / 100
                         * sm.Scalar(1).safe_division(
-                            (scaling_exp / v.upper_limits.velocity).norm()
+                            (scaling_exp / v.upper.velocity).norm()
                         )
                     )
                     base_v = v

@@ -416,7 +416,8 @@ def test_joint_goal():
         ll = DerivativeMap()
         ll.velocity = -1
         dof = DegreeOfFreedom(
-            name=PrefixedName("dof", "a"), lower_limits=ll, upper_limits=ul
+            name=PrefixedName("dof", "a"),
+            limits=DegreeOfFreedomLimits(lower=ll, upper=ul),
         )
         world.add_degree_of_freedom(dof)
         root_C_tip = RevoluteConnection(
@@ -425,7 +426,8 @@ def test_joint_goal():
         world.add_connection(root_C_tip)
 
         dof = DegreeOfFreedom(
-            name=PrefixedName("dof", "b"), lower_limits=ll, upper_limits=ul
+            name=PrefixedName("dof", "b"),
+            limits=DegreeOfFreedomLimits(lower=ll, upper=ul),
         )
         world.add_degree_of_freedom(dof)
         root_C_tip2 = RevoluteConnection(
@@ -2333,7 +2335,7 @@ class TestOpenClose:
                     reference_frame=pr2_world_state_reset.root,
                 ),
                 connection_limits=DegreeOfFreedomLimits(
-                    lower_limit=lower_limits, upper_limit=upper_limits
+                    lower=lower_limits, upper=upper_limits
                 ),
                 active_axis=Vector3.Z(),
             )

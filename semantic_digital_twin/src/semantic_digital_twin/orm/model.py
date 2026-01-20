@@ -5,11 +5,11 @@ from uuid import UUID
 import numpy as np
 import trimesh
 import trimesh.exchange.stl
-from krrood.ormatic.dao import AlternativeMapping
 from sqlalchemy import TypeDecorator, types
 from typing_extensions import List
 from typing_extensions import Optional
 
+from krrood.ormatic.dao import AlternativeMapping
 from ..datastructures.prefixed_name import PrefixedName
 from ..spatial_types import (
     RotationMatrix,
@@ -21,7 +21,7 @@ from ..spatial_types.derivatives import DerivativeMap
 from ..spatial_types.spatial_types import Quaternion, Pose
 from ..world import World
 from ..world_description.connections import Connection
-from ..world_description.degree_of_freedom import DegreeOfFreedom
+from ..world_description.degree_of_freedom import DegreeOfFreedom, DegreeOfFreedomLimits
 from ..world_description.world_entity import (
     SemanticAnnotation,
     KinematicStructureEntity,
@@ -58,8 +58,10 @@ class WorldMapping(AlternativeMapping[World]):
             for dof in self.degrees_of_freedom:
                 d = DegreeOfFreedom(
                     name=dof.name,
-                    lower_limits=dof.lower_limits,
-                    upper_limits=dof.upper_limits,
+                    limits=DegreeOfFreedomLimits(
+                        lower=dof.limits.lower,
+                        upper=dof.limits.upper,
+                    ),
                     id=dof.id,
                 )
                 result.add_degree_of_freedom(d)
@@ -247,8 +249,8 @@ class DegreeOfFreedomMapping(AlternativeMapping[DegreeOfFreedom]):
     def from_domain_object(cls, obj: DegreeOfFreedom):
         return cls(
             name=obj.name,
-            lower_limits=obj.lower_limits.data,
-            upper_limits=obj.upper_limits.data,
+            lower_limits=obj.limits.lower.data,
+            upper_limits=obj.limits.upper.data,
             id=obj.id,
         )
 
@@ -257,8 +259,7 @@ class DegreeOfFreedomMapping(AlternativeMapping[DegreeOfFreedom]):
         upper_limits = DerivativeMap(data=self.upper_limits)
         return DegreeOfFreedom(
             name=self.name,
-            lower_limits=lower_limits,
-            upper_limits=upper_limits,
+            limits=DegreeOfFreedomLimits(lower=lower_limits, upper=upper_limits),
             id=self.id,
         )
 
