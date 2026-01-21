@@ -633,7 +633,7 @@ class Drink(SemanticAnnotation):
     """
     A Semantic annotation representing a drink item.
     """
-    body: Body
+    body: Body = field(kw_only=True)
 
 
 @dataclass(eq=False)
