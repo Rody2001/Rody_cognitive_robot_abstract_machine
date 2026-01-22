@@ -416,7 +416,7 @@ class JointState(ABC):
     The backreference to the world this joint state belongs to.
     """
 
-    _robot: AbstractRobot = field(init=False)
+    _robot: AbstractRobot = field(init=False, default=None)
     """
     The robot this joint state belongs to
     """
@@ -446,10 +446,10 @@ class JointState(ABC):
 
     def __hash__(self):
         """
-        Returns the hash of the joint state, which is based on the joint names and positions.
+        Returns the hash of the joint state, which is based on the joint state name.
         This allows for proper comparison and storage in sets or dictionaries.
         """
-        return hash((self.name, self.joints, self.joint_positions))
+        return hash(self.name)
 
 @dataclass
 class Base(KinematicChain):

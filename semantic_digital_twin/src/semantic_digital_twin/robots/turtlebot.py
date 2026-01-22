@@ -6,7 +6,7 @@ from ..datastructures.prefixed_name import PrefixedName
 from ..world import World
 
 
-@dataclass
+@dataclass(eq=False)
 class Turtlebot(AbstractRobot):
     """
     Class that describes the Turtlebot Robot.

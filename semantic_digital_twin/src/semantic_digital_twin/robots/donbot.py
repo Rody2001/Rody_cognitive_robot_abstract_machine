@@ -21,7 +21,7 @@ from ..spatial_types import Quaternion, Vector3
 from ..world import World
 
 
-@dataclass
+@dataclass(eq=False)
 class Donbot(AbstractRobot, HasArms, HasNeck):
     """
     Class that describes the Donbot Robot.

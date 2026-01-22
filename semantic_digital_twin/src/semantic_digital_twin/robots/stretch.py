@@ -19,7 +19,7 @@ from ..spatial_types.spatial_types import Vector3
 from ..world import World
 
 
-@dataclass
+@dataclass(eq=False)
 class Stretch(AbstractRobot, HasArms, HasNeck):
     """
     Class that describes the Stretch Robot.

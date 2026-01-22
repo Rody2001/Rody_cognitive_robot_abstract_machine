@@ -21,7 +21,7 @@ from ..spatial_types.spatial_types import Vector3
 from ..world import World
 
 
-@dataclass
+@dataclass(eq=False)
 class HSRB(AbstractRobot, HasArms, HasNeck):
     """
     Class that describes the Human Support Robot variant B (https://upmroboticclub.wordpress.com/robot/).

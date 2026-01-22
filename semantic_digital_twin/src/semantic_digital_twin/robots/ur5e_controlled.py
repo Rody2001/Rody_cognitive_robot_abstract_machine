@@ -16,7 +16,7 @@ from ..spatial_types.spatial_types import Vector3
 from ..world import World
 
 
-@dataclass
+@dataclass(eq=False)
 class UR5Controlled(AbstractRobot, HasArms):
     """
     Class that describes the UR5 controlled Robot.

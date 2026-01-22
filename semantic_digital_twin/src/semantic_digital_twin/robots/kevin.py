@@ -20,7 +20,7 @@ from ..spatial_types import Quaternion, Vector3
 from ..world import World
 
 
-@dataclass
+@dataclass(eq=False)
 class Kevin(AbstractRobot, HasArms):
     """
     Class that describes the Kevin Robot.

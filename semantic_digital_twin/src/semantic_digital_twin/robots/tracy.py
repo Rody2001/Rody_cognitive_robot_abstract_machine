@@ -21,7 +21,7 @@ from ..spatial_types import Quaternion, Vector3
 from ..world import World
 
 
-@dataclass
+@dataclass(eq=False)
 class Tracy(AbstractRobot, SpecifiesLeftRightArm, HasNeck):
     """
     Represents two UR10e Arms on a table, with a pole between them holding a small camera.
