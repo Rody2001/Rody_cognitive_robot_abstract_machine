@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
-from typing_extensions import List, Optional
+from typing_extensions import List, Optional, Dict
 
 from probabilistic_model.probabilistic_circuit.rx.helper import fully_factorized
 from probabilistic_model.probabilistic_circuit.rx.probabilistic_circuit import (
@@ -36,25 +36,19 @@ class Parameterizer:
         self, wrapped_class: WrappedClass, prefix: str
     ) -> List[Variable]:
         """
-        Create variables for all fields of a WrappedClass recursively.
+        Create variables for all fields of a WrappedClass.
 
         :return: A list of random event variables.
         """
-        variables = []
+
+        variables_by_name: Dict[str, Variable] = {}
+
         for wrapped_field in wrapped_class.fields:
-            variables.extend(self._parameterize_wrapped_field(wrapped_field, prefix))
+            for var in self._parameterize_wrapped_field(wrapped_field, prefix):
+                if var.name not in variables_by_name:
+                    variables_by_name[var.name] = var
 
-        for base_cls in wrapped_class.clazz.__bases__:
-            if not hasattr(base_cls, "__dataclass_fields__"):
-                continue
-
-            class_diagram = wrapped_class._class_diagram
-            if base_cls not in class_diagram._cls_wrapped_cls_map:
-                continue
-
-            base_wrapped = class_diagram.get_wrapped_class(base_cls)
-            variables.extend(self._parameterize_wrapped_class(base_wrapped, prefix))
-        return variables
+        return list(variables_by_name.values())
 
     def _parameterize_wrapped_field(
         self, wrapped_field: WrappedField, prefix: str

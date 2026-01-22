@@ -30,6 +30,8 @@ from semantic_digital_twin.world_description.world_entity import Body
 from semantic_digital_twin.world_description.world_modification import (
     WorldModelModificationBlock,
 )
+from krrood.class_diagrams.class_diagram import ClassDiagram
+from krrood.class_diagrams.parameterizer import Parameterizer
 from .datastructures.dataclasses import ExecutionData, Context
 from .datastructures.enums import TaskStatus
 from .datastructures.pose import PoseStamped
@@ -406,6 +408,56 @@ class Plan:
         """
         if cls.on_end_callback and action_type in cls.on_end_callback:
             cls.on_end_callback[action_type].remove(callback)
+
+
+    def parameterize_plan(self, classes: List[type]) -> List:
+        """
+        Parameterize all parameters of a plan using the krrood parameterizer.
+
+        :param classes: List of classes to include in the ClassDiagram
+                        (including classes found on the plan nodes).
+        :return: List of random event variables created by the parameterizer.
+        """
+
+        try:
+            ordered_nodes = self.root.children
+        except AttributeError:
+            ordered_nodes = list(self.nodes)
+
+        designator_nodes = []
+        all_classes = set(classes)
+
+        for node in ordered_nodes:
+            if not isinstance(node, DesignatorNode):
+                continue
+            if not node.designator_type:
+                continue
+
+            designator_nodes.append(node)
+            all_classes.add(node.designator_type)
+
+        class_diagram = ClassDiagram(list(all_classes))
+        parameterizer = Parameterizer()
+
+        all_variables = []
+
+        for index, node in enumerate(designator_nodes):
+            try:
+                wrapped_class = class_diagram.get_wrapped_class(
+                    node.designator_type
+                )
+            except Exception:
+                continue
+
+            prefix = f"{node.designator_type.__name__}_{index}"
+            variables = parameterizer._parameterize_wrapped_class(
+                wrapped_class,
+                prefix=prefix
+            )
+
+            all_variables.extend(variables)
+
+        return all_variables
 
 
 def managed_node(func: Callable) -> Callable:

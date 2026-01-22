@@ -96,7 +96,7 @@ def test_parameterize_atom(parameterizer: Parameterizer):
     wrapped_atom = class_diagram.get_wrapped_class(Atom)
     variables = parameterizer(wrapped_atom)
     expected_variables = [
-        Symbolic("Atom.element", Set.from_iterable([Element.C, Element.H])),
+        Symbolic("Atom.element", Set.from_iterable(Element)),
         Integer("Atom.type"),
         Continuous("Atom.charge"),
     ]
@@ -277,4 +277,5 @@ def test_parameterize_pickup_navigate_place(parameterizer: Parameterizer):
         assert sample[arm_pickup] == sample[arm_place]
         assert sample[v_nav_x] == nav_target_x
         assert sample[v_nav_y] == nav_target_y
+
 
