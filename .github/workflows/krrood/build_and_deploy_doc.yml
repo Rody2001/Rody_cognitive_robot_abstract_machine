@@ -1,16 +1,19 @@
 name: deploy-book
 
+defaults:
+  run:
+    shell: bash
+    working-directory: krrood
+
 # Run this when the master or main branch changes
 on:
+  workflow_call:
   push:
     branches:
     - main
-    # If your git repository has the Jupyter Book within some-subfolder next to
-    # unrelated files, you can make this run only if a file within that specific
-    # folder has been modified.
-    #
-    # paths:
-    # - some-subfolder/**
+  pull_request:
+    branches:
+    - main
 
 # This job installs dependencies, builds the book, and pushes it to `gh-pages`
 jobs:
@@ -53,11 +56,8 @@ jobs:
 
     # Upload the book's HTML as an artifact
     - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
+      if: ${{ !env.ACT }}
+      uses: actions/upload-artifact@v4
       with:
-        path: "doc/_build/html"
-
-    # Deploy the book's HTML to GitHub Pages
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+        name: krrood-doc
+        path: "krrood/doc/_build/html"
