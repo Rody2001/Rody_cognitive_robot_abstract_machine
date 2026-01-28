@@ -73,7 +73,7 @@ jobs:
           pip install .
           [ -f ${{ inputs.doc_path }}/requirements.txt ] && pip install -r ${{ inputs.doc_path }}/requirements.txt || echo "No doc requirements"
           [ -f doc/requirements.txt ] && pip install -r doc/requirements.txt || echo "No root doc requirements"
-          pip install jupyter-book
+          pip install jupyter-book==0.15.1
 
       - name: Install dependencies (Container)
         if: ${{ inputs.use_container }}
