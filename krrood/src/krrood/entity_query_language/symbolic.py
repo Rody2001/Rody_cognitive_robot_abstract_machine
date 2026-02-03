@@ -445,12 +445,15 @@ class CanBehaveLikeAVariable(Selectable[T], ABC):
 
         :param current_value: The current value of the variable.
         """
-        is_true = (
-            len(current_value) > 0
-            if is_iterable(current_value)
-            else bool(current_value)
-        )
-        self._is_false_ = not is_true
+        if isinstance(self._parent_, (LogicalOperator, QueryObjectDescriptor)):
+            is_true = (
+                len(current_value) > 0
+                if is_iterable(current_value)
+                else bool(current_value)
+            )
+            self._is_false_ = not is_true
+        else:
+            self._is_false_ = False
 
     def _get_domain_mapping_(
         self, type_: Type[DomainMapping], *args, **kwargs
@@ -1318,6 +1321,9 @@ class SetOf(QueryObjectDescriptor[T]):
         return UnificationDict(
             {v._var_: result[v._binding_id_] for v in self._selected_variables}
         )
+
+    def __getitem__(self, key: Selectable[T]) -> T:
+        ...
 
 
 @dataclass(eq=False, repr=False)
