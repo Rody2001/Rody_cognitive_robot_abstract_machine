@@ -3,6 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 import numpy as np
+import rclpy
 import rustworkx as rx
 from box import Box
 from probabilistic_model.distributions import (
@@ -36,6 +37,10 @@ from giskardpy.motion_statechart.goals.templates import Sequence
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
 from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
 from giskardpy.qp.qp_controller_config import QPControllerConfig
+from semantic_digital_twin.adapters.ros.tf_publisher import TFPublisher
+from semantic_digital_twin.adapters.ros.visualization.viz_marker import (
+    VizMarkerPublisher,
+)
 from semantic_digital_twin.datastructures.variables import SpatialVariables
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.spatial_types import Point3
@@ -243,6 +248,10 @@ class CostmapLocation(LocationDesignatorDescription):
             test_world = deepcopy(self.world)
             test_world.name = "Test World"
 
+            node = rclpy.create_node("test_node")
+            VizMarkerPublisher(test_world, node)
+            TFPublisher(test_world, node)
+
             params_box = Box(params)
             # Target is either a pose or an object since the object is later needed for the visibility validator
             target = (
@@ -276,6 +285,11 @@ class CostmapLocation(LocationDesignatorDescription):
                 target, params_box.visible_for, params_box.reachable_for
             )
             final_map.number_of_samples = 600
+            final_map.orientation_generator = (
+                OrientationGenerator.orientation_generator_for_axis(
+                    list(self.robot_view.base.main_axis.to_np())
+                )
+            )
 
             for pose_candidate in final_map:
                 logger.debug(f"Testing candidate pose at {pose_candidate}")
@@ -314,11 +328,9 @@ class CostmapLocation(LocationDesignatorDescription):
                     [params_box.grasp_descriptions]
                     if params_box.grasp_descriptions
                     else GraspDescription.calculate_grasp_descriptions(
-                        (
-                            test_robot.left_arm.manipulator
-                            if params_box.reachable_arm == Arms.LEFT
-                            else test_robot.right_arm.manipulator
-                        ),
+                        ViewManager.get_arm_view(
+                            params_box.reachable_arm, test_robot
+                        ).manipulator,
                         target,
                     )
                 )

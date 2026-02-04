@@ -25,7 +25,7 @@ class PosePublisher(StateChangeCallback):
     """
     The pose to publish.
     """
-    node: rclpy.node.Node
+    node: Any  # rclpy.node.Node
     """
     ROS node handle, used to create the publisher.
     """

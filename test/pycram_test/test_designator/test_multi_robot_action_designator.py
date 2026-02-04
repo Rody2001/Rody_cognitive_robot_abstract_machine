@@ -35,6 +35,7 @@ from pycram.robot_plans import (
     CloseActionDescription,
     FaceAtActionDescription,
     GraspingActionDescription,
+    TransportActionDescription,
 )
 from semantic_digital_twin.adapters.ros.pose_publisher import PosePublisher
 from semantic_digital_twin.adapters.ros.tf_publisher import TFPublisher
@@ -48,6 +49,7 @@ from semantic_digital_twin.datastructures.definitions import (
 )
 from semantic_digital_twin.robots.abstract_robot import AbstractRobot
 from semantic_digital_twin.robots.hsrb import HSRB
+from semantic_digital_twin.robots.pr2 import PR2
 from semantic_digital_twin.robots.stretch import Stretch
 from semantic_digital_twin.robots.tiago import Tiago
 from semantic_digital_twin.semantic_annotations.semantic_annotations import Milk
@@ -59,9 +61,14 @@ import pycram.alternative_motion_mappings.stretch_motion_mapping
 import pycram.alternative_motion_mappings.hsrb_motion_mapping
 
 
-@pytest.fixture(scope="session", params=["hsrb", "stretch", "tiago"])
+@pytest.fixture(scope="session", params=["hsrb", "stretch", "tiago", "pr2"])
 def setup_multi_robot_apartment(
-    request, hsr_world_setup, stretch_world, tiago_world, apartment_world_setup
+    request,
+    hsr_world_setup,
+    stretch_world,
+    tiago_world,
+    pr2_world_setup,
+    apartment_world_setup,
 ):
     apartment_copy = deepcopy(apartment_world_setup)
 
@@ -90,6 +97,17 @@ def setup_multi_robot_apartment(
             tiago_copy,
         )
         view = Tiago.from_world(apartment_copy)
+        view.root.parent_connection.origin = (
+            HomogeneousTransformationMatrix.from_xyz_rpy(1.5, 2, 0)
+        )
+        return apartment_copy, view
+
+    elif request.param == "pr2":
+        pr2_copy = deepcopy(pr2_world_setup)
+        apartment_copy.merge_world(
+            pr2_copy,
+        )
+        view = PR2.from_world(apartment_copy)
         view.root.parent_connection.origin = (
             HomogeneousTransformationMatrix.from_xyz_rpy(1.5, 2, 0)
         )
@@ -443,10 +461,6 @@ def test_close(immutable_multiple_robot_apartment):
 def test_facing(immutable_multiple_robot_apartment):
     world, robot_view, context = immutable_multiple_robot_apartment
 
-    node = rclpy.create_node("test")
-    VizMarkerPublisher(world, node)
-    TFPublisher(world, node)
-
     with simulated_robot:
         milk_pose = PoseStamped.from_spatial_type(
             world.get_body_by_name("milk.stl").global_pose
@@ -459,3 +473,28 @@ def test_facing(immutable_multiple_robot_apartment):
         )
         milk_in_robot_frame = PoseStamped.from_spatial_type(milk_in_robot_frame)
         assert milk_in_robot_frame.position.y == pytest.approx(0.0, abs=0.01)
+
+
+def test_transport(mutable_multiple_robot_apartment):
+    world, robot_view, context = mutable_multiple_robot_apartment
+
+    # node = rclpy.create_node("test_node")
+    # VizMarkerPublisher(world, node)
+    # TFPublisher(world, node)
+
+    description = TransportActionDescription(
+        world.get_body_by_name("milk.stl"),
+        [PoseStamped.from_list([3.1, 2.2, 0.95], [0.0, 0.0, 1.0, 0.0], world.root)],
+        [Arms.RIGHT],
+    )
+    plan = SequentialPlan(
+        context, MoveTorsoActionDescription([TorsoState.HIGH]), description
+    )
+    with simulated_robot:
+        plan.perform()
+    milk_position = world.get_body_by_name("milk.stl").global_pose.to_np()[:3, 3]
+    dist = np.linalg.norm(milk_position - np.array([3.1, 2.2, 0.95]))
+    assert dist <= 0.01
+
+    assert len(plan.nodes) == len(plan.all_nodes)
+    assert len(plan.edges) == len(plan.all_nodes) - 1

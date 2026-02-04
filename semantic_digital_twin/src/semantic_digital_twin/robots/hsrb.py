@@ -11,6 +11,7 @@ from .abstract_robot import (
     Camera,
     Torso,
     FieldOfView,
+    Base,
 )
 from .robot_mixins import HasNeck, HasArms
 from ..datastructures.definitions import StaticJointState, GripperState, TorsoState
@@ -231,6 +232,16 @@ class HSRB(AbstractRobot, HasArms, HasNeck):
             torso.add_joint_state(torso_low)
             torso.add_joint_state(torso_mid)
             torso.add_joint_state(torso_high)
+
+            # Create the robot base
+            base = Base(
+                name=PrefixedName("base", prefix=hsrb.name.name),
+                root=world.get_body_by_name("base_link"),
+                tip=world.get_body_by_name("base_link"),
+                _world=world,
+            )
+
+            hsrb.add_base(base)
 
             world.add_semantic_annotation(hsrb)
 

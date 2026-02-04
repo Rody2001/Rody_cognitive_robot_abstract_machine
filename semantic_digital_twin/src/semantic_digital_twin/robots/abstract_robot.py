@@ -407,6 +407,11 @@ class Base(KinematicChain):
     The base of a robot
     """
 
+    main_axis: Vector3 = field(default=Vector3(1, 0, 0), kw_only=True)
+    """
+    Axis along which the robot manipulates
+    """
+
     @property
     def bounding_box(self) -> BoundingBox:
         bounding_boxes = [

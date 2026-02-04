@@ -9,6 +9,7 @@ from .abstract_robot import (
     ParallelGripper,
     Camera,
     Torso,
+    Base,
 )
 from .robot_mixins import HasNeck, HasArms
 from ..datastructures.definitions import StaticJointState, GripperState, TorsoState
@@ -207,6 +208,17 @@ class Stretch(AbstractRobot, HasArms, HasNeck):
             torso.add_joint_state(torso_low)
             torso.add_joint_state(torso_mid)
             torso.add_joint_state(torso_high)
+
+            # Create the robot base
+            base = Base(
+                name=PrefixedName("base", prefix=stretch.name.name),
+                root=world.get_body_by_name("base_link"),
+                tip=world.get_body_by_name("base_link"),
+                _world=world,
+                main_axis=Vector3(0, -1, 0, world.get_body_by_name("base_link")),
+            )
+
+            stretch.add_base(base)
 
             world.add_semantic_annotation(stretch)
 
