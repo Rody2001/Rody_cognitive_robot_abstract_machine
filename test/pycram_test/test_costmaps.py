@@ -504,6 +504,24 @@ def test_segment_highest_first(immutable_model_world):
     assert np.max(segmented_maps[2]) == 1
 
 
+def test_segment_empty_map(immutable_model_world):
+    world, robot_view, context = immutable_model_world
+    np_map = np.zeros((200, 200))
+    gaussian_map = GaussianCostmap(
+        resolution=0.02,
+        origin=PoseStamped.from_list([0, 0, 0], [0, 0, 0, 1], world.root),
+        mean=200,
+        sigma=15,
+        world=world,
+    )
+    gaussian_map.map = np_map
+
+    segmented_maps = gaussian_map.segment_map()
+
+    assert len(segmented_maps) == 1
+    assert np.sum(segmented_maps[0]) == 0
+
+
 def test_orientation_generator_by_axis_y(immutable_model_world):
     world, robot_view, context = immutable_model_world
 

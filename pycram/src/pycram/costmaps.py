@@ -489,6 +489,10 @@ class Costmap:
 
         :return: A list of numpy arrays with one partition per array
         """
+        # In case the map is empty we just return the map
+        if np.sum(self.map) == 0:
+            return [self.map]
+
         discrete_map = np.copy(self.map)
         # Label only works on integer arrays
         discrete_map[discrete_map != 0] = 1
