@@ -125,10 +125,10 @@ class Tiago(AbstractRobot, SpecifiesLeftRightArm, HasNeck):
                 root=world.get_body_by_name("xtion_optical_frame"),
                 forward_facing_axis=Vector3(0, 0, 1),
                 field_of_view=FieldOfView(
-                    horizontal_angle=1.0665, vertical_angle=1.4165
+                    horizontal_angle=0.99483, vertical_angle=0.75049
                 ),
-                minimal_height=0.99483,
-                maximal_height=0.75049,
+                minimal_height=1.0665,
+                maximal_height=1.4165,
                 _world=world,
             )
 
@@ -239,7 +239,7 @@ class Tiago(AbstractRobot, SpecifiesLeftRightArm, HasNeck):
 
             torso_high = JointState.from_mapping(
                 name=PrefixedName("torso_high", prefix=tiago.name.name),
-                mapping=dict(zip(torso_joint, [0.3])),
+                mapping=dict(zip(torso_joint, [0.35])),
                 state_type=TorsoState.HIGH,
             )
 
