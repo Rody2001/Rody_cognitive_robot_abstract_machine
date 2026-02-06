@@ -25,7 +25,10 @@ from giskardpy.motion_statechart.exceptions import (
     NonObservationVariableError,
     NodeAlreadyBelongsToDifferentNodeError,
 )
-from giskardpy.motion_statechart.goals.cartesian_goals import DiffDriveBaseGoal
+from giskardpy.motion_statechart.goals.cartesian_goals import (
+    DiffDriveBaseGoal,
+    CartesianPoseStraight,
+)
 from giskardpy.motion_statechart.goals.collision_avoidance import (
     CollisionAvoidance,
 )
@@ -1650,6 +1653,40 @@ class TestCartesianTasks:
         # Verify task detected completion
         assert cart_straight.observation_state == ObservationStateValues.TRUE
 
+    def test_cartesian_pose_straight(self, pr2_world_state_reset: World):
+        """Test CartesianPositionStraight basic functionality."""
+        tip = pr2_world_state_reset.get_kinematic_structure_entity_by_name(
+            "base_footprint"
+        )
+        root = pr2_world_state_reset.get_kinematic_structure_entity_by_name(
+            "odom_combined"
+        )
+
+        goal_pose = HomogeneousTransformationMatrix.from_xyz_rpy(
+            0.1, 2, 0, reference_frame=tip
+        )
+
+        msc = MotionStatechart()
+        cart_straight = CartesianPoseStraight(
+            root_link=root,
+            tip_link=tip,
+            goal_pose=goal_pose,
+            binding_policy=GoalBindingPolicy.Bind_on_start,
+        )
+        msc.add_node(cart_straight)
+        msc.add_node(EndMotion.when_true(cart_straight))
+
+        kin_sim = Executor(world=pr2_world_state_reset)
+        kin_sim.compile(motion_statechart=msc)
+        kin_sim.tick_until_end()
+
+        # Verify task detected completion
+        assert cart_straight.observation_state == ObservationStateValues.TRUE
+
+        assert np.allclose(
+            cart_straight.goal_pose.to_np(), goal_pose.to_np(), atol=0.015
+        )
+
 
 class TestDiffDriveBaseGoal:
     @pytest.mark.parametrize(
@@ -1681,18 +1718,15 @@ class TestDiffDriveBaseGoal:
     def test_drive(
         self,
         cylinder_bot_diff_world,
-        rclpy_node,
         goal_pose: HomogeneousTransformationMatrix,
     ):
-        TFPublisher(cylinder_bot_diff_world, rclpy_node)
-        VizMarkerPublisher(cylinder_bot_diff_world, rclpy_node)
         bot = cylinder_bot_diff_world.get_body_by_name("bot")
         msc = MotionStatechart()
         goal_pose.reference_frame = cylinder_bot_diff_world.root
         msc.add_node(goal := DiffDriveBaseGoal(goal_pose=goal_pose))
         msc.add_node(EndMotion.when_true(goal))
 
-        kin_sim = Executor(world=cylinder_bot_diff_world, pacer=SimulationPacer(1.0))
+        kin_sim = Executor(world=cylinder_bot_diff_world)
         kin_sim.compile(motion_statechart=msc)
         kin_sim.tick_until_end()
 
