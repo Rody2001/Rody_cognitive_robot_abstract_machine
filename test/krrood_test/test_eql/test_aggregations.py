@@ -15,6 +15,7 @@ from krrood.entity_query_language.failures import (
     NonAggregatedSelectedVariablesError,
     AggregatorInWhereConditionsError,
     NestedAggregationError,
+    UnsupportedAggregationOfAGroupedByVariable,
 )
 from krrood.entity_query_language.symbolic import Having, GroupBy
 from ..dataset.department_and_employee import Department, Employee
@@ -217,6 +218,16 @@ def test_count_variable_in_grouped_by_variables(handles_and_containers_world):
             expected[c] += 1
     for result in results:
         assert result[count] == expected[result[cabinet]]
+
+
+def test_non_count_aggregation_of_variable_in_grouped_by_variables(
+    handles_and_containers_world,
+):
+    world = handles_and_containers_world
+    cabinet = variable(Cabinet, domain=world.views)
+    query = set_of(avg := eql.average(cabinet), cabinet).grouped_by(cabinet)
+    with pytest.raises(UnsupportedAggregationOfAGroupedByVariable):
+        results = query.tolist()
 
 
 def test_count_variable_in_grouped_by_variables_selectnig_only_the_count(
