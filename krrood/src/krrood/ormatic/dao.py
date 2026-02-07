@@ -358,6 +358,29 @@ class HasGeneric(Generic[T]):
         return None
 
 
+class AssociationDataAccessObject:
+    """
+    Base class for association objects in the Data Access Object layer.
+    Association objects are used to map many-to-many relationships that
+    require additional information or identity for each association,
+    such as when duplicates are allowed in a collection.
+    """
+
+    @property
+    def target(self) -> DataAccessObject:
+        """
+        :return: The target Data Access Object of this association.
+        """
+        raise NotImplementedError
+
+    @target.setter
+    def target(self, value: DataAccessObject) -> None:
+        """
+        :param value: The target Data Access Object of this association.
+        """
+        raise NotImplementedError
+
+
 class DataAccessObject(HasGeneric[T]):
     """
     Base class for Data Access Objects (DAOs) providing bidirectional conversion between
@@ -677,10 +700,28 @@ class DataAccessObject(HasGeneric[T]):
         :param state: The conversion state.
         """
         source_collection = getattr(source_object, relationship.key)
-        expected_type = relationship.mapper.class_.original_class()
-        dao_collection = [
-            self._get_or_queue_dao(v, state, expected_type) for v in source_collection
-        ]
+        target_dao_clazz = relationship.mapper.class_
+
+        if issubclass(target_dao_clazz, AssociationDataAccessObject):
+            # Target is an Association Object
+            # We need to find the target DAO class of the association
+            target_rel = sqlalchemy.inspection.inspect(target_dao_clazz).relationships[
+                "target"
+            ]
+            expected_type = target_rel.mapper.class_.original_class()
+
+            dao_collection = []
+            for v in source_collection:
+                assoc_dao = target_dao_clazz()
+                assoc_dao.target = self._get_or_queue_dao(v, state, expected_type)
+                dao_collection.append(assoc_dao)
+        else:
+            expected_type = target_dao_clazz.original_class()
+            dao_collection = [
+                self._get_or_queue_dao(v, state, expected_type)
+                for v in source_collection
+            ]
+
         setattr(self, relationship.key, type(source_collection)(dao_collection))
 
     def _get_or_queue_dao(
@@ -906,11 +947,21 @@ class DataAccessObject(HasGeneric[T]):
         """
         for relationship in mapper.relationships:
             value = getattr(self, relationship.key)
-            if self._is_single_relationship(relationship) and value is not None:
+            if value is None:
+                continue
+
+            if self._is_single_relationship(relationship):
                 value.from_dao(state=state)
             elif relationship.direction in (ONETOMANY, MANYTOMANY):
-                for item in value:
-                    item.from_dao(state=state)
+                target_dao_clazz = relationship.mapper.class_
+                if issubclass(target_dao_clazz, AssociationDataAccessObject):
+                    # Collection of Association Objects
+                    for item in value:
+                        if item.target is not None:
+                            item.target.from_dao(state=state)
+                else:
+                    for item in value:
+                        item.from_dao(state=state)
 
         self._build_base_keyword_arguments_for_alternative_parent(domain_object, state)
         return domain_object
@@ -1016,7 +1067,18 @@ class DataAccessObject(HasGeneric[T]):
         if not value:
             object.__setattr__(domain_object, key, value)
             return
-        instances = [self._get_or_allocate_domain_object(v, state) for v in value]
+
+        relationship = sqlalchemy.inspection.inspect(type(self)).relationships[key]
+        target_dao_clazz = relationship.mapper.class_
+
+        if issubclass(target_dao_clazz, AssociationDataAccessObject):
+            dao_collection = [item.target for item in value if item.target is not None]
+        else:
+            dao_collection = value
+
+        instances = [
+            self._get_or_allocate_domain_object(v, state) for v in dao_collection
+        ]
         object.__setattr__(domain_object, key, list(instances))
 
     def _get_or_allocate_domain_object(

@@ -33,7 +33,7 @@ import typing_extensions
 import uuid
 
 
-from krrood.ormatic.dao import DataAccessObject
+from krrood.ormatic.dao import DataAccessObject, AssociationDataAccessObject
 from krrood.ormatic.custom_types import TypeType
 
 
@@ -48,129 +48,252 @@ class Base(DeclarativeBase):
 
 
 # Association tables for many-to-many relationships
-genericclassassociationdao_associated_value_list_association = Table(
-    "genericclassassociationdao_associated_value_list_association",
-    Base.metadata,
-    Column(
-        "source_genericclassassociationdao_id",
-        ForeignKey("GenericClassAssociationDAO.database_id"),
-    ),
-    Column(
-        "target_genericclass_positiondao_id",
-        ForeignKey("GenericClass_PositionDAO.database_id"),
-    ),
-)
-parentalternativelymappedmappingdao_entities_association = Table(
-    "parentalternativelymappedmappingdao_entities_association",
-    Base.metadata,
-    Column(
-        "source_parentalternativelymappedmappingdao_id",
-        ForeignKey("ParentAlternativelyMappedMappingDAO.database_id"),
-    ),
-    Column("target_customentitydao_id", ForeignKey("CustomEntityDAO.database_id")),
-)
-persondao_knows_association = Table(
-    "persondao_knows_association",
-    Base.metadata,
-    Column("source_persondao_id", ForeignKey("PersonDAO.database_id")),
-    Column("target_persondao_id", ForeignKey("PersonDAO.database_id")),
-)
-alternativemappingaggregatordao_entities1_association = Table(
-    "alternativemappingaggregatordao_entities1_association",
-    Base.metadata,
-    Column(
-        "source_alternativemappingaggregatordao_id",
-        ForeignKey("AlternativeMappingAggregatorDAO.database_id"),
-    ),
-    Column("target_customentitydao_id", ForeignKey("CustomEntityDAO.database_id")),
-)
-alternativemappingaggregatordao_entities2_association = Table(
-    "alternativemappingaggregatordao_entities2_association",
-    Base.metadata,
-    Column(
-        "source_alternativemappingaggregatordao_id",
-        ForeignKey("AlternativeMappingAggregatorDAO.database_id"),
-    ),
-    Column("target_customentitydao_id", ForeignKey("CustomEntityDAO.database_id")),
-)
-containergenerationdao_items_association = Table(
-    "containergenerationdao_items_association",
-    Base.metadata,
-    Column(
-        "source_containergenerationdao_id",
-        ForeignKey("ContainerGenerationDAO.database_id"),
-    ),
-    Column(
-        "target_itemwithbackreferencedao_id",
-        ForeignKey("ItemWithBackreferenceDAO.database_id"),
-    ),
-)
-doublepositionaggregatordao_positions1_association = Table(
-    "doublepositionaggregatordao_positions1_association",
-    Base.metadata,
-    Column(
-        "source_doublepositionaggregatordao_id",
-        ForeignKey("DoublePositionAggregatorDAO.database_id"),
-    ),
-    Column("target_positiondao_id", ForeignKey("PositionDAO.database_id")),
-)
-doublepositionaggregatordao_positions2_association = Table(
-    "doublepositionaggregatordao_positions2_association",
-    Base.metadata,
-    Column(
-        "source_doublepositionaggregatordao_id",
-        ForeignKey("DoublePositionAggregatorDAO.database_id"),
-    ),
-    Column("target_positiondao_id", ForeignKey("PositionDAO.database_id")),
-)
-fruitboxdao_fruits_association = Table(
-    "fruitboxdao_fruits_association",
-    Base.metadata,
-    Column("source_fruitboxdao_id", ForeignKey("FruitBoxDAO.database_id")),
-    Column("target_bodydao_id", ForeignKey("BodyDAO.database_id")),
-)
-moreshapesdao_shapes_association = Table(
-    "moreshapesdao_shapes_association",
-    Base.metadata,
-    Column("source_moreshapesdao_id", ForeignKey("MoreShapesDAO.database_id")),
-    Column("target_shapesdao_id", ForeignKey("ShapesDAO.database_id")),
-)
-positionsdao_positions_association = Table(
-    "positionsdao_positions_association",
-    Base.metadata,
-    Column("source_positionsdao_id", ForeignKey("PositionsDAO.database_id")),
-    Column("target_positiondao_id", ForeignKey("PositionDAO.database_id")),
-)
-shapesdao_shapes_association = Table(
-    "shapesdao_shapes_association",
-    Base.metadata,
-    Column("source_shapesdao_id", ForeignKey("ShapesDAO.database_id")),
-    Column("target_shapedao_id", ForeignKey("ShapeDAO.database_id")),
-)
-symbolgraphmappingdao_instances_association = Table(
-    "symbolgraphmappingdao_instances_association",
-    Base.metadata,
-    Column(
-        "source_symbolgraphmappingdao_id",
-        ForeignKey("SymbolGraphMappingDAO.database_id"),
-    ),
-    Column(
-        "target_wrappedinstancemappingdao_id",
-        ForeignKey("WrappedInstanceMappingDAO.database_id"),
-    ),
-)
-symbolgraphmappingdao_predicate_relations_association = Table(
-    "symbolgraphmappingdao_predicate_relations_association",
-    Base.metadata,
-    Column(
-        "source_symbolgraphmappingdao_id",
-        ForeignKey("SymbolGraphMappingDAO.database_id"),
-    ),
-    Column(
-        "target_predicateclassrelationdao_id",
-        ForeignKey("PredicateClassRelationDAO.database_id"),
-    ),
-)
+class GenericclassassociationdaoAssociatedValueListAssociationDAO(
+    Base, AssociationDataAccessObject
+):
+
+    __tablename__ = "genericclassassociationdao_associated_value_list_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_genericclassassociationdao_id: Mapped[int] = mapped_column(
+        ForeignKey("GenericClassAssociationDAO.database_id")
+    )
+    target_genericclass_positiondao_id: Mapped[int] = mapped_column(
+        ForeignKey("GenericClass_PositionDAO.database_id")
+    )
+
+    target: Mapped[GenericClass_PositionDAO] = relationship(
+        "GenericClass_PositionDAO", foreign_keys=[target_genericclass_positiondao_id]
+    )
+
+
+class ParentalternativelymappedmappingdaoEntitiesAssociationDAO(
+    Base, AssociationDataAccessObject
+):
+
+    __tablename__ = "parentalternativelymappedmappingdao_entities_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_parentalternativelymappedmappingdao_id: Mapped[int] = mapped_column(
+        ForeignKey("ParentAlternativelyMappedMappingDAO.database_id")
+    )
+    target_customentitydao_id: Mapped[int] = mapped_column(
+        ForeignKey("CustomEntityDAO.database_id")
+    )
+
+    target: Mapped[CustomEntityDAO] = relationship(
+        "CustomEntityDAO", foreign_keys=[target_customentitydao_id]
+    )
+
+
+class PersondaoKnowsAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "persondao_knows_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_persondao_id: Mapped[int] = mapped_column(
+        ForeignKey("PersonDAO.database_id")
+    )
+    target_persondao_id: Mapped[int] = mapped_column(
+        ForeignKey("PersonDAO.database_id")
+    )
+
+    target: Mapped[PersonDAO] = relationship(
+        "PersonDAO", foreign_keys=[target_persondao_id]
+    )
+
+
+class AlternativemappingaggregatordaoEntities1AssociationDAO(
+    Base, AssociationDataAccessObject
+):
+
+    __tablename__ = "alternativemappingaggregatordao_entities1_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_alternativemappingaggregatordao_id: Mapped[int] = mapped_column(
+        ForeignKey("AlternativeMappingAggregatorDAO.database_id")
+    )
+    target_customentitydao_id: Mapped[int] = mapped_column(
+        ForeignKey("CustomEntityDAO.database_id")
+    )
+
+    target: Mapped[CustomEntityDAO] = relationship(
+        "CustomEntityDAO", foreign_keys=[target_customentitydao_id]
+    )
+
+
+class AlternativemappingaggregatordaoEntities2AssociationDAO(
+    Base, AssociationDataAccessObject
+):
+
+    __tablename__ = "alternativemappingaggregatordao_entities2_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_alternativemappingaggregatordao_id: Mapped[int] = mapped_column(
+        ForeignKey("AlternativeMappingAggregatorDAO.database_id")
+    )
+    target_customentitydao_id: Mapped[int] = mapped_column(
+        ForeignKey("CustomEntityDAO.database_id")
+    )
+
+    target: Mapped[CustomEntityDAO] = relationship(
+        "CustomEntityDAO", foreign_keys=[target_customentitydao_id]
+    )
+
+
+class ContainergenerationdaoItemsAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "containergenerationdao_items_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_containergenerationdao_id: Mapped[int] = mapped_column(
+        ForeignKey("ContainerGenerationDAO.database_id")
+    )
+    target_itemwithbackreferencedao_id: Mapped[int] = mapped_column(
+        ForeignKey("ItemWithBackreferenceDAO.database_id")
+    )
+
+    target: Mapped[ItemWithBackreferenceDAO] = relationship(
+        "ItemWithBackreferenceDAO", foreign_keys=[target_itemwithbackreferencedao_id]
+    )
+
+
+class DoublepositionaggregatordaoPositions1AssociationDAO(
+    Base, AssociationDataAccessObject
+):
+
+    __tablename__ = "doublepositionaggregatordao_positions1_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_doublepositionaggregatordao_id: Mapped[int] = mapped_column(
+        ForeignKey("DoublePositionAggregatorDAO.database_id")
+    )
+    target_positiondao_id: Mapped[int] = mapped_column(
+        ForeignKey("PositionDAO.database_id")
+    )
+
+    target: Mapped[PositionDAO] = relationship(
+        "PositionDAO", foreign_keys=[target_positiondao_id]
+    )
+
+
+class DoublepositionaggregatordaoPositions2AssociationDAO(
+    Base, AssociationDataAccessObject
+):
+
+    __tablename__ = "doublepositionaggregatordao_positions2_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_doublepositionaggregatordao_id: Mapped[int] = mapped_column(
+        ForeignKey("DoublePositionAggregatorDAO.database_id")
+    )
+    target_positiondao_id: Mapped[int] = mapped_column(
+        ForeignKey("PositionDAO.database_id")
+    )
+
+    target: Mapped[PositionDAO] = relationship(
+        "PositionDAO", foreign_keys=[target_positiondao_id]
+    )
+
+
+class FruitboxdaoFruitsAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "fruitboxdao_fruits_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_fruitboxdao_id: Mapped[int] = mapped_column(
+        ForeignKey("FruitBoxDAO.database_id")
+    )
+    target_bodydao_id: Mapped[int] = mapped_column(ForeignKey("BodyDAO.database_id"))
+
+    target: Mapped[BodyDAO] = relationship("BodyDAO", foreign_keys=[target_bodydao_id])
+
+
+class MoreshapesdaoShapesAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "moreshapesdao_shapes_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_moreshapesdao_id: Mapped[int] = mapped_column(
+        ForeignKey("MoreShapesDAO.database_id")
+    )
+    target_shapesdao_id: Mapped[int] = mapped_column(
+        ForeignKey("ShapesDAO.database_id")
+    )
+
+    target: Mapped[ShapesDAO] = relationship(
+        "ShapesDAO", foreign_keys=[target_shapesdao_id]
+    )
+
+
+class PositionsdaoPositionsAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "positionsdao_positions_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_positionsdao_id: Mapped[int] = mapped_column(
+        ForeignKey("PositionsDAO.database_id")
+    )
+    target_positiondao_id: Mapped[int] = mapped_column(
+        ForeignKey("PositionDAO.database_id")
+    )
+
+    target: Mapped[PositionDAO] = relationship(
+        "PositionDAO", foreign_keys=[target_positiondao_id]
+    )
+
+
+class ShapesdaoShapesAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "shapesdao_shapes_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_shapesdao_id: Mapped[int] = mapped_column(
+        ForeignKey("ShapesDAO.database_id")
+    )
+    target_shapedao_id: Mapped[int] = mapped_column(ForeignKey("ShapeDAO.database_id"))
+
+    target: Mapped[ShapeDAO] = relationship(
+        "ShapeDAO", foreign_keys=[target_shapedao_id]
+    )
+
+
+class SymbolgraphmappingdaoInstancesAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "symbolgraphmappingdao_instances_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_symbolgraphmappingdao_id: Mapped[int] = mapped_column(
+        ForeignKey("SymbolGraphMappingDAO.database_id")
+    )
+    target_wrappedinstancemappingdao_id: Mapped[int] = mapped_column(
+        ForeignKey("WrappedInstanceMappingDAO.database_id")
+    )
+
+    target: Mapped[WrappedInstanceMappingDAO] = relationship(
+        "WrappedInstanceMappingDAO", foreign_keys=[target_wrappedinstancemappingdao_id]
+    )
+
+
+class SymbolgraphmappingdaoPredicateRelationsAssociationDAO(
+    Base, AssociationDataAccessObject
+):
+
+    __tablename__ = "symbolgraphmappingdao_predicate_relations_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_symbolgraphmappingdao_id: Mapped[int] = mapped_column(
+        ForeignKey("SymbolGraphMappingDAO.database_id")
+    )
+    target_predicateclassrelationdao_id: Mapped[int] = mapped_column(
+        ForeignKey("PredicateClassRelationDAO.database_id")
+    )
+
+    target: Mapped[PredicateClassRelationDAO] = relationship(
+        "PredicateClassRelationDAO", foreign_keys=[target_predicateclassrelationdao_id]
+    )
+
+
 testpositionsetdao_positions_association = Table(
     "testpositionsetdao_positions_association",
     Base.metadata,
@@ -179,45 +302,94 @@ testpositionsetdao_positions_association = Table(
     ),
     Column("target_positiondao_id", ForeignKey("PositionDAO.database_id")),
 )
-torsodao_kinematic_chains_association = Table(
-    "torsodao_kinematic_chains_association",
-    Base.metadata,
-    Column("source_torsodao_id", ForeignKey("TorsoDAO.database_id")),
-    Column("target_kinematicchaindao_id", ForeignKey("KinematicChainDAO.database_id")),
-)
-vectorswithpropertymappeddao_vectors_association = Table(
-    "vectorswithpropertymappeddao_vectors_association",
-    Base.metadata,
-    Column(
-        "source_vectorswithpropertymappeddao_id",
-        ForeignKey("VectorsWithPropertyMappedDAO.database_id"),
-    ),
-    Column("target_vectormappeddao_id", ForeignKey("VectorMappedDAO.database_id")),
-)
-worlddao_bodies_association = Table(
-    "worlddao_bodies_association",
-    Base.metadata,
-    Column("source_worlddao_id", ForeignKey("WorldDAO.database_id")),
-    Column("target_bodydao_id", ForeignKey("BodyDAO.database_id")),
-)
-worlddao_connections_association = Table(
-    "worlddao_connections_association",
-    Base.metadata,
-    Column("source_worlddao_id", ForeignKey("WorldDAO.database_id")),
-    Column("target_connectiondao_id", ForeignKey("ConnectionDAO.database_id")),
-)
-worlddao_views_association = Table(
-    "worlddao_views_association",
-    Base.metadata,
-    Column("source_worlddao_id", ForeignKey("WorldDAO.database_id")),
-    Column("target_viewdao_id", ForeignKey("ViewDAO.database_id")),
-)
-cabinetdao_drawers_association = Table(
-    "cabinetdao_drawers_association",
-    Base.metadata,
-    Column("source_cabinetdao_id", ForeignKey("CabinetDAO.database_id")),
-    Column("target_drawerdao_id", ForeignKey("DrawerDAO.database_id")),
-)
+
+
+class TorsodaoKinematicChainsAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "torsodao_kinematic_chains_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_torsodao_id: Mapped[int] = mapped_column(ForeignKey("TorsoDAO.database_id"))
+    target_kinematicchaindao_id: Mapped[int] = mapped_column(
+        ForeignKey("KinematicChainDAO.database_id")
+    )
+
+    target: Mapped[KinematicChainDAO] = relationship(
+        "KinematicChainDAO", foreign_keys=[target_kinematicchaindao_id]
+    )
+
+
+class VectorswithpropertymappeddaoVectorsAssociationDAO(
+    Base, AssociationDataAccessObject
+):
+
+    __tablename__ = "vectorswithpropertymappeddao_vectors_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_vectorswithpropertymappeddao_id: Mapped[int] = mapped_column(
+        ForeignKey("VectorsWithPropertyMappedDAO.database_id")
+    )
+    target_vectormappeddao_id: Mapped[int] = mapped_column(
+        ForeignKey("VectorMappedDAO.database_id")
+    )
+
+    target: Mapped[VectorMappedDAO] = relationship(
+        "VectorMappedDAO", foreign_keys=[target_vectormappeddao_id]
+    )
+
+
+class WorlddaoBodiesAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "worlddao_bodies_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_worlddao_id: Mapped[int] = mapped_column(ForeignKey("WorldDAO.database_id"))
+    target_bodydao_id: Mapped[int] = mapped_column(ForeignKey("BodyDAO.database_id"))
+
+    target: Mapped[BodyDAO] = relationship("BodyDAO", foreign_keys=[target_bodydao_id])
+
+
+class WorlddaoConnectionsAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "worlddao_connections_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_worlddao_id: Mapped[int] = mapped_column(ForeignKey("WorldDAO.database_id"))
+    target_connectiondao_id: Mapped[int] = mapped_column(
+        ForeignKey("ConnectionDAO.database_id")
+    )
+
+    target: Mapped[ConnectionDAO] = relationship(
+        "ConnectionDAO", foreign_keys=[target_connectiondao_id]
+    )
+
+
+class WorlddaoViewsAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "worlddao_views_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_worlddao_id: Mapped[int] = mapped_column(ForeignKey("WorldDAO.database_id"))
+    target_viewdao_id: Mapped[int] = mapped_column(ForeignKey("ViewDAO.database_id"))
+
+    target: Mapped[ViewDAO] = relationship("ViewDAO", foreign_keys=[target_viewdao_id])
+
+
+class CabinetdaoDrawersAssociationDAO(Base, AssociationDataAccessObject):
+
+    __tablename__ = "cabinetdao_drawers_association"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_cabinetdao_id: Mapped[int] = mapped_column(
+        ForeignKey("CabinetDAO.database_id")
+    )
+    target_drawerdao_id: Mapped[int] = mapped_column(
+        ForeignKey("DrawerDAO.database_id")
+    )
+
+    target: Mapped[DrawerDAO] = relationship(
+        "DrawerDAO", foreign_keys=[target_drawerdao_id]
+    )
 
 
 class CallableWrapperDAO(
@@ -261,27 +433,6 @@ class GenericClassDAO(
     }
 
 
-class GenericClass_floatDAO(
-    GenericClassDAO,
-    DataAccessObject[test.krrood_test.dataset.example_classes.GenericClass[float]],
-):
-
-    __tablename__ = "GenericClass_floatDAO"
-
-    database_id: Mapped[builtins.int] = mapped_column(
-        ForeignKey(GenericClassDAO.database_id),
-        primary_key=True,
-        use_existing_column=True,
-    )
-
-    value: Mapped[builtins.float] = mapped_column(use_existing_column=True)
-
-    __mapper_args__ = {
-        "polymorphic_identity": "GenericClass_floatDAO",
-        "inherit_condition": database_id == GenericClassDAO.database_id,
-    }
-
-
 class GenericClass_PositionDAO(
     GenericClassDAO,
     DataAccessObject[
@@ -315,6 +466,27 @@ class GenericClass_PositionDAO(
     }
 
 
+class GenericClass_floatDAO(
+    GenericClassDAO,
+    DataAccessObject[test.krrood_test.dataset.example_classes.GenericClass[float]],
+):
+
+    __tablename__ = "GenericClass_floatDAO"
+
+    database_id: Mapped[builtins.int] = mapped_column(
+        ForeignKey(GenericClassDAO.database_id),
+        primary_key=True,
+        use_existing_column=True,
+    )
+
+    value: Mapped[builtins.float] = mapped_column(use_existing_column=True)
+
+    __mapper_args__ = {
+        "polymorphic_identity": "GenericClass_floatDAO",
+        "inherit_condition": database_id == GenericClassDAO.database_id,
+    }
+
+
 class GenericClassAssociationDAO(
     Base,
     DataAccessObject[test.krrood_test.dataset.example_classes.GenericClassAssociation],
@@ -338,15 +510,13 @@ class GenericClassAssociationDAO(
         foreign_keys=[associated_value_id],
         post_update=True,
     )
-    associated_value_list: Mapped[builtins.list[GenericClass_PositionDAO]] = (
-        relationship(
-            "GenericClass_PositionDAO",
-            secondary="genericclassassociationdao_associated_value_list_association",
-            primaryjoin="GenericClassAssociationDAO.database_id == genericclassassociationdao_associated_value_list_association.c.source_genericclassassociationdao_id",
-            secondaryjoin="GenericClass_PositionDAO.database_id == genericclassassociationdao_associated_value_list_association.c.target_genericclass_positiondao_id",
-            collection_class=builtins.list,
-            cascade="save-update, merge",
-        )
+    associated_value_list: Mapped[
+        builtins.list[GenericclassassociationdaoAssociatedValueListAssociationDAO]
+    ] = relationship(
+        "GenericclassassociationdaoAssociatedValueListAssociationDAO",
+        collection_class=builtins.list,
+        cascade="all, delete-orphan",
+        foreign_keys="[GenericclassassociationdaoAssociatedValueListAssociationDAO.source_genericclassassociationdao_id]",
     )
 
 
@@ -494,13 +664,13 @@ class ParentAlternativelyMappedMappingDAO(
         String(255), nullable=False, use_existing_column=True
     )
 
-    entities: Mapped[builtins.list[CustomEntityDAO]] = relationship(
-        "CustomEntityDAO",
-        secondary="parentalternativelymappedmappingdao_entities_association",
-        primaryjoin="ParentAlternativelyMappedMappingDAO.database_id == parentalternativelymappedmappingdao_entities_association.c.source_parentalternativelymappedmappingdao_id",
-        secondaryjoin="CustomEntityDAO.database_id == parentalternativelymappedmappingdao_entities_association.c.target_customentitydao_id",
+    entities: Mapped[
+        builtins.list[ParentalternativelymappedmappingdaoEntitiesAssociationDAO]
+    ] = relationship(
+        "ParentalternativelymappedmappingdaoEntitiesAssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[ParentalternativelymappedmappingdaoEntitiesAssociationDAO.source_parentalternativelymappedmappingdao_id]",
     )
 
     __mapper_args__ = {
@@ -573,13 +743,11 @@ class PersonDAO(
 
     name: Mapped[builtins.str] = mapped_column(String(255), use_existing_column=True)
 
-    knows: Mapped[builtins.list[PersonDAO]] = relationship(
-        "PersonDAO",
-        secondary="persondao_knows_association",
-        primaryjoin="PersonDAO.database_id == persondao_knows_association.c.source_persondao_id",
-        secondaryjoin="PersonDAO.database_id == persondao_knows_association.c.target_persondao_id",
+    knows: Mapped[builtins.list[PersondaoKnowsAssociationDAO]] = relationship(
+        "PersondaoKnowsAssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[PersondaoKnowsAssociationDAO.source_persondao_id]",
     )
 
 
@@ -722,21 +890,21 @@ class AlternativeMappingAggregatorDAO(
         ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
     )
 
-    entities1: Mapped[builtins.list[CustomEntityDAO]] = relationship(
-        "CustomEntityDAO",
-        secondary="alternativemappingaggregatordao_entities1_association",
-        primaryjoin="AlternativeMappingAggregatorDAO.database_id == alternativemappingaggregatordao_entities1_association.c.source_alternativemappingaggregatordao_id",
-        secondaryjoin="CustomEntityDAO.database_id == alternativemappingaggregatordao_entities1_association.c.target_customentitydao_id",
+    entities1: Mapped[
+        builtins.list[AlternativemappingaggregatordaoEntities1AssociationDAO]
+    ] = relationship(
+        "AlternativemappingaggregatordaoEntities1AssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[AlternativemappingaggregatordaoEntities1AssociationDAO.source_alternativemappingaggregatordao_id]",
     )
-    entities2: Mapped[builtins.list[CustomEntityDAO]] = relationship(
-        "CustomEntityDAO",
-        secondary="alternativemappingaggregatordao_entities2_association",
-        primaryjoin="AlternativeMappingAggregatorDAO.database_id == alternativemappingaggregatordao_entities2_association.c.source_alternativemappingaggregatordao_id",
-        secondaryjoin="CustomEntityDAO.database_id == alternativemappingaggregatordao_entities2_association.c.target_customentitydao_id",
+    entities2: Mapped[
+        builtins.list[AlternativemappingaggregatordaoEntities2AssociationDAO]
+    ] = relationship(
+        "AlternativemappingaggregatordaoEntities2AssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[AlternativemappingaggregatordaoEntities2AssociationDAO.source_alternativemappingaggregatordao_id]",
     )
 
     __mapper_args__ = {
@@ -813,13 +981,13 @@ class ContainerGenerationDAO(
         ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
     )
 
-    items: Mapped[builtins.list[ItemWithBackreferenceDAO]] = relationship(
-        "ItemWithBackreferenceDAO",
-        secondary="containergenerationdao_items_association",
-        primaryjoin="ContainerGenerationDAO.database_id == containergenerationdao_items_association.c.source_containergenerationdao_id",
-        secondaryjoin="ItemWithBackreferenceDAO.database_id == containergenerationdao_items_association.c.target_itemwithbackreferencedao_id",
-        collection_class=builtins.list,
-        cascade="save-update, merge",
+    items: Mapped[builtins.list[ContainergenerationdaoItemsAssociationDAO]] = (
+        relationship(
+            "ContainergenerationdaoItemsAssociationDAO",
+            collection_class=builtins.list,
+            cascade="all, delete-orphan",
+            foreign_keys="[ContainergenerationdaoItemsAssociationDAO.source_containergenerationdao_id]",
+        )
     )
 
     __mapper_args__ = {
@@ -839,21 +1007,21 @@ class DoublePositionAggregatorDAO(
         ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
     )
 
-    positions1: Mapped[builtins.list[PositionDAO]] = relationship(
-        "PositionDAO",
-        secondary="doublepositionaggregatordao_positions1_association",
-        primaryjoin="DoublePositionAggregatorDAO.database_id == doublepositionaggregatordao_positions1_association.c.source_doublepositionaggregatordao_id",
-        secondaryjoin="PositionDAO.database_id == doublepositionaggregatordao_positions1_association.c.target_positiondao_id",
+    positions1: Mapped[
+        builtins.list[DoublepositionaggregatordaoPositions1AssociationDAO]
+    ] = relationship(
+        "DoublepositionaggregatordaoPositions1AssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[DoublepositionaggregatordaoPositions1AssociationDAO.source_doublepositionaggregatordao_id]",
     )
-    positions2: Mapped[builtins.list[PositionDAO]] = relationship(
-        "PositionDAO",
-        secondary="doublepositionaggregatordao_positions2_association",
-        primaryjoin="DoublePositionAggregatorDAO.database_id == doublepositionaggregatordao_positions2_association.c.source_doublepositionaggregatordao_id",
-        secondaryjoin="PositionDAO.database_id == doublepositionaggregatordao_positions2_association.c.target_positiondao_id",
+    positions2: Mapped[
+        builtins.list[DoublepositionaggregatordaoPositions2AssociationDAO]
+    ] = relationship(
+        "DoublepositionaggregatordaoPositions2AssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[DoublepositionaggregatordaoPositions2AssociationDAO.source_doublepositionaggregatordao_id]",
     )
 
     __mapper_args__ = {
@@ -987,13 +1155,11 @@ class FruitBoxDAO(
 
     name: Mapped[builtins.str] = mapped_column(String(255), use_existing_column=True)
 
-    fruits: Mapped[builtins.list[BodyDAO]] = relationship(
-        "BodyDAO",
-        secondary="fruitboxdao_fruits_association",
-        primaryjoin="FruitBoxDAO.database_id == fruitboxdao_fruits_association.c.source_fruitboxdao_id",
-        secondaryjoin="BodyDAO.database_id == fruitboxdao_fruits_association.c.target_bodydao_id",
+    fruits: Mapped[builtins.list[FruitboxdaoFruitsAssociationDAO]] = relationship(
+        "FruitboxdaoFruitsAssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[FruitboxdaoFruitsAssociationDAO.source_fruitboxdao_id]",
     )
 
     __mapper_args__ = {
@@ -1082,13 +1248,11 @@ class MoreShapesDAO(
         ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
     )
 
-    shapes: Mapped[builtins.list[ShapesDAO]] = relationship(
-        "ShapesDAO",
-        secondary="moreshapesdao_shapes_association",
-        primaryjoin="MoreShapesDAO.database_id == moreshapesdao_shapes_association.c.source_moreshapesdao_id",
-        secondaryjoin="ShapesDAO.database_id == moreshapesdao_shapes_association.c.target_shapesdao_id",
+    shapes: Mapped[builtins.list[MoreshapesdaoShapesAssociationDAO]] = relationship(
+        "MoreshapesdaoShapesAssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[MoreshapesdaoShapesAssociationDAO.source_moreshapesdao_id]",
     )
 
     __mapper_args__ = {
@@ -1439,13 +1603,13 @@ class PositionsDAO(
         JSON, nullable=False, use_existing_column=True
     )
 
-    positions: Mapped[builtins.list[PositionDAO]] = relationship(
-        "PositionDAO",
-        secondary="positionsdao_positions_association",
-        primaryjoin="PositionsDAO.database_id == positionsdao_positions_association.c.source_positionsdao_id",
-        secondaryjoin="PositionDAO.database_id == positionsdao_positions_association.c.target_positiondao_id",
-        collection_class=builtins.list,
-        cascade="save-update, merge",
+    positions: Mapped[builtins.list[PositionsdaoPositionsAssociationDAO]] = (
+        relationship(
+            "PositionsdaoPositionsAssociationDAO",
+            collection_class=builtins.list,
+            cascade="all, delete-orphan",
+            foreign_keys="[PositionsdaoPositionsAssociationDAO.source_positionsdao_id]",
+        )
     )
 
     __mapper_args__ = {
@@ -1654,13 +1818,11 @@ class ShapesDAO(
         ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
     )
 
-    shapes: Mapped[builtins.list[ShapeDAO]] = relationship(
-        "ShapeDAO",
-        secondary="shapesdao_shapes_association",
-        primaryjoin="ShapesDAO.database_id == shapesdao_shapes_association.c.source_shapesdao_id",
-        secondaryjoin="ShapeDAO.database_id == shapesdao_shapes_association.c.target_shapedao_id",
+    shapes: Mapped[builtins.list[ShapesdaoShapesAssociationDAO]] = relationship(
+        "ShapesdaoShapesAssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[ShapesdaoShapesAssociationDAO.source_shapesdao_id]",
     )
 
     __mapper_args__ = {
@@ -1679,23 +1841,21 @@ class SymbolGraphMappingDAO(
         Integer, primary_key=True, use_existing_column=True
     )
 
-    instances: Mapped[builtins.list[WrappedInstanceMappingDAO]] = relationship(
-        "WrappedInstanceMappingDAO",
-        secondary="symbolgraphmappingdao_instances_association",
-        primaryjoin="SymbolGraphMappingDAO.database_id == symbolgraphmappingdao_instances_association.c.source_symbolgraphmappingdao_id",
-        secondaryjoin="WrappedInstanceMappingDAO.database_id == symbolgraphmappingdao_instances_association.c.target_wrappedinstancemappingdao_id",
-        collection_class=builtins.list,
-        cascade="save-update, merge",
-    )
-    predicate_relations: Mapped[builtins.list[PredicateClassRelationDAO]] = (
+    instances: Mapped[builtins.list[SymbolgraphmappingdaoInstancesAssociationDAO]] = (
         relationship(
-            "PredicateClassRelationDAO",
-            secondary="symbolgraphmappingdao_predicate_relations_association",
-            primaryjoin="SymbolGraphMappingDAO.database_id == symbolgraphmappingdao_predicate_relations_association.c.source_symbolgraphmappingdao_id",
-            secondaryjoin="PredicateClassRelationDAO.database_id == symbolgraphmappingdao_predicate_relations_association.c.target_predicateclassrelationdao_id",
+            "SymbolgraphmappingdaoInstancesAssociationDAO",
             collection_class=builtins.list,
-            cascade="save-update, merge",
+            cascade="all, delete-orphan",
+            foreign_keys="[SymbolgraphmappingdaoInstancesAssociationDAO.source_symbolgraphmappingdao_id]",
         )
+    )
+    predicate_relations: Mapped[
+        builtins.list[SymbolgraphmappingdaoPredicateRelationsAssociationDAO]
+    ] = relationship(
+        "SymbolgraphmappingdaoPredicateRelationsAssociationDAO",
+        collection_class=builtins.list,
+        cascade="all, delete-orphan",
+        foreign_keys="[SymbolgraphmappingdaoPredicateRelationsAssociationDAO.source_symbolgraphmappingdao_id]",
     )
 
 
@@ -1731,13 +1891,13 @@ class TorsoDAO(
         use_existing_column=True,
     )
 
-    kinematic_chains: Mapped[builtins.list[KinematicChainDAO]] = relationship(
-        "KinematicChainDAO",
-        secondary="torsodao_kinematic_chains_association",
-        primaryjoin="TorsoDAO.database_id == torsodao_kinematic_chains_association.c.source_torsodao_id",
-        secondaryjoin="KinematicChainDAO.database_id == torsodao_kinematic_chains_association.c.target_kinematicchaindao_id",
-        collection_class=builtins.list,
-        cascade="save-update, merge",
+    kinematic_chains: Mapped[builtins.list[TorsodaoKinematicChainsAssociationDAO]] = (
+        relationship(
+            "TorsodaoKinematicChainsAssociationDAO",
+            collection_class=builtins.list,
+            cascade="all, delete-orphan",
+            foreign_keys="[TorsodaoKinematicChainsAssociationDAO.source_torsodao_id]",
+        )
     )
 
     __mapper_args__ = {
@@ -1844,13 +2004,13 @@ class VectorsWithPropertyMappedDAO(
         ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
     )
 
-    vectors: Mapped[builtins.list[VectorMappedDAO]] = relationship(
-        "VectorMappedDAO",
-        secondary="vectorswithpropertymappeddao_vectors_association",
-        primaryjoin="VectorsWithPropertyMappedDAO.database_id == vectorswithpropertymappeddao_vectors_association.c.source_vectorswithpropertymappeddao_id",
-        secondaryjoin="VectorMappedDAO.database_id == vectorswithpropertymappeddao_vectors_association.c.target_vectormappeddao_id",
+    vectors: Mapped[
+        builtins.list[VectorswithpropertymappeddaoVectorsAssociationDAO]
+    ] = relationship(
+        "VectorswithpropertymappeddaoVectorsAssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[VectorswithpropertymappeddaoVectorsAssociationDAO.source_vectorswithpropertymappeddao_id]",
     )
 
     __mapper_args__ = {
@@ -1872,29 +2032,25 @@ class WorldDAO(
 
     id: Mapped[builtins.int] = mapped_column(use_existing_column=True)
 
-    bodies: Mapped[builtins.list[BodyDAO]] = relationship(
-        "BodyDAO",
-        secondary="worlddao_bodies_association",
-        primaryjoin="WorldDAO.database_id == worlddao_bodies_association.c.source_worlddao_id",
-        secondaryjoin="BodyDAO.database_id == worlddao_bodies_association.c.target_bodydao_id",
+    bodies: Mapped[builtins.list[WorlddaoBodiesAssociationDAO]] = relationship(
+        "WorlddaoBodiesAssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[WorlddaoBodiesAssociationDAO.source_worlddao_id]",
     )
-    connections: Mapped[builtins.list[ConnectionDAO]] = relationship(
-        "ConnectionDAO",
-        secondary="worlddao_connections_association",
-        primaryjoin="WorldDAO.database_id == worlddao_connections_association.c.source_worlddao_id",
-        secondaryjoin="ConnectionDAO.database_id == worlddao_connections_association.c.target_connectiondao_id",
-        collection_class=builtins.list,
-        cascade="save-update, merge",
+    connections: Mapped[builtins.list[WorlddaoConnectionsAssociationDAO]] = (
+        relationship(
+            "WorlddaoConnectionsAssociationDAO",
+            collection_class=builtins.list,
+            cascade="all, delete-orphan",
+            foreign_keys="[WorlddaoConnectionsAssociationDAO.source_worlddao_id]",
+        )
     )
-    views: Mapped[builtins.list[ViewDAO]] = relationship(
-        "ViewDAO",
-        secondary="worlddao_views_association",
-        primaryjoin="WorldDAO.database_id == worlddao_views_association.c.source_worlddao_id",
-        secondaryjoin="ViewDAO.database_id == worlddao_views_association.c.target_viewdao_id",
+    views: Mapped[builtins.list[WorlddaoViewsAssociationDAO]] = relationship(
+        "WorlddaoViewsAssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[WorlddaoViewsAssociationDAO.source_worlddao_id]",
     )
 
     __mapper_args__ = {
@@ -2142,13 +2298,11 @@ class CabinetDAO(
     container: Mapped[ContainerDAO] = relationship(
         "ContainerDAO", uselist=False, foreign_keys=[container_id], post_update=True
     )
-    drawers: Mapped[builtins.list[DrawerDAO]] = relationship(
-        "DrawerDAO",
-        secondary="cabinetdao_drawers_association",
-        primaryjoin="CabinetDAO.database_id == cabinetdao_drawers_association.c.source_cabinetdao_id",
-        secondaryjoin="DrawerDAO.database_id == cabinetdao_drawers_association.c.target_drawerdao_id",
+    drawers: Mapped[builtins.list[CabinetdaoDrawersAssociationDAO]] = relationship(
+        "CabinetdaoDrawersAssociationDAO",
         collection_class=builtins.list,
-        cascade="save-update, merge",
+        cascade="all, delete-orphan",
+        foreign_keys="[CabinetdaoDrawersAssociationDAO.source_cabinetdao_id]",
     )
 
     __mapper_args__ = {

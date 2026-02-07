@@ -105,6 +105,18 @@ class AssociationTable:
     The full primary key reference for the right table (e.g., 'TableName.primary_key').
     """
 
+    primary_key_name: Optional[str] = None
+    """
+    The name of the primary key column, if any.
+    """
+
+    @property
+    def class_name(self) -> str:
+        """
+        :return: The name of the association class.
+        """
+        return "".join(part.capitalize() for part in self.name.split("_")) + "DAO"
+
 
 @dataclass
 class WrappedTable:
@@ -690,14 +702,18 @@ class WrappedTable:
             right_table_name=target_wrapped_table.tablename,
             right_foreign_key=right_fk_name,
             right_primary_key=target_wrapped_table.full_primary_key_name,
+            primary_key_name=(
+                "database_id"
+                if issubclass(wrapped_field.container_type, list)
+                else None
+            ),
         )
 
         # add association table to ORMatic
         self.ormatic.association_tables.append(association_table)
 
-        # create a relationship with a list using the association table
+        # create a relationship
         rel_name = f"{wrapped_field.field.name}"
-        rel_type = f"Mapped[{module_and_class_name(wrapped_field.container_type)}[{target_wrapped_table.tablename}]]"
 
         # Use the actual container type from the domain model (e.g., list)
         container_name = module_and_class_name(wrapped_field.container_type)
@@ -705,14 +721,27 @@ class WrappedTable:
         # Provide explicit join conditions to disambiguate self-referential associations
         primaryjoin = f"{self.tablename}.{self.primary_key_name} == {association_table_name}.c.{left_fk_name}"
         secondaryjoin = f"{target_wrapped_table.tablename}.{target_wrapped_table.primary_key_name} == {association_table_name}.c.{right_fk_name}"
-        rel_constructor = (
-            f"relationship('{target_wrapped_table.tablename}', "
-            f"secondary='{association_table_name}', "
-            f"primaryjoin='{primaryjoin}', "
-            f"secondaryjoin='{secondaryjoin}', "
-            f"collection_class={container_name}, "
-            f"cascade='save-update, merge')"
-        )
+
+        if association_table.primary_key_name:
+            # Association Object pattern
+            rel_type = f"Mapped[{module_and_class_name(wrapped_field.container_type)}[{association_table.class_name}]]"
+            rel_constructor = (
+                f"relationship('{association_table.class_name}', "
+                f"collection_class={container_name}, "
+                f"cascade='all, delete-orphan', "
+                f"foreign_keys='[{association_table.class_name}.{association_table.left_foreign_key}]')"
+            )
+        else:
+            # Standard many-to-many
+            rel_type = f"Mapped[{module_and_class_name(wrapped_field.container_type)}[{target_wrapped_table.tablename}]]"
+            rel_constructor = (
+                f"relationship('{target_wrapped_table.tablename}', "
+                f"secondary='{association_table_name}', "
+                f"primaryjoin='{primaryjoin}', "
+                f"secondaryjoin='{secondaryjoin}', "
+                f"collection_class={container_name}, "
+                f"cascade='save-update, merge')"
+            )
         self.relationships.append(
             ColumnConstructor(rel_name, rel_type, rel_constructor)
         )

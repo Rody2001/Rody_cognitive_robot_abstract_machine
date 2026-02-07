@@ -225,6 +225,23 @@ def test_positions(session, database):
     assert len(result.positions) == 2
 
 
+def test_positions_with_duplicated_entry_in_list(session, database):
+    p1 = Position(1, 2, 3)
+    positions = Positions([p1, p1], ["a", "b", "c"])
+    dao: PositionsDAO = to_dao(positions)
+    assert len(dao.positions) == 2
+    session.add(dao)
+    session.commit()
+
+    associations_in_db = session.execute(
+        select(PositionsdaoPositionsAssociationDAO)
+    ).all()
+    assert len(associations_in_db) == 2
+
+    queried = session.scalars(select(PositionsDAO)).one()
+    assert len(queried.positions) == 2
+
+
 def test_double_position_aggregator(session, database):
     p1, p2, p3 = Position(1, 2, 3), Position(2, 3, 4), Position(3, 4, 5)
     dpa = DoublePositionAggregator([p1, p2], [p1, p3])
@@ -237,7 +254,7 @@ def test_double_position_aggregator(session, database):
 
     queried = session.scalars(select(DoublePositionAggregatorDAO)).one()
     assert queried == dpa_dao
-    assert queried.positions1[0] in queried_positions
+    assert queried.positions1[0].target in queried_positions
 
 
 def test_kinematic_chain_and_torso(session, database):
@@ -371,7 +388,7 @@ def test_alternative_mapping_aggregator(session, database):
     ama = AlternativeMappingAggregator([e1, e2], [e2, e3])
     dao = to_dao(ama)
 
-    assert dao.entities1[1] is dao.entities2[0]
+    assert dao.entities1[1].target is dao.entities2[0].target
 
     session.add(dao)
     session.commit()
@@ -481,15 +498,19 @@ def test_to_dao_alternatively_mapped_parent(session, database):
 
     result_by_hand = ChildLevel2NormallyMappedDAO(
         derived_attribute="1",
-        entities=[CustomEntityDAO(overwritten_name="a")],
+        entities=[
+            ParentalternativelymappedmappingdaoEntitiesAssociationDAO(
+                target=CustomEntityDAO(overwritten_name="a")
+            )
+        ],
         level_one_attribute=2,
         level_two_attribute=3,
     )
 
-    assert isinstance(ch2_dao.entities[0], CustomEntityDAO)
+    assert isinstance(ch2_dao.entities[0].target, CustomEntityDAO)
     assert (
-        ch2_dao.entities[0].overwritten_name
-        == result_by_hand.entities[0].overwritten_name
+        ch2_dao.entities[0].target.overwritten_name
+        == result_by_hand.entities[0].target.overwritten_name
     )
     assert len(ch2_dao.entities) == len(result_by_hand.entities)
     assert ch2_dao.level_one_attribute == result_by_hand.level_one_attribute
@@ -600,11 +621,11 @@ def test_many_to_many_with_same_type(session, database):
     q = select(PositionsDAO)
     r_ps1, r_ps2 = session.scalars(q).all()
 
-    assert r_ps1.positions[0] is r_ps2.positions[0]
+    assert r_ps1.positions[0].target is r_ps2.positions[0].target
 
 
 def test_multiple_inheritance(session, database):
-    assert issubclass(MultipleInheritanceDAO, PrimaryBaseDAO)
+    assert issubclass(MultipleInheritanceDAO, (PrimaryBaseDAO, MixinDAO))
     obj = MultipleInheritance(
         primary_attribute="p", mixin_attribute="m", extra_attribute="e"
     )
@@ -648,7 +669,7 @@ def test_persons(session, database):
 
     q = session.scalar(select(PersonDAO).where(PersonDAO.name == "Alice"))
     assert q.name == "Alice"
-    assert q.knows[0].name == "Bob"
+    assert q.knows[0].target.name == "Bob"
 
 
 def test_underspecified_types():
@@ -680,7 +701,10 @@ def test_post_init_and_circular_reference(session, database):
     i1_dao = ItemWithBackreferenceDAO(value=10)
     i2_dao = ItemWithBackreferenceDAO(value=20)
 
-    c1_dao.items = [i1_dao, i2_dao]
+    c1_dao.items = [
+        ContainergenerationdaoItemsAssociationDAO(target=i1_dao),
+        ContainergenerationdaoItemsAssociationDAO(target=i2_dao),
+    ]
     i1_dao.container = c1_dao
     i2_dao.container = c1_dao
 
@@ -756,7 +780,7 @@ def test_generic_class(session, database):
 
     # check that there exist two relations in the generic position relations table.
     q = session.execute(
-        select(genericclassassociationdao_associated_value_list_association)
+        select(GenericclassassociationdaoAssociatedValueListAssociationDAO)
     ).all()
     assert len(q) == 2
 
