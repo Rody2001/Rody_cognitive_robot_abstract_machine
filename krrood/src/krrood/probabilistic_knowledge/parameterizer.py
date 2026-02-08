@@ -15,7 +15,7 @@ from sqlalchemy.orm import Relationship
 from typing_extensions import List, Optional
 
 from krrood.adapters.json_serializer import list_like_classes
-from krrood.class_diagrams.class_diagram import ClassDiagram
+from krrood.class_diagrams.class_diagram import ClassDiagram, WrappedClass
 from krrood.class_diagrams.wrapped_field import WrappedField
 from krrood.ormatic.dao import DataAccessObject, get_dao_class
 from probabilistic_model.probabilistic_circuit.rx.helper import fully_factorized
@@ -39,13 +39,13 @@ class Parameterizer:
         """
 
         original_class = dao.original_class()
-        class_diagram = ClassDiagram([original_class])
+        wrapped_class = WrappedClass(original_class)
         mapper = inspect(dao).mapper
 
         variables = []
         simple_event = SimpleEvent({})
 
-        for wrapped_field in class_diagram.get_wrapped_class(original_class).fields:
+        for wrapped_field in wrapped_class.fields:
             if wrapped_field.type_endpoint in SKIPPED_FIELD_TYPES:
                 continue
 
@@ -94,6 +94,9 @@ class Parameterizer:
             return None, None
 
         attribute = getattr(dao, attribute_name)
+        if wrapped_field.is_optional and attribute is None:
+            return None, None
+
         if attribute is None:
             if wrapped_field.type_endpoint is str:
                 return None, None
@@ -126,21 +129,33 @@ class Parameterizer:
         prefix: str,
     ) -> Tuple[List[Variable], Optional[SimpleEvent]]:
         attribute_name = relationship.key
+        attribute_dao = getattr(dao, attribute_name)
 
         if not self.is_attribute_of_interest(attribute_name, wrapped_field):
             return [], None
         elif wrapped_field.is_one_to_many_relationship:
-            # Here again, we dont know how long the container should be. Not sure how to handle this yet.
-            return [], None
+            one_to_many_variables = []
+            one_to_many_simple_event = SimpleEvent({})
+            for value in attribute_dao:
+                variables, simple_event = self.parameterize_dao(
+                    dao=value, prefix=f"{prefix}.{attribute_name}"
+                )
+                one_to_many_variables.extend(variables)
+                one_to_many_simple_event.update(simple_event)
+            return one_to_many_variables, one_to_many_simple_event
+
         elif wrapped_field.is_one_to_one_relationship:
-            attribute_dao = getattr(dao, attribute_name)
+
+            if wrapped_field.is_optional and attribute_dao is None:
+                return [], None
+
             if attribute_dao is None:
                 attribute_dao = get_dao_class(wrapped_field.type_endpoint)()
-            variables, event = self.parameterize_dao(
+            variables, simple_event = self.parameterize_dao(
                 dao=attribute_dao,
                 prefix=f"{prefix}.{attribute_name}",
             )
-            return variables, event
+            return variables, simple_event
         else:
             assert_never(wrapped_field)
 

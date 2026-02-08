@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-import pytest
-from random_events.set import Set
-
-from krrood.class_diagrams.class_diagram import ClassDiagram
-from test.krrood_test.dataset.example_classes import (
-    Atom,
-    Element,
-)
-
 import unittest
-from random_events.variable import Continuous, Integer, Symbolic
-from krrood.probabilistic_knowledge.parameterizer import Parameterizer
-from test.krrood_test.dataset.example_classes import Position, Pose, Orientation
+
+from random_events.variable import Continuous
+
 from krrood.ormatic.dao import to_dao
+from krrood.probabilistic_knowledge.parameterizer import Parameterizer
+from test.krrood_test.dataset.example_classes import OptionalTestCase
+from test.krrood_test.dataset.example_classes import Position, Pose, Orientation
 
 
 def test_parameterize_position():
@@ -136,17 +130,64 @@ class TestDAOParameterizer(unittest.TestCase):
                 val = getattr(pose.orientation, parts[2])
             self.assertEqual(event[var].simple_sets[0].lower, val)
 
-    def test_parameterize_dao_with_none(self):
+    def test_parameterize_dao_with_optional(self):
+        # optional = OptionalTestCase(1)
+        # optional_dao = to_dao(optional)
+        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+        #
+        # self.assertEqual(len(variables), 1)
+        #
+        # optional = OptionalTestCase(None)
+        # optional_dao = to_dao(optional)
+        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+        #
+        # self.assertEqual(len(variables), 1)
+        #
+        # optional = OptionalTestCase(1, Position(1.0, 2.0, 3.0))
+        # optional_dao = to_dao(optional)
+        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+        #
+        # self.assertEqual(len(variables), 4)
+        #
+        # optional = OptionalTestCase(None, Position(1.0, None, 3.0))
+        # optional_dao = to_dao(optional)
+        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+        #
+        # self.assertEqual(len(variables), 4)
+        #
+        # optional = OptionalTestCase(
+        #     1, list_of_orientations=[Orientation(0.0, 0.0, 0.0, 1.0)]
+        # )
+        # optional_dao = to_dao(optional)
+        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+        #
+        # self.assertEqual(len(variables), 5)
+        #
+        # optional = OptionalTestCase(
+        #     1, list_of_orientations=[Orientation(0.0, 0.0, None, 1.0)]
+        # )
+        # optional_dao = to_dao(optional)
+        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+        #
+        # self.assertEqual(len(variables), 5)
+
+        optional = OptionalTestCase(1, list_of_values=[0])
+        optional_dao = to_dao(optional)
+        variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+
+        self.assertEqual(len(variables), 2)
+
+    def test_parameterize_dao_with_optional_filled(self):
         # Orientation with w=None
-        orient = Orientation(x=0.0, y=0.0, z=0.0, w=None)
+        orient = Orientation(x=0.0, y=0.0, z=None, w=1.0)
         orient_dao = to_dao(orient)
         variables, event = self.parameterizer.parameterize_dao(orient_dao, "orient")
 
         self.assertEqual(len(variables), 4)
-        w_var = next(v for v in variables if v.name == "orient.w")
+        z_var = next(v for v in variables if v.name == "orient.z")
         # Since SimpleEvent fills missing variables with reals(), orient.w should be a full interval
-        self.assertTrue(event[w_var].simple_sets[0].lower < -1e10)
-        self.assertTrue(event[w_var].simple_sets[0].upper > 1e10)
+        self.assertTrue(event[z_var].simple_sets[0].lower < -1e10)
+        self.assertTrue(event[z_var].simple_sets[0].upper > 1e10)
 
 
 if __name__ == "__main__":

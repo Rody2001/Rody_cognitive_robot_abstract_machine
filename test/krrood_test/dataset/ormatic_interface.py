@@ -123,6 +123,14 @@ moreshapesdao_shapes_association = Table(
     Column("source_moreshapesdao_id", ForeignKey("MoreShapesDAO.database_id")),
     Column("target_shapesdao_id", ForeignKey("ShapesDAO.database_id")),
 )
+optionaltestcasedao_list_of_orientations_association = Table(
+    "optionaltestcasedao_list_of_orientations_association",
+    Base.metadata,
+    Column(
+        "source_optionaltestcasedao_id", ForeignKey("OptionalTestCaseDAO.database_id")
+    ),
+    Column("target_orientationdao_id", ForeignKey("OrientationDAO.database_id")),
+)
 positionsdao_positions_association = Table(
     "positionsdao_positions_association",
     Base.metadata,
@@ -1057,6 +1065,49 @@ class ObjectAnnotationDAO(
 
     __mapper_args__ = {
         "polymorphic_identity": "ObjectAnnotationDAO",
+        "inherit_condition": database_id == SymbolDAO.database_id,
+    }
+
+
+class OptionalTestCaseDAO(
+    SymbolDAO,
+    DataAccessObject[test.krrood_test.dataset.example_classes.OptionalTestCase],
+):
+
+    __tablename__ = "OptionalTestCaseDAO"
+
+    database_id: Mapped[builtins.int] = mapped_column(
+        ForeignKey(SymbolDAO.database_id), primary_key=True, use_existing_column=True
+    )
+
+    value: Mapped[builtins.int] = mapped_column(use_existing_column=True)
+
+    list_of_values: Mapped[typing.List[builtins.int]] = mapped_column(
+        JSON, nullable=False, use_existing_column=True
+    )
+
+    optional_position_id: Mapped[typing.Optional[builtins.int]] = mapped_column(
+        ForeignKey("PositionDAO.database_id", use_alter=True),
+        nullable=True,
+        use_existing_column=True,
+    )
+
+    optional_position: Mapped[PositionDAO] = relationship(
+        "PositionDAO",
+        uselist=False,
+        foreign_keys=[optional_position_id],
+        post_update=True,
+    )
+    list_of_orientations: Mapped[builtins.list[OrientationDAO]] = relationship(
+        "OrientationDAO",
+        secondary="optionaltestcasedao_list_of_orientations_association",
+        primaryjoin="OptionalTestCaseDAO.database_id == optionaltestcasedao_list_of_orientations_association.c.source_optionaltestcasedao_id",
+        secondaryjoin="OrientationDAO.database_id == optionaltestcasedao_list_of_orientations_association.c.target_orientationdao_id",
+        cascade="save-update, merge",
+    )
+
+    __mapper_args__ = {
+        "polymorphic_identity": "OptionalTestCaseDAO",
         "inherit_condition": database_id == SymbolDAO.database_id,
     }
 
