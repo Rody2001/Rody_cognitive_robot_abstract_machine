@@ -3,164 +3,39 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from functools import reduce
-from operator import or_
 from typing import assert_never, Any, Tuple
 
+from random_events.interval import Bound
 from random_events.interval import SimpleInterval
-from random_events.product_algebra import SimpleEvent, Event
-from probabilistic_model.probabilistic_circuit.rx.helper import fully_factorized
-from probabilistic_model.probabilistic_circuit.rx.probabilistic_circuit import (
-    ProbabilisticCircuit,
-)
+from random_events.product_algebra import SimpleEvent
 from random_events.set import Set
 from random_events.variable import Continuous, Integer, Symbolic, Variable
 from sqlalchemy import inspect, Column
 from sqlalchemy.orm import Relationship
-from typing_extensions import List, Optional, Dict
+from typing_extensions import List, Optional
 
 from krrood.adapters.json_serializer import list_like_classes
-from krrood.class_diagrams.class_diagram import WrappedClass, ClassDiagram
+from krrood.class_diagrams.class_diagram import ClassDiagram
 from krrood.class_diagrams.wrapped_field import WrappedField
 from krrood.ormatic.dao import DataAccessObject, get_dao_class
-from random_events.interval import Bound
+from probabilistic_model.probabilistic_circuit.rx.helper import fully_factorized
+from probabilistic_model.probabilistic_circuit.rx.probabilistic_circuit import (
+    ProbabilisticCircuit,
+)
 
 SKIPPED_FIELD_TYPES = (datetime,)
 
 
 @dataclass
 class Parameterizer:
-    """
-    Parameterizer for creating random event variables from WrappedClass instances.
-
-    This class provides methods to recursively inspect a class structure (via WrappedClass)
-    and generate corresponding random variables for probabilistic modeling.
-    """
-
-    def __call__(self, wrapped_class: WrappedClass) -> List[Variable]:
-        """
-        Create random event variables from a WrappedClass.
-
-        """
-        return self.parameterize(wrapped_class, prefix=wrapped_class.clazz.__name__)
-
-    def parameterize(self, wrapped_class: WrappedClass, prefix: str) -> List[Variable]:
-        """
-        Create variables for all fields of a WrappedClass.
-
-        :return: A list of random event variables.
-        """
-
-        variables_by_name: Dict[str, Variable] = {}
-
-        for wrapped_field in wrapped_class.fields:
-            for var in self._parameterize_wrapped_field(wrapped_field, prefix):
-                variables_by_name.setdefault(var.name, var)
-
-        return list(variables_by_name.values())
-
-    def _parameterize_wrapped_field(
-        self, wrapped_field: WrappedField, prefix: str
-    ) -> List[Variable]:
-        """
-        Create variables for a single WrappedField.
-
-        :return: A list of variables
-        """
-        field_name = f"{prefix}.{wrapped_field.name}"
-
-        if self.skip_field(wrapped_field):
-            return []
-
-        if wrapped_field.is_one_to_one_relationship and not wrapped_field.is_enum:
-            return self._parameterize_relationship(wrapped_field, field_name)
-
-        variable = self._create_variable_from_field(wrapped_field, field_name)
-
-        return [variable]
-
-    def skip_field(self, wrapped_field: WrappedField) -> bool:
-        """
-        Skip fields listed in SKIPPED_FIELD_TYPES.
-        """
-        return wrapped_field.type_endpoint in SKIPPED_FIELD_TYPES
-
-    def _parameterize_relationship(
-        self, wrapped_field: WrappedField, field_name: str
-    ) -> List[Variable]:
-        """
-        Create variables for a one-to-one relationship field.
-
-        :return: A list of variables from the related class.
-        """
-        class_diagram = getattr(wrapped_field.clazz, "_class_diagram", None)
-        if not class_diagram:
-            return []
-
-        target_type = wrapped_field.type_endpoint
-        if target_type not in class_diagram._cls_wrapped_cls_map:
-            return []
-
-        target_wrapped_class = class_diagram.get_wrapped_class(target_type)
-        return self.parameterize(target_wrapped_class, prefix=field_name)
-
-    def _create_variable_from_field(
-        self, wrapped_field: WrappedField, field_name: str
-    ) -> Optional[Variable]:
-        """
-        Create a random event variable from a WrappedField based on its type.
-
-        :return: A random event variable or raise error if the type is not supported.
-        """
-        endpoint_type = wrapped_field.type_endpoint
-
-        if wrapped_field.is_enum:
-            return Symbolic(field_name, Set.from_iterable(list(endpoint_type)))
-
-        elif endpoint_type is int:
-            return Integer(field_name)
-
-        elif endpoint_type is float:
-            return Continuous(field_name)
-
-        elif endpoint_type is bool:
-            return Symbolic(field_name, Set.from_iterable([True, False]))
-
-        else:
-            raise NotImplementedError(
-                f"No conversion between {endpoint_type} and random_events.Variable is known."
-            )
-
-    def create_fully_factorized_distribution(
-        self,
-        variables: List[Variable],
-    ) -> ProbabilisticCircuit:
-        """
-        Create a fully factorized probabilistic circuit over the given variables.
-
-        :return: A fully factorized probabilistic circuit.
-        """
-        distribution_variables = [v for v in variables if not isinstance(v, Integer)]
-
-        return fully_factorized(
-            distribution_variables,
-            means={v: 0.0 for v in distribution_variables if isinstance(v, Continuous)},
-            variances={
-                v: 1.0 for v in distribution_variables if isinstance(v, Continuous)
-            },
-        )
-
-
-@dataclass
-class DAOParameterizer:
 
     def parameterize_dao(
         self, dao: DataAccessObject, prefix: str
-    ) -> Tuple[List[Variable], Optional[Event]]:
+    ) -> Tuple[List[Variable], Optional[SimpleEvent]]:
         """
-        Create variables for all fields of a WrappedClass.
+        Create variables for all fields of a DataAccessObject.
 
-        :return: A list of random event variables.
+        :return: A list of random event variables and a SimpleEvent containing the values.
         """
 
         original_class = dao.original_class()
@@ -174,16 +49,15 @@ class DAOParameterizer:
             if wrapped_field.type_endpoint in SKIPPED_FIELD_TYPES:
                 continue
 
-            column_variables = [
-                self._process_column(column, wrapped_field, dao, prefix)
-                for column in mapper.columns
-            ]
-            for var, event in column_variables:
+            for column in mapper.columns:
+                var, val = self._process_column(column, wrapped_field, dao, prefix)
                 if var is None:
                     continue
                 variables.append(var)
-                if event is not None:
-                    simple_event[var] = event
+                if val is None:
+                    continue
+                event = self._create_simple_event_singleton_from_set_attribute(var, val)
+                simple_event.update(event)
 
             for relationship in mapper.relationships:
                 relationship_variables, relationship_event = self._process_relationship(
@@ -192,7 +66,8 @@ class DAOParameterizer:
                 if relationship_variables is not None:
                     variables.extend(relationship_variables)
                 if relationship_event is not None:
-                    simple_event = SimpleEvent({**simple_event, **relationship_event})
+                    simple_event.update(relationship_event)
+
         simple_event.fill_missing_variables(variables)
         return variables, simple_event
 
@@ -211,12 +86,12 @@ class DAOParameterizer:
         if wrapped_field.is_one_to_one_relationship and not (
             wrapped_field.is_enum or wrapped_field.type_endpoint is uuid.UUID
         ):
-            assert_never(wrapped_field)
+            return None, None
 
         # Not sure how we want to handle one to many relationships. We dont know how long the container should be
         # so does it really make sense to parameterize it?
         if wrapped_field.is_one_to_many_relationship:
-            assert_never(wrapped_field)
+            return None, None
 
         attribute = getattr(dao, attribute_name)
         if attribute is None:
@@ -225,6 +100,7 @@ class DAOParameterizer:
             var = self._create_variable_from_wrapped_field(
                 wrapped_field, f"{prefix}.{attribute_name}"
             )
+            return var, None
         elif isinstance(attribute, list_like_classes):
             # skip attributes that are not None, and not list-like. those are already set correctly, and by not
             # adding the variable we dont clutter the model
@@ -233,8 +109,7 @@ class DAOParameterizer:
             var = self._create_variable_from_wrapped_field(
                 wrapped_field, f"{prefix}.{attribute_name}"
             )
-            ...
-        return var, attribute
+            return var, attribute
 
     def _create_simple_event_singleton_from_set_attribute(self, variable, attribute):
         if isinstance(attribute, bool):
@@ -273,12 +148,11 @@ class DAOParameterizer:
         self, attribute_name: Optional[str], wrapped_field: WrappedField
     ):
         """
-        If its optional, we dont care. My assumption for now is, that the plan resolves this
+        If it's of the same name as the field, we are interested.
         """
         return (
             attribute_name
             and wrapped_field.public_name == attribute_name
-            and not wrapped_field.is_optional
             and not wrapped_field.type_endpoint is uuid.UUID
         )
 
@@ -322,3 +196,23 @@ class DAOParameterizer:
         Creates a random event variable from a list attribute. That variable is the union of all elements in the list.
         """
         return Symbolic(name, Set.from_iterable(list_attribute))
+
+    @classmethod
+    def create_fully_factorized_distribution(
+        cls,
+        variables: List[Variable],
+    ) -> ProbabilisticCircuit:
+        """
+        Create a fully factorized probabilistic circuit over the given variables.
+
+        :return: A fully factorized probabilistic circuit.
+        """
+        distribution_variables = [v for v in variables if not isinstance(v, Integer)]
+
+        return fully_factorized(
+            distribution_variables,
+            means={v: 0.0 for v in distribution_variables if isinstance(v, Continuous)},
+            variances={
+                v: 1.0 for v in distribution_variables if isinstance(v, Continuous)
+            },
+        )

@@ -697,7 +697,7 @@ def test_algebra_sequentialplan(immutable_model_world):
         # ),
     )
 
-    variables, simple_event = sp.parameterize_plan()
+    variables, simple_event = sp.parameterize()
     variables_map = {v.name: v for v in variables}
 
     probabilistic_circuit = Parameterizer().create_fully_factorized_distribution(
@@ -778,17 +778,7 @@ def test_algebra_parallelplan(immutable_model_world):
         ParkArmsActionDescription(None),
     )
 
-    plan_classes = [
-        MoveTorsoAction,
-        ParkArmsAction,
-        PoseStamped,
-        PyCramPose,
-        PyCramVector3,
-        PyCramQuaternion,
-        Header,
-    ]
-
-    variables = sp.parameterize_plan()
+    variables, _ = sp.parameterize()
     variables_map = {v.name: v for v in variables}
 
     # Ensure expected variable names exist
@@ -812,3 +802,252 @@ def test_algebra_parallelplan(immutable_model_world):
         sample = dict(zip(restricted_dist.variables, sample_values))
         assert sample[arm_var] == Arms.BOTH
         assert torso_var in sample
+
+
+def test_parameterize_movetorse_navigate(immutable_model_world):
+    """
+    Test parameterization of a potential robot plan consisting of: MoveTorso - Navigate - MoveTorso.
+
+    This test verifies:
+    1. Parameterization of simple robot action plan
+    2. Sampling from the constrained distribution and validation of constraints.
+    """
+    world, robot_view, context = immutable_model_world
+
+    plan = SequentialPlan(
+        context,
+        MoveTorsoActionDescription(None),
+        NavigateActionDescription(None),
+        MoveTorsoActionDescription(None),
+    )
+
+    all_variables, _ = plan.parameterize()
+
+    variables = {v.name: v for v in all_variables}
+
+    expected_names = {
+        "MoveTorsoAction_0.torso_state",
+        "MoveTorsoAction_2.torso_state",
+        "NavigateAction_1.keep_joint_states",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.buffer_zone_distance",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.disabled",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.max_avoided_bodies",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.violated_distance",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.buffer_zone_distance",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.disabled",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.max_avoided_bodies",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.violated_distance",
+        "NavigateAction_1.target_location.header.sequence",
+        "NavigateAction_1.target_location.pose.orientation.w",
+        "NavigateAction_1.target_location.pose.orientation.x",
+        "NavigateAction_1.target_location.pose.orientation.y",
+        "NavigateAction_1.target_location.pose.orientation.z",
+        "NavigateAction_1.target_location.pose.position.x",
+        "NavigateAction_1.target_location.pose.position.y",
+        "NavigateAction_1.target_location.pose.position.z",
+    }
+
+    assert set(variables.keys()) == expected_names
+
+    probabilistic_circuit = Parameterizer.create_fully_factorized_distribution(
+        all_variables
+    )
+
+    expected_distribution_names = expected_names - {
+        "NavigateAction_1.target_location.header.sequence",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.max_avoided_bodies",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.max_avoided_bodies",
+    }
+    assert {
+        v.name for v in probabilistic_circuit.variables
+    } == expected_distribution_names
+
+    torso_1 = variables["MoveTorsoAction_0.torso_state"]
+    torso_2 = variables["MoveTorsoAction_2.torso_state"]
+
+    consistency_events = [
+        SimpleEvent({torso_1: [state], torso_2: [state]}) for state in TorsoState
+    ]
+    restricted_distribution, _ = probabilistic_circuit.truncated(
+        Event(*consistency_events)
+    )
+    restricted_distribution.normalize()
+
+    pose_constraints = {
+        variables["NavigateAction_1.target_location.pose.position.x"]: 1.5,
+        variables["NavigateAction_1.target_location.pose.position.y"]: -2.0,
+        variables["NavigateAction_1.target_location.pose.orientation.x"]: 0.0,
+        variables["NavigateAction_1.target_location.pose.orientation.y"]: 0.0,
+        variables["NavigateAction_1.target_location.pose.orientation.z"]: 0.0,
+        variables["NavigateAction_1.target_location.pose.orientation.w"]: 1.0,
+    }
+
+    final_distribution, _ = restricted_distribution.conditional(pose_constraints)
+    final_distribution.normalize()
+
+    target_x, target_y = 1.5, -2.0
+    nav_x = variables["NavigateAction_1.target_location.pose.position.x"]
+    nav_y = variables["NavigateAction_1.target_location.pose.position.y"]
+
+    for sample_values in final_distribution.sample(10):
+        sample = dict(zip(final_distribution.variables, sample_values))
+        assert sample[torso_1] == sample[torso_2]
+        assert sample[nav_x] == target_x
+        assert sample[nav_y] == target_y
+
+
+def test_parameterize_pickup_navigate_place(immutable_model_world):
+    """
+    Test parameterization of a potential robot plan consisting of: PickUp - Navigate - Place.
+
+    This test verifies:
+    1. Parameterization of pick up, navigate, placing robot action plan
+    2. Creating and sampling from a constrained distribution over the plan variables.
+    """
+    world, robot_view, context = immutable_model_world
+
+    plan = SequentialPlan(
+        context,
+        PickUpActionDescription(None, None, None),
+        NavigateActionDescription(None),
+        PlaceActionDescription(None, None, None),
+    )
+    all_variables, _ = plan.parameterize()
+    variables = {v.name: v for v in all_variables}
+
+    expected_variables = {
+        "NavigateAction_1.keep_joint_states",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.buffer_zone_distance",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.disabled",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.max_avoided_bodies",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.violated_distance",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.buffer_zone_distance",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.disabled",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.max_avoided_bodies",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.violated_distance",
+        "NavigateAction_1.target_location.header.sequence",
+        "NavigateAction_1.target_location.pose.orientation.w",
+        "NavigateAction_1.target_location.pose.orientation.x",
+        "NavigateAction_1.target_location.pose.orientation.y",
+        "NavigateAction_1.target_location.pose.orientation.z",
+        "NavigateAction_1.target_location.pose.position.x",
+        "NavigateAction_1.target_location.pose.position.y",
+        "NavigateAction_1.target_location.pose.position.z",
+        "PickUpAction_0.arm",
+        "PickUpAction_0.grasp_description.approach_direction",
+        "PickUpAction_0.grasp_description.manipulation_offset",
+        "PickUpAction_0.grasp_description.manipulator.front_facing_axis.x",
+        "PickUpAction_0.grasp_description.manipulator.front_facing_axis.y",
+        "PickUpAction_0.grasp_description.manipulator.front_facing_axis.z",
+        "PickUpAction_0.grasp_description.manipulator.front_facing_orientation.w",
+        "PickUpAction_0.grasp_description.manipulator.front_facing_orientation.x",
+        "PickUpAction_0.grasp_description.manipulator.front_facing_orientation.y",
+        "PickUpAction_0.grasp_description.manipulator.front_facing_orientation.z",
+        "PickUpAction_0.grasp_description.manipulator.root.collision_config.buffer_zone_distance",
+        "PickUpAction_0.grasp_description.manipulator.root.collision_config.disabled",
+        "PickUpAction_0.grasp_description.manipulator.root.collision_config.max_avoided_bodies",
+        "PickUpAction_0.grasp_description.manipulator.root.collision_config.violated_distance",
+        "PickUpAction_0.grasp_description.manipulator.root.temp_collision_config.buffer_zone_distance",
+        "PickUpAction_0.grasp_description.manipulator.root.temp_collision_config.disabled",
+        "PickUpAction_0.grasp_description.manipulator.root.temp_collision_config.max_avoided_bodies",
+        "PickUpAction_0.grasp_description.manipulator.root.temp_collision_config.violated_distance",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.collision_config.buffer_zone_distance",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.collision_config.disabled",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.collision_config.max_avoided_bodies",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.collision_config.violated_distance",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.temp_collision_config.buffer_zone_distance",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.temp_collision_config.disabled",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.temp_collision_config.max_avoided_bodies",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.temp_collision_config.violated_distance",
+        "PickUpAction_0.grasp_description.rotate_gripper",
+        "PickUpAction_0.grasp_description.vertical_alignment",
+        "PickUpAction_0.object_designator.collision_config.buffer_zone_distance",
+        "PickUpAction_0.object_designator.collision_config.disabled",
+        "PickUpAction_0.object_designator.collision_config.max_avoided_bodies",
+        "PickUpAction_0.object_designator.collision_config.violated_distance",
+        "PickUpAction_0.object_designator.temp_collision_config.buffer_zone_distance",
+        "PickUpAction_0.object_designator.temp_collision_config.disabled",
+        "PickUpAction_0.object_designator.temp_collision_config.max_avoided_bodies",
+        "PickUpAction_0.object_designator.temp_collision_config.violated_distance",
+        "PlaceAction_2.arm",
+        "PlaceAction_2.object_designator.collision_config.buffer_zone_distance",
+        "PlaceAction_2.object_designator.collision_config.disabled",
+        "PlaceAction_2.object_designator.collision_config.max_avoided_bodies",
+        "PlaceAction_2.object_designator.collision_config.violated_distance",
+        "PlaceAction_2.object_designator.temp_collision_config.buffer_zone_distance",
+        "PlaceAction_2.object_designator.temp_collision_config.disabled",
+        "PlaceAction_2.object_designator.temp_collision_config.max_avoided_bodies",
+        "PlaceAction_2.object_designator.temp_collision_config.violated_distance",
+        "PlaceAction_2.target_location.header.frame_id.collision_config.buffer_zone_distance",
+        "PlaceAction_2.target_location.header.frame_id.collision_config.disabled",
+        "PlaceAction_2.target_location.header.frame_id.collision_config.max_avoided_bodies",
+        "PlaceAction_2.target_location.header.frame_id.collision_config.violated_distance",
+        "PlaceAction_2.target_location.header.frame_id.temp_collision_config.buffer_zone_distance",
+        "PlaceAction_2.target_location.header.frame_id.temp_collision_config.disabled",
+        "PlaceAction_2.target_location.header.frame_id.temp_collision_config.max_avoided_bodies",
+        "PlaceAction_2.target_location.header.frame_id.temp_collision_config.violated_distance",
+        "PlaceAction_2.target_location.header.sequence",
+        "PlaceAction_2.target_location.pose.orientation.w",
+        "PlaceAction_2.target_location.pose.orientation.x",
+        "PlaceAction_2.target_location.pose.orientation.y",
+        "PlaceAction_2.target_location.pose.orientation.z",
+        "PlaceAction_2.target_location.pose.position.x",
+        "PlaceAction_2.target_location.pose.position.y",
+        "PlaceAction_2.target_location.pose.position.z",
+    }
+
+    assert set(variables.keys()) == expected_variables
+
+    probabilistic_distribution = Parameterizer.create_fully_factorized_distribution(
+        all_variables
+    )
+
+    expected_distribution = expected_variables - {
+        "PickUpAction_0.grasp_description.manipulator.root.collision_config.max_avoided_bodies",
+        "PickUpAction_0.grasp_description.manipulator.root.temp_collision_config.max_avoided_bodies",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.collision_config.max_avoided_bodies",
+        "PickUpAction_0.grasp_description.manipulator.tool_frame.temp_collision_config.max_avoided_bodies",
+        "PickUpAction_0.object_designator.collision_config.max_avoided_bodies",
+        "PickUpAction_0.object_designator.temp_collision_config.max_avoided_bodies",
+        "NavigateAction_1.target_location.header.sequence",
+        "NavigateAction_1.target_location.header.frame_id.temp_collision_config.max_avoided_bodies",
+        "NavigateAction_1.target_location.header.frame_id.collision_config.max_avoided_bodies",
+        "PlaceAction_2.target_location.header.sequence",
+        "PlaceAction_2.target_location.header.frame_id.temp_collision_config.max_avoided_bodies",
+        "PlaceAction_2.target_location.header.frame_id.collision_config.max_avoided_bodies",
+        "PlaceAction_2.object_designator.temp_collision_config.max_avoided_bodies",
+        "PlaceAction_2.object_designator.collision_config.max_avoided_bodies",
+    }
+    assert {
+        v.name for v in probabilistic_distribution.variables
+    } == expected_distribution
+
+    arm_pickup = variables["PickUpAction_0.arm"]
+    arm_place = variables["PlaceAction_2.arm"]
+
+    arm_consistency_events = [
+        SimpleEvent({arm_pickup: [arm], arm_place: [arm]}) for arm in Arms
+    ]
+    restricted_dist, _ = probabilistic_distribution.truncated(
+        Event(*arm_consistency_events)
+    )
+    restricted_dist.normalize()
+
+    nav_target_x = 2.0
+    nav_target_y = 3.0
+    pose_constraints = {
+        variables["NavigateAction_1.target_location.pose.position.x"]: nav_target_x,
+        variables["NavigateAction_1.target_location.pose.position.y"]: nav_target_y,
+    }
+
+    final_distribution, _ = restricted_dist.conditional(pose_constraints)
+    final_distribution.normalize()
+
+    v_nav_x = variables["NavigateAction_1.target_location.pose.position.x"]
+    v_nav_y = variables["NavigateAction_1.target_location.pose.position.y"]
+
+    for sample_values in final_distribution.sample(10):
+        sample = dict(zip(final_distribution.variables, sample_values))
+        assert sample[arm_pickup] == sample[arm_place]
+        assert sample[v_nav_x] == nav_target_x
+        assert sample[v_nav_y] == nav_target_y

@@ -37,7 +37,7 @@ from semantic_digital_twin.world_description.world_modification import (
     WorldModelModificationBlock,
 )
 from krrood.class_diagrams.class_diagram import ClassDiagram
-from krrood.probabilistic_knowledge.parameterizer import Parameterizer, DAOParameterizer
+from krrood.probabilistic_knowledge.parameterizer import Parameterizer, Parameterizer
 from .datastructures.dataclasses import ExecutionData, Context
 from .datastructures.enums import TaskStatus
 from .datastructures.pose import PoseStamped
@@ -621,7 +621,7 @@ class Plan:
         if cls.on_end_callback and action_type in cls.on_end_callback:
             cls.on_end_callback[action_type].remove(callback)
 
-    def parameterize_plan(self) -> Tuple[List[Variable], SimpleEvent]:
+    def parameterize(self) -> Tuple[List[Variable], SimpleEvent]:
         """
         Parameterize all parameters of a plan using the krrood parameterizer.
 
@@ -636,7 +636,7 @@ class Plan:
             node for node in ordered_nodes if isinstance(node, DesignatorNode)
         ]
 
-        parameterizer = DAOParameterizer()
+        parameterizer = Parameterizer()
 
         all_variables = []
         simple_event = SimpleEvent({})
