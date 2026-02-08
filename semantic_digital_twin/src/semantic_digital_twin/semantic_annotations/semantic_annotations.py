@@ -546,9 +546,12 @@ class WineBottle(Bottle):
     A wine bottle.
     """
 
+@dataclass(eq=False)
+class Condiments(SemanticAnnotation): ...
+
 
 @dataclass(eq=False)
-class MustardBottle(Bottle):
+class MustardBottle(Bottle, Condiments):
     """
     A mustard bottle.
     """
@@ -607,16 +610,19 @@ class PotLid(Lid):
     A pot lid.
     """
 
+@dataclass(eq=False)
+class Tableware(SemanticAnnotation): ...
+
 
 @dataclass(eq=False)
-class Plate(HasSupportingSurface):
+class Plate(Tableware, HasSupportingSurface):
     """
     A plate.
     """
 
 
 @dataclass(eq=False)
-class Bowl(HasSupportingSurface, IsPerceivable):
+class Bowl(HasSupportingSurface, IsPerceivable, Tableware):
     """
     A bowl.
     """
@@ -698,7 +704,7 @@ class Cereal(Food, IsPerceivable):
 
 
 @dataclass(eq=False)
-class Milk(Food, IsPerceivable):
+class Milk(Drink, IsPerceivable):
     """
     A container of milk.
     """
@@ -895,7 +901,7 @@ class WallPanel(HasRootBody):
 
 
 @dataclass(eq=False)
-class Potato(Produce): ...
+class Potato(Vegetable): ...
 
 
 @dataclass(eq=False)
@@ -955,7 +961,7 @@ class SaltPepperShaker(HasRootBody):
 
 
 @dataclass(eq=False)
-class Cuttlery(HasRootBody): ...
+class Cuttlery(HasRootBody,Tableware): ...
 
 
 @dataclass(eq=False)
