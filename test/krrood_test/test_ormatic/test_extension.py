@@ -4,7 +4,7 @@ import sys
 from krrood.class_diagrams import ClassDiagram
 from krrood.ormatic.ormatic import ORMatic
 from krrood.ormatic.type_dict import TypeDict
-from krrood.ormatic.utils import get_classes_of_ormatic_interface
+from krrood.ormatic.helper import get_classes_of_ormatic_interface
 from ..dataset.dataset_extension import AggregatorOfExternalInstances, CustomPosition
 from ..dataset import ormatic_interface
 
