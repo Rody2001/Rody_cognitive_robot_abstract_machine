@@ -542,11 +542,11 @@ class AbstractRobot(Agent):
         """
         for connection in self._world.get_connections_by_type(ActiveConnection1DOF):
             connection.raw_dof._overwrite_dof_limits(
-                new_lower_limits=DerivativeMap.from_data(
-                    [None, -new_limits[connection], None, None]
+                new_lower_limits=DerivativeMap(
+                    None, -new_limits[connection], None, None
                 ),
-                new_upper_limits=DerivativeMap.from_data(
-                    [None, new_limits[connection], None, None]
+                new_upper_limits=DerivativeMap(
+                    None, new_limits[connection], None, None
                 ),
             )
 

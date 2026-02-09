@@ -53,24 +53,12 @@ class DerivativeMap(Generic[T]):
     crackle: Optional[T] = None
     pop: Optional[T] = None
 
-    @classmethod
-    def from_data(cls, data: List[Optional[T]]) -> DerivativeMap[T]:
-        return cls(*data)
-
     @property
     def data(self) -> List[Optional[T]]:
         """
         :return: A list of all derivative values.
         """
-        return [
-            self.position,
-            self.velocity,
-            self.acceleration,
-            self.jerk,
-            self.snap,
-            self.crackle,
-            self.pop,
-        ]
+        return [self[d] for d in Derivatives]
 
     def __hash__(self):
         return hash(tuple(self.data))
