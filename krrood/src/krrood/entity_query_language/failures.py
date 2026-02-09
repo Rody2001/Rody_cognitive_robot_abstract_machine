@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         QueryObjectDescriptor,
         Aggregator,
         GroupBy,
+        GroupByBuilder,
     )
     from .match import Match
 
@@ -218,13 +219,13 @@ class UnsupportedAggregationOfAGroupedByVariable(AggregationUsageError):
 
     group_by: GroupBy
     """
-    The grouped_by variable that is not Count.
+    The group_by operation that contains the grouped_by variable that is being aggregated over.
     """
 
     def __post_init__(self):
         self.message = (
             f"Aggregation over grouped_by variable that is not Count "
-            f"{list(self.group_by.aggregators_of_grouped_by_variables_that_are_not_count())} in the group_by operation"
+            f"{self.group_by.aggregators_of_grouped_by_variables_that_are_not_count} in the group_by operation"
             f" {self.group_by}"
         )
         super().__post_init__()

@@ -1273,9 +1273,13 @@ class GroupBy(UnaryExpression):
     specific variables. This is useful for aggregating results separately for each group.
     """
 
-    _child_: QueryObjectDescriptor
+    _child_: SetOf
     """
-    The child of the group-by operation. It must be a QueryObjectDescriptor.
+    The child of the group-by operation. It must be a SetOf.
+    """
+    aggregators: Tuple[Aggregator, ...]
+    """
+    The aggregators to apply to the grouped results.
     """
     variables_to_group_by: Tuple[Selectable, ...] = ()
     """
@@ -1283,7 +1287,7 @@ class GroupBy(UnaryExpression):
     """
 
     @property
-    def query_descriptor(self) -> QueryObjectDescriptor:
+    def query_descriptor(self) -> SetOf:
         """
         The query object descriptor that is being grouped.
         """
@@ -1297,7 +1301,7 @@ class GroupBy(UnaryExpression):
         :return: An iterator of OperationResult objects, each representing a group of child results.
         """
 
-        if any(self.aggregators_of_grouped_by_variables_that_are_not_count()):
+        if len(self.aggregators_of_grouped_by_variables_that_are_not_count) > 0:
             raise UnsupportedAggregationOfAGroupedByVariable(
                 self.query_descriptor, self
             )
@@ -1335,13 +1339,20 @@ class GroupBy(UnaryExpression):
             if self.count_occurrences_of_each_group_key:
                 group_key_count[group_key] += 1
 
-            self.update_group_from_bindings(groups[group_key], res)
+            self.update_group_from_bindings(groups[group_key], res.bindings)
 
         if len(groups) == 0:
             for var in self.aggregated_variables:
                 groups[()][var._binding_id_] = []
 
         return groups, group_key_count
+
+    @cached_property
+    def aggregated_variables(self) -> Tuple[SymbolicExpression, ...]:
+        """
+        :return: A tuple of the aggregated variables in the selected variables of the query descriptor.
+        """
+        return tuple(var._child_ for var in self.aggregators if var._child_ is not None)
 
     def update_group_from_bindings(self, group: OperationResult, results: Bindings):
         """
@@ -1370,8 +1381,46 @@ class GroupBy(UnaryExpression):
         )
 
     @cached_property
+    def count_occurrences_of_each_group_key(self) -> bool:
+        """
+        :return: True if there are any aggregators of type Count in the selected variables of the query descriptor that
+         are counting values of variables that are in the grouped_by clause, False otherwise.
+        """
+        return len(self.aggregators_of_grouped_by_variables) > 0
+
+    @cached_property
+    def aggregators_of_grouped_by_variables_that_are_not_count(
+        self,
+    ) -> Tuple[Aggregator, ...]:
+        """
+        :return: Aggregators in the selected variables of the query descriptor that are aggregating over
+         expressions having variables that are in the grouped_by clause and are not Count.
+        """
+        return tuple(
+            var
+            for var in self.aggregators_of_grouped_by_variables
+            if not isinstance(var, Count)
+        )
+
+    @cached_property
+    def aggregators_of_grouped_by_variables(self):
+        """
+        :return: A list of the aggregators in the selected variables of the query descriptor that are aggregating over
+         expressions having variables that are in the grouped_by clause.
+        """
+        return [
+            var
+            for var in self.aggregators
+            if (var._child_ is None)
+            or (var._child_._binding_id_ in self.ids_of_variables_to_group_by)
+        ]
+
+    @cached_property
     def ids_of_variables_to_group_by(self) -> Tuple[int, ...]:
-        return tuple(var._binding_id_ for var in self.variables_to_group_by)
+        """
+        :return: A tuple of the binding IDs of the variables to group by.
+        """
+        return tuple(var._binding_id_ for var in self._variables_to_group_by_)
 
     @property
     def _name_(self) -> str:
@@ -1533,10 +1582,16 @@ class GroupByBuilder(ExpressionBuilder):
     The variables to group the results by their values.
     """
 
+    def __post_init__(self):
+        if len(self.aggregators_of_grouped_by_variables_that_are_not_count) > 0:
+            raise UnsupportedAggregationOfAGroupedByVariable(
+                self.query_descriptor, self
+            )
+
     @cached_property
     def expression(self) -> GroupBy:
         aggregated_variables, non_aggregated_variables = (
-            self._aggregated_and_non_aggregated_variables_in_selection_
+            self.query_descriptor._aggregated_and_non_aggregated_variables_in_selection_
         )
         group_by_entity_selected_variables = non_aggregated_variables + [
             var._child_ for var in aggregated_variables if var._child_ is not None
@@ -1546,7 +1601,19 @@ class GroupByBuilder(ExpressionBuilder):
                 _selected_variables=tuple(group_by_entity_selected_variables),
                 _child_=self.query_descriptor._where_builder_.expression,
             ),
+            self.aggregators,
             self.variables_to_group_by,
+        )
+
+    @cached_property
+    def aggregators(self) -> Tuple[Aggregator, ...]:
+        """
+        :return: A tuple of aggregators in the selected variables of the query descriptor.
+        """
+        return tuple(
+            var
+            for var in self.query_descriptor._selected_variables
+            if isinstance(var, Aggregator)
         )
 
 
@@ -1618,7 +1685,7 @@ class QueryObjectDescriptor(SymbolicExpression, ABC):
     """
     The builder for the having constraint specifier of the query object descriptor.
     """
-    _quantifier_builder_: QuantifierBuilder = field(default=None, init=False)
+    _quantifier_builder_: Optional[QuantifierBuilder] = field(default=None, init=False)
     """
     The quantifier builder for the query object descriptor. The default quantifier is `An` which yields all results.
     """
@@ -1839,54 +1906,6 @@ class QueryObjectDescriptor(SymbolicExpression, ABC):
                 continue
             var_value = self._distinct_on[i]._evaluate_(copy(res), parent=self)
             res[id_] = next(var_value).value
-
-    @cached_property
-    def count_occurrences_of_each_group_key(self) -> bool:
-        """
-        :return: True if there are any aggregators of type Count in the selected variables of the query descriptor that
-         are counting values of variables that are in the grouped_by clause, False otherwise.
-        """
-        return len(self.aggregators_of_grouped_by_variables) > 0
-
-    def aggregators_of_grouped_by_variables_that_are_not_count(
-        self,
-    ) -> Iterator[Aggregator]:
-        """
-        :return: Aggregators in the selected variables of the query descriptor that are aggregating over
-         expressions having variables that are in the grouped_by clause and are not Count.
-        """
-        yield from (
-            var
-            for var in self.aggregators_of_grouped_by_variables
-            if not isinstance(var, Count)
-        )
-
-    @cached_property
-    def aggregators_of_grouped_by_variables(self):
-        """
-        :return: A list of the aggregators in the selected variables of the query descriptor that are aggregating over
-         expressions having variables that are in the grouped_by clause.
-        """
-        return [
-            var
-            for var in self.aggregators
-            if (var._child_ is None)
-            or (var._child_._binding_id_ in self.ids_of_variables_to_group_by)
-        ]
-
-    @cached_property
-    def ids_of_variables_to_group_by(self) -> Tuple[int, ...]:
-        """
-        :return: A tuple of the binding IDs of the variables to group by.
-        """
-        return tuple(var._binding_id_ for var in self._variables_to_group_by_)
-
-    @cached_property
-    def aggregators(self):
-        """
-        :return: A list of aggregators in the selected variables of the query descriptor.
-        """
-        return [var for var in self._selected_variables if isinstance(var, Aggregator)]
 
     def _enclose_plotted_nodes_of_selected_variables_(self):
         """
