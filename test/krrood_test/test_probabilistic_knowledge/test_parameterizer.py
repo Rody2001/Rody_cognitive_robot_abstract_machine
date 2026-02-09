@@ -131,45 +131,45 @@ class TestDAOParameterizer(unittest.TestCase):
             self.assertEqual(event[var].simple_sets[0].lower, val)
 
     def test_parameterize_dao_with_optional(self):
-        # optional = OptionalTestCase(1)
-        # optional_dao = to_dao(optional)
-        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
-        #
-        # self.assertEqual(len(variables), 1)
-        #
-        # optional = OptionalTestCase(None)
-        # optional_dao = to_dao(optional)
-        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
-        #
-        # self.assertEqual(len(variables), 1)
-        #
-        # optional = OptionalTestCase(1, Position(1.0, 2.0, 3.0))
-        # optional_dao = to_dao(optional)
-        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
-        #
-        # self.assertEqual(len(variables), 4)
-        #
-        # optional = OptionalTestCase(None, Position(1.0, None, 3.0))
-        # optional_dao = to_dao(optional)
-        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
-        #
-        # self.assertEqual(len(variables), 4)
-        #
-        # optional = OptionalTestCase(
-        #     1, list_of_orientations=[Orientation(0.0, 0.0, 0.0, 1.0)]
-        # )
-        # optional_dao = to_dao(optional)
-        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
-        #
-        # self.assertEqual(len(variables), 5)
-        #
-        # optional = OptionalTestCase(
-        #     1, list_of_orientations=[Orientation(0.0, 0.0, None, 1.0)]
-        # )
-        # optional_dao = to_dao(optional)
-        # variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
-        #
-        # self.assertEqual(len(variables), 5)
+        optional = OptionalTestCase(1)
+        optional_dao = to_dao(optional)
+        variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+
+        self.assertEqual(len(variables), 1)
+
+        optional = OptionalTestCase(None)
+        optional_dao = to_dao(optional)
+        variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+
+        self.assertEqual(len(variables), 1)
+
+        optional = OptionalTestCase(1, Position(1.0, 2.0, 3.0))
+        optional_dao = to_dao(optional)
+        variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+
+        self.assertEqual(len(variables), 4)
+
+        optional = OptionalTestCase(None, Position(1.0, None, 3.0))
+        optional_dao = to_dao(optional)
+        variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+
+        self.assertEqual(len(variables), 4)
+
+        optional = OptionalTestCase(
+            1, list_of_orientations=[Orientation(0.0, 0.0, 0.0, 1.0)]
+        )
+        optional_dao = to_dao(optional)
+        variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+
+        self.assertEqual(len(variables), 5)
+
+        optional = OptionalTestCase(
+            1, list_of_orientations=[Orientation(0.0, 0.0, None, 1.0)]
+        )
+        optional_dao = to_dao(optional)
+        variables, event = self.parameterizer.parameterize_dao(optional_dao, "optional")
+
+        self.assertEqual(len(variables), 5)
 
         optional = OptionalTestCase(1, list_of_values=[0])
         optional_dao = to_dao(optional)

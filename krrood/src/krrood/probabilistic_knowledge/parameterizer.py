@@ -50,14 +50,19 @@ class Parameterizer:
                 continue
 
             for column in mapper.columns:
-                var, val = self._process_column(column, wrapped_field, dao, prefix)
-                if var is None:
-                    continue
-                variables.append(var)
-                if val is None:
-                    continue
-                event = self._create_simple_event_singleton_from_set_attribute(var, val)
-                simple_event.update(event)
+                vars, vals = self._process_column(column, wrapped_field, dao, prefix)
+
+                for val, var in zip(vals, vars):
+                    if var is None:
+                        continue
+                    variables.append(var)
+                    if val is None:
+                        continue
+
+                    event = self._create_simple_event_singleton_from_set_attribute(
+                        var, val
+                    )
+                    simple_event.update(event)
 
             for relationship in mapper.relationships:
                 relationship_variables, relationship_event = self._process_relationship(
@@ -77,42 +82,46 @@ class Parameterizer:
         wrapped_field: WrappedField,
         dao: DataAccessObject,
         prefix: str,
-    ) -> Tuple[Optional[Variable], Optional[Any]]:
+    ) -> Tuple[List[Variable], List[Any]]:
         attribute_name = self.column_attribute_name(column)
         if not self.is_attribute_of_interest(attribute_name, wrapped_field):
-            return None, None
+            return [], []
 
         # one to one relationships are handled through relationships, they should never appear here
         if wrapped_field.is_one_to_one_relationship and not (
             wrapped_field.is_enum or wrapped_field.type_endpoint is uuid.UUID
         ):
-            return None, None
-
-        # Not sure how we want to handle one to many relationships. We dont know how long the container should be
-        # so does it really make sense to parameterize it?
-        if wrapped_field.is_one_to_many_relationship:
-            return None, None
+            return [], []
 
         attribute = getattr(dao, attribute_name)
         if wrapped_field.is_optional and attribute is None:
-            return None, None
+            return [], []
+
+        if wrapped_field.is_collection_of_builtins:
+            variables = [
+                self._create_variable_from_wrapped_field(
+                    wrapped_field, f"{prefix}.{value}"
+                )
+                for value in attribute
+            ]
+            return variables, attribute
 
         if attribute is None:
             if wrapped_field.type_endpoint is str:
-                return None, None
+                return [], []
             var = self._create_variable_from_wrapped_field(
                 wrapped_field, f"{prefix}.{attribute_name}"
             )
-            return var, None
+            return [var], [None]
         elif isinstance(attribute, list_like_classes):
             # skip attributes that are not None, and not list-like. those are already set correctly, and by not
             # adding the variable we dont clutter the model
-            return None, None
+            return [], []
         else:
             var = self._create_variable_from_wrapped_field(
                 wrapped_field, f"{prefix}.{attribute_name}"
             )
-            return var, attribute
+            return [var], [attribute]
 
     def _create_simple_event_singleton_from_set_attribute(self, variable, attribute):
         if isinstance(attribute, bool):
@@ -203,14 +212,6 @@ class Parameterizer:
             raise NotImplementedError(
                 f"No conversion between {type_endpoint} and random_events.Variable is known."
             )
-
-    def _create_variable_from_list_attribute(
-        self, list_attribute: List[Any], name: str
-    ) -> Symbolic:
-        """
-        Creates a random event variable from a list attribute. That variable is the union of all elements in the list.
-        """
-        return Symbolic(name, Set.from_iterable(list_attribute))
 
     @classmethod
     def create_fully_factorized_distribution(
