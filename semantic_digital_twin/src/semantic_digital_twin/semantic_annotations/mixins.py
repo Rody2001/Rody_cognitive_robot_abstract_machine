@@ -48,8 +48,8 @@ if TYPE_CHECKING:
         Handle,
         Hinge,
         Slider,
-        Aperture,
-    )
+        Aperture, Dishwasher,
+)
 
 
 @dataclass(eq=False)
@@ -779,3 +779,30 @@ class HasCaseAsRootBody(HasSupportingSurface, ABC):
         container_event = outer_box.as_composite_set() - inner_box.as_composite_set()
 
         return container_event
+
+@dataclass(eq=False)
+class HasDishwasher(HasRootBody, ABC):
+    """
+    A mixin class for semantic annotations that have a dishwasher.
+    """
+
+    dishwasher: Optional[Dishwasher] = None
+    """
+    The handle of the semantic annotation.
+    """
+
+    @synchronized_attribute_modification
+    def add_handle(
+        self,
+        dishwasher: Dishwasher,
+    ):
+        """
+        Adds a handle to the parent world with a fixed connection.
+
+        :param handle: The handle to add.
+        """
+        self._attach_child_entity_in_kinematic_structure(
+            dishwasher.root,
+        )
+        self.dishwasher = dishwasher
+

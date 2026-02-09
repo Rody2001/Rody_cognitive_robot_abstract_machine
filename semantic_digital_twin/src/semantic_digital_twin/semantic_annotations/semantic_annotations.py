@@ -22,7 +22,7 @@ from .mixins import (
     HasApertures,
     IsPerceivable,
     HasRootBody,
-    HasStorageSpace,
+    HasStorageSpace, HasDishwasher,
 )
 from ..datastructures.prefixed_name import PrefixedName
 from ..datastructures.variables import SpatialVariables
@@ -121,6 +121,17 @@ class Handle(HasRootBody):
                 SpatialVariables.z.value: z_interval,
             }
         )
+@dataclass(eq=False)
+class Counter_top(HasSupportingSurface, HasRootBody,HasDoors, HasDrawers, HasDishwasher):
+    """
+    A countertop is a flat surface in a kitchen that is used for food preparation and other tasks. It is typically supported by cabinets or other structures.
+    """
+
+@dataclass(eq=False)
+class Dishwasher(HasCaseAsRootBody, HasDoors, HasDrawers):
+    """
+    A dishwasher is a kitchen appliance used for cleaning dishes, utensils, and cookware. It typically has a front door that opens to reveal racks for loading dirty items and a control panel for selecting wash cycles.
+    """
 
 
 @dataclass(eq=False)
@@ -704,7 +715,7 @@ class Cereal(Food, IsPerceivable):
 
 
 @dataclass(eq=False)
-class Milk(Drink, IsPerceivable):
+class Milk(IsPerceivable):
     """
     A container of milk.
     """
