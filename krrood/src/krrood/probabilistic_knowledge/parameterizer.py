@@ -24,14 +24,23 @@ from probabilistic_model.probabilistic_circuit.rx.probabilistic_circuit import (
     ProbabilisticCircuit,
 )
 
-SKIPPED_FIELD_TYPES = (datetime,)
-
-
 @dataclass
 class Parameterizer:
+    """
+    A class that can be used to parameterize a DataAccessObject into random event variables and a simple event
+    containing the values of the variables.
+    The resulting variables and simple event can then be used to create a probabilistic circuit.
+    """
 
     variables: List[Variable] = field(default_factory=list)
+    """
+    Variables that are created during parameterization.
+    """
+
     simple_event: SimpleEvent = field(default_factory=lambda: SimpleEvent({}))
+    """
+    A SimpleEvent containing Singletons for all variables that were already parameterized.
+    """
 
     def parameterize_dao(
         self, dao: DataAccessObject, prefix: str
@@ -39,78 +48,44 @@ class Parameterizer:
         """
         Create variables for all fields of a DataAccessObject.
 
+        :param dao: The DataAccessObject to parameterize.
+        :param prefix: The prefix to use for variable names.
+
         :return: A list of random event variables and a SimpleEvent containing the values.
         """
+        sql_alchemy_mapper = inspect(dao).mapper
 
-        original_class = dao.original_class()
-        wrapped_class = WrappedClass(original_class)
-        mapper = inspect(dao).mapper
-
-        for wrapped_field in wrapped_class.fields:
-            if wrapped_field.type_endpoint in SKIPPED_FIELD_TYPES:
-                continue
-
-            for column in mapper.columns:
-                vars, vals = self._process_column(column, wrapped_field, dao, prefix)
-
-                for val, var in zip(vals, vars):
-                    if var is None:
-                        continue
-                    self.variables.append(var)
-                    if val is None:
-                        continue
-
-                    event = self._create_simple_event_singleton_from_set_attribute(
-                        var, val
-                    )
-                    self.simple_event.update(event)
-
-            for relationship in mapper.relationships:
+        for wrapped_field in WrappedClass(dao.original_class()).fields:
+            for relationship in sql_alchemy_mapper.relationships:
                 self._process_relationship(relationship, wrapped_field, dao, prefix)
+
+            for column in sql_alchemy_mapper.columns:
+                variables, attribute_values = self._process_column(
+                    column, wrapped_field, dao, prefix
+                )
+                self._update_variables_and_event(variables, attribute_values)
 
         self.simple_event.fill_missing_variables(self.variables)
         return self.variables, self.simple_event
 
-    def _process_column(
-        self,
-        column: Column,
-        wrapped_field: WrappedField,
-        dao: DataAccessObject,
-        prefix: str,
-    ) -> Tuple[List[Variable], List[Any]]:
-        attribute_name = self.column_attribute_name(column)
-        if not self.is_attribute_of_interest(attribute_name, wrapped_field):
-            return [], []
+    def _update_variables_and_event(self, variables: List[Variable], attribute_values: List[Any]):
+        """
+        Update the variables and simple event based on the given variables and attribute values.
 
-        attribute = getattr(dao, attribute_name)
-        if wrapped_field.is_optional and attribute is None:
-            return [], []
+        :param variables: The variables to add to the variables list.
+        :param attribute_values: The attribute values to add to the simple event.
+        """
+        for variable, attribute_value in zip(variables, attribute_values):
+            if variable is None:
+                continue
+            self.variables.append(variable)
+            if attribute_value is None:
+                continue
 
-        if wrapped_field.is_collection_of_builtins:
-            variables = [
-                self._create_variable_from_type(
-                    wrapped_field.type_endpoint, f"{prefix}.{value}"
-                )
-                for value in attribute
-            ]
-            return variables, attribute
-
-        if attribute is None:
-            if wrapped_field.type_endpoint is str:
-                return [], []
-            var = self._create_variable_from_type(
-                wrapped_field.type_endpoint, f"{prefix}.{attribute_name}"
+            event = self._create_simple_event_singleton_from_set_attribute(
+                variable, attribute_value
             )
-            return [var], [None]
-        elif isinstance(attribute, list_like_classes):
-            # skip attributes that are not None, and not list-like. those are already set correctly, and by not
-            # adding the variable we dont clutter the model
-            return [], []
-        else:
-            var = self._create_variable_from_type(
-                wrapped_field.type_endpoint, f"{prefix}.{attribute_name}"
-            )
-            return [var], [attribute]
+            self.simple_event.update(event)
 
     def _create_simple_event_singleton_from_set_attribute(
         self, variable: Variable, attribute: Any
@@ -126,13 +101,10 @@ class Parameterizer:
         if isinstance(attribute, bool) or isinstance(attribute, enum.Enum):
             return SimpleEvent({variable: Set.from_iterable([attribute])})
         elif isinstance(attribute, int) or isinstance(attribute, float):
-            return SimpleEvent(
-                {
-                    variable: SimpleInterval(
-                        attribute, attribute, Bound.CLOSED, Bound.CLOSED
-                    )
-                }
+            simple_interval = SimpleInterval(
+                attribute, attribute, Bound.CLOSED, Bound.CLOSED
             )
+            return SimpleEvent({variable: simple_interval})
         else:
             assert_never(attribute)
 
@@ -149,18 +121,17 @@ class Parameterizer:
         ..Note:: This method is recursive and will process all relationships of a relationship. Optional relationships that are None will be skipped, as we decided that they should not be included in the model.
 
         :param relationship: The SQLAlchemy relationship to process.
-        :param wrapped_field: The WrappedField corresponding to the relationship.
+        :param wrapped_field: The WrappedField potentially corresponding to the relationship.
         :param dao: The DataAccessObject containing the relationship.
         :param prefix: The prefix to use for variable names.
         """
         attribute_name = relationship.key
-        attribute_dao = getattr(dao, attribute_name)
 
         # %% Skip attributes that are not of interest.
-        if not self.is_attribute_of_interest(attribute_name, wrapped_field):
+        if not self.is_attribute_of_interest(attribute_name, dao, wrapped_field):
             return
-        if wrapped_field.is_optional and attribute_dao is None:
-            return
+
+        attribute_dao = getattr(dao, attribute_name)
 
         # %% one to many relationships
         if wrapped_field.is_one_to_many_relationship:
@@ -181,16 +152,74 @@ class Parameterizer:
         else:
             assert_never(wrapped_field)
 
+    def _process_column(
+        self,
+        column: Column,
+        wrapped_field: WrappedField,
+        dao: DataAccessObject,
+        prefix: str,
+    ) -> Tuple[List[Variable], List[Any]]:
+        """
+        Process a SQLAlchemy column and create variables and events for it.
+
+        :param column: The SQLAlchemy column to process.
+        :param wrapped_field: The WrappedField potentially corresponding to the column.
+        :param dao: The DataAccessObject containing the column.
+        :param prefix: The prefix to use for variable names.
+
+        :return: A tuple containing a list of variables and a list of corresponding attribute values.
+        """
+        attribute_name = self.column_attribute_name(column)
+
+        # %% Skip attributes that are not of interest.
+        if not self.is_attribute_of_interest(attribute_name, dao, wrapped_field):
+            return [], []
+
+        attribute = getattr(dao, attribute_name)
+
+        # %% one to many relationships
+        if wrapped_field.is_collection_of_builtins:
+            variables = [
+                self._create_variable_from_type(
+                    wrapped_field.type_endpoint, f"{prefix}.{value}"
+                )
+                for value in attribute
+            ]
+            return variables, attribute
+
+        # %% one to one relationships
+        if wrapped_field.is_builtin_type or wrapped_field.is_enum:
+            var = self._create_variable_from_type(
+                wrapped_field.type_endpoint, f"{prefix}.{attribute_name}"
+            )
+            return [var], [attribute]
+
+        else:
+            assert_never(wrapped_field)
+
     def is_attribute_of_interest(
-        self, attribute_name: Optional[str], wrapped_field: WrappedField
+        self,
+        attribute_name: Optional[str],
+        dao: DataAccessObject,
+        wrapped_field: WrappedField,
     ) -> bool:
         """
-        Check if the given attribute name corresponds to the given WrappedField and is not a UUID.
+        Check if we are inspecting the correct attribute, and if yes, if we should be included in the model
+
+        ..warning:: Included are only attributes that are not primary keys, foreign keys, and that are not optional with
+        a None value. Additionally, attributes of type uuid.UUID and str are excluded.
+
+        :param attribute_name: The name of the attribute to check.
+        :param dao: The DataAccessObject containing the attribute.
+        :param wrapped_field: The WrappedField corresponding to the attribute.
+
+        :return: True if the attribute is of interest, False otherwise.
         """
         return (
             attribute_name
             and wrapped_field.public_name == attribute_name
-            and not wrapped_field.type_endpoint is uuid.UUID
+            and not wrapped_field.type_endpoint in (datetime, uuid.UUID, str)
+            and not (wrapped_field.is_optional and getattr(dao, attribute_name) is None)
         )
 
     def column_attribute_name(self, column: Column) -> Optional[str]:
