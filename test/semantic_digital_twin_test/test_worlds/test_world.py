@@ -2,7 +2,10 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
+import rclpy
 from numpy.testing import assert_raises
+from semantic_digital_twin.adapters.ros.tf_publisher import TFPublisher
+from semantic_digital_twin.adapters.ros.visualization.viz_marker import VizMarkerPublisher
 
 from semantic_digital_twin.semantic_annotations.semantic_annotations import Handle
 
@@ -50,6 +53,10 @@ from semantic_digital_twin.world_description.world_state_trajectory_plotter impo
 
 def test_set_state(world_setup):
     world, l1, l2, bf, r1, r2 = world_setup
+
+    tf = TFPublisher(world, rclpy.create_node("test_node2"))
+    vizmarker = VizMarkerPublisher(world, rclpy.create_node("test_node"))
+
     c1: PrismaticConnection = world.get_connection(l1, l2)
     c1.position = 1.0
     assert c1.position == 1.0

@@ -132,30 +132,7 @@ class Dishwasher(HasCaseAsRootBody, HasDoors, HasDrawers):
     """
     A dishwasher is a kitchen appliance used for cleaning dishes, utensils, and cookware. It typically has a front door that opens to reveal racks for loading dirty items and a control panel for selecting wash cycles.
     """
-    @classproperty
-    def create_with_new_body_in_world(
-        cls,
-        name: PrefixedName,
-        world: World,
-        world_root_T_self: Optional[HomogeneousTransformationMatrix] = None,
-        connection_limits: Optional[DegreeOfFreedomLimits] = None,
-        active_axis: Vector3 = Vector3.Z(),
-        connection_multiplier: float = 1.0,
-        connection_offset: float = 0.0,
-        *,
-        scale: Scale = Scale(0.6, 0.6, 0.85),
-    ) -> Self:
-        dishwasher_body = Body(name=name)
-        dishwasher_event = scale.to_simple_event().as_composite_set()
-        dishwasher_collision = BoundingBoxCollection.from_event(
-            dishwasher_body, dishwasher_event
-        ).as_shapes()
-        dishwasher_body.collision = dishwasher_collision
-        dishwasher_body.visual = dishwasher_collision
 
-        return cls._create_with_connection_in_world(
-            name, world, dishwasher_body, world_root_T_self
-        )
 
 
 
