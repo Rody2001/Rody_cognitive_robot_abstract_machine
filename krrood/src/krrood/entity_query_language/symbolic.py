@@ -1490,6 +1490,14 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         """
         return list(An(_child_=self).evaluate())
 
+    def tolist(self) -> List[T]:
+        """
+        Map the results of the query object descriptor to a list of the selected variable values.
+
+        :return: A list of the selected variable values.
+        """
+        return list(An(_child_=self).evaluate())
+
     def where(self, *conditions: ConditionType) -> Self:
         """
         Set the conditions that describe the query object. The conditions are chained using AND.
@@ -2553,7 +2561,7 @@ class Attribute(DomainMapping):
 
 
 @dataclass(eq=False, repr=False)
-class Index(DomainMapping):
+class Index(DomainMapping[T]):
     """
     A symbolic indexing operation that can be used to access items of symbolic variables via [] operator.
     """
@@ -2563,7 +2571,7 @@ class Index(DomainMapping):
     The key to index with.
     """
 
-    def _apply_mapping_(self, value: Any) -> Iterable[Any]:
+    def _apply_mapping_(self, value: Iterable[T]) -> T:
         yield value[self._key_]
 
     @property
