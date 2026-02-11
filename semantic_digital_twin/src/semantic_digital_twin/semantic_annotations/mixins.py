@@ -30,7 +30,7 @@ from ..world_description.connections import (
     FixedConnection,
 )
 from ..world_description.degree_of_freedom import DegreeOfFreedomLimits
-from ..world_description.geometry import Scale
+from ..world_description.geometry import Scale, Color
 from ..world_description.shape_collection import BoundingBoxCollection
 from ..world_description.world_entity import (
     SemanticAnnotation,
@@ -284,6 +284,7 @@ class HasRootBody(HasRootKinematicStructureEntity, ABC):
         connection_multiplier: float = 1.0,
         connection_offset: float = 0.0,
         scale: Scale = None,
+        color: Color = None,
         **kwargs,
     ) -> Self:
         """
@@ -451,6 +452,32 @@ class HasHinge(HasRootBody, ABC):
             hinge.root,
         )
         self.hinge = hinge
+
+
+@dataclass(eq=False)
+class HasHotplates(HasRootKinematicStructureEntity, ABC):
+    """
+    A mixin class for semantic annotations that have hotplates.
+    """
+
+    hotplates: List[Hotplate] = field(default_factory=list, hash=False, kw_only=True)
+    """
+    The hotplates of the semantic annotation.
+    """
+
+    @synchronized_attribute_modification
+    def add_hotplate(
+        self,
+        hotplate: Hotplate,
+    ):
+        """
+        Add a hotplate to the semantic annotation.
+
+        :param hotplate: The hotplate to add.
+        """
+
+        self._attach_child_entity_in_kinematic_structure(hotplate.root)
+        self.hotplates.append(hotplate)
 
 
 @dataclass(eq=False)

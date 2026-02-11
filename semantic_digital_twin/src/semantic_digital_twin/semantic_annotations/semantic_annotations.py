@@ -6,6 +6,7 @@ from typing import Iterable, Optional, Self, Tuple
 
 from random_events.interval import closed
 from random_events.product_algebra import SimpleEvent
+from semantic_digital_twin.semantic_annotations.mixins import HasHotplates
 from typing_extensions import List, Type
 
 from krrood.ormatic.utils import classproperty
@@ -133,7 +134,15 @@ class Dishwasher(HasCaseAsRootBody, HasDoors, HasDrawers):
     A dishwasher is a kitchen appliance used for cleaning dishes, utensils, and cookware. It typically has a front door that opens to reveal racks for loading dirty items and a control panel for selecting wash cycles.
     """
 
+@dataclass(eq=False)
+class Hotplate(HasRootBody):
+    ...
 
+@dataclass(eq=False)
+class Stove(HasRootBody, HasHotplates):
+    """
+    A stove is a kitchen appliance used for cooking food. It typically consists of a flat surface with multiple hotplates or burners that can be used to heat pots and pans.
+    """
 
 
 @dataclass(eq=False)
