@@ -628,6 +628,34 @@ class Where(UnaryExpression, ConstraintSpecifier):
 
 
 @dataclass(eq=False, repr=False)
+class MultiArityExpression(SymbolicExpression, ABC):
+    """
+    A multi-arity expression is a symbolic expression that takes multiple arguments (i.e., has multiple child
+    expressions).
+    """
+
+    children: Tuple[SymbolicExpression, ...] = field(default_factory=tuple)
+    """
+    The children expressions of this symbolic expression.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.children = self._update_children_(*self.children)
+
+    @cached_property
+    def _all_variable_instances_(self) -> List[Selectable]:
+        """
+        Get the leaf instances of the symbolic expression.
+        This is useful for accessing the leaves of the symbolic expression tree.
+        """
+        variables = []
+        for child in self.children:
+            variables.extend(child._all_variable_instances_)
+        return variables
+
+
+@dataclass(eq=False, repr=False)
 class BinaryExpression(SymbolicExpression, ABC):
     """
     A base class for binary operators that can be used to combine symbolic expressions.
@@ -1269,9 +1297,9 @@ class GroupBy(UnaryExpression):
     specific variables. This is useful for aggregating results separately for each group.
     """
 
-    _child_: SetOf
+    _child_: SymbolicExpression
     """
-    The child of the group-by operation. It must be a SetOf.
+    The child of the group-by operation.
     """
     aggregators: Tuple[Aggregator, ...]
     """
@@ -1283,7 +1311,7 @@ class GroupBy(UnaryExpression):
     """
 
     @property
-    def query_descriptor(self) -> SetOf:
+    def query_descriptor(self) -> SymbolicExpression:
         """
         The query object descriptor that is being grouped.
         """
@@ -1592,13 +1620,15 @@ class GroupByBuilder(ExpressionBuilder):
         group_by_entity_selected_variables = non_aggregated_variables + [
             var._child_ for var in aggregated_variables if var._child_ is not None
         ]
+        where = self.query_descriptor._where_expression_
+        children = []
+        if where:
+            children.append(where)
+        children.extend(group_by_entity_selected_variables)
         return GroupBy(
-            SetOf(
-                _selected_variables_=tuple(group_by_entity_selected_variables),
-                _child_=self.query_descriptor._where_expression_,
-            ),
-            self.aggregators,
-            self.variables_to_group_by,
+            _child_=Chain(children=tuple(children)),
+            aggregators=tuple(self.aggregators),
+            variables_to_group_by=tuple(self.variables_to_group_by),
         )
 
     @lru_cache
@@ -1705,13 +1735,13 @@ class QuantifierBuilder(ExpressionBuilder):
 
 
 @dataclass(eq=False, repr=False)
-class QueryObjectDescriptor(SymbolicExpression, ABC):
+class QueryObjectDescriptor(MultiArityExpression, ABC):
     """
     Describes the queried object(s), could be a query over a single variable or a set of variables,
     also describes the condition(s)/properties of the queried object(s).
     """
 
-    _selected_variables_: Tuple[Selectable, ...]
+    _selected_variables_: Tuple[Selectable, ...] = field(default_factory=tuple)
     """
     The variables that are selected by the query object descriptor.
     """
@@ -1912,13 +1942,24 @@ class QueryObjectDescriptor(SymbolicExpression, ABC):
         self._built_ = True
         if self._group_ and self._group_by_builder_ is None:
             self._group_by_builder_ = GroupByBuilder(self)
+
+        root_constraint = None
         if self._having_builder is not None:
             self._having_builder.group_by = self._group_by_builder_.expression
-            self._child_ = self._update_children_(self._having_builder.expression)[0]
+            root_constraint = self._having_builder.expression
         elif self._group_by_builder_ is not None:
-            self._child_ = self._update_children_(self._group_by_builder_.expression)[0]
+            root_constraint = self._group_by_builder_.expression
         elif self._where_builder_ is not None:
-            self._child_ = self._update_children_(self._where_builder_.expression)[0]
+            root_constraint = self._where_builder_.expression
+
+        if root_constraint is not None:
+            self._child_ = root_constraint
+            self.children = self._update_children_(
+                root_constraint, *self._selected_variables_
+            )
+        else:
+            self.children = self._update_children_(*self._selected_variables_)
+
         return self
 
     def _evaluate__(
@@ -1969,11 +2010,16 @@ class QueryObjectDescriptor(SymbolicExpression, ABC):
         """
         Internal generator to process constrained values and selected variables.
         """
+        # First evaluate the constraint (if any) and handle conclusions
         for values in self._get_constrained_values_(sources):
-            selected_vars_bindings = self._evaluate_selected_variables(values)
+            # Then use Chain for the selected variables
+            chain = Chain(children=self.children[1:] if self._child_ else self.children)
+            selected_vars_bindings = (
+                res.bindings for res in chain._evaluate_(values, parent=self)
+            )
 
             yield from (
-                OperationResult({**values, **result}, False, self)
+                OperationResult(result, False, self)
                 for result in self._apply_results_mapping_(selected_vars_bindings)
             )
 
@@ -2164,17 +2210,6 @@ class QueryObjectDescriptor(SymbolicExpression, ABC):
             res for res in self._child_._evaluate_(sources, parent=self) if res.is_true
         )
 
-    def _evaluate_selected_variables(self, sources: Bindings) -> Iterator[Bindings]:
-        """
-        Evaluate the selected variables by generating combinations of values from their evaluation generators.
-
-        :param sources: The current bindings.
-        :return: An Iterable of Bindings for each combination of values.
-        """
-        yield from self._chain_evaluate_variables(
-            self._selected_variables_, sources, parent=self
-        )
-
     @staticmethod
     def _chain_evaluate_variables(
         variables: Iterable[SymbolicExpression],
@@ -2182,15 +2217,19 @@ class QueryObjectDescriptor(SymbolicExpression, ABC):
         parent: Optional[SymbolicExpression] = None,
     ) -> Iterator[Bindings]:
         """
-        Evaluate the selected variables by generating combinations of values from their evaluation generators.
+        Evaluate the symbolic expressions by generating combinations of values from their evaluation generators.
 
+        :param variables: The symbolic expressions to evaluate.
         :param sources: The current bindings.
-        :return: An Iterable of OperationResults for each combination of values.
+        :param parent: The parent expression.
+        :return: An Iterable of Bindings for each combination of values.
         """
         var_val_gen = [
             (
                 lambda bindings, var=var: (
-                    v.bindings for v in var._evaluate_(copy(bindings), parent=parent)
+                    v.bindings
+                    for v in var._evaluate_(copy(bindings), parent=parent)
+                    if v.is_true
                 )
             )
             for var in variables
@@ -2214,13 +2253,6 @@ class QueryObjectDescriptor(SymbolicExpression, ABC):
             results = result_mapping(results)
         return results
 
-    @cached_property
-    def _all_variable_instances_(self) -> List[Selectable]:
-        variables = list(self._selected_variables_)
-        if self._child_ is not None:
-            variables.extend(self._child_._all_variable_instances_)
-        return variables
-
     def _invert_(self):
         raise UnsupportedNegation(self.__class__)
 
@@ -2231,6 +2263,26 @@ class QueryObjectDescriptor(SymbolicExpression, ABC):
     @property
     def _name_(self) -> str:
         return f"({', '.join(var._name_ for var in self._selected_variables_)})"
+
+
+@dataclass(eq=False, repr=False)
+class Chain(MultiArityExpression):
+    """
+    A symbolic operation that evaluates its children in sequence, passing bindings from one to the next.
+    """
+
+    @property
+    def _name_(self) -> str:
+        return f"Chain({', '.join(child._name_ for child in self.children)})"
+
+    def _evaluate__(self, sources: Bindings) -> Iterator[OperationResult]:
+        """
+        Evaluate the symbolic expressions by generating combinations of values from their evaluation generators.
+        """
+        for bindings in QueryObjectDescriptor._chain_evaluate_variables(
+            self.children, sources, parent=self
+        ):
+            yield OperationResult(bindings, False, self)
 
 
 @dataclass(eq=False, repr=False)
