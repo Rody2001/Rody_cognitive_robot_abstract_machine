@@ -28,6 +28,7 @@ from krrood.entity_query_language.failures import (
     NonPositiveLimitValue,
     LiteralConditionError,
     UnsupportedExpressionTypeForDistinct,
+    TryingToModifyAnAlreadyBuiltQuery,
 )
 from krrood.entity_query_language.predicate import (
     HasType,
@@ -1116,3 +1117,25 @@ def test_unsupported_distinct(handles_and_containers_world):
     body = variable(Body, domain=handles_and_containers_world.bodies)
     with pytest.raises(UnsupportedExpressionTypeForDistinct):
         query = distinct(and_(body, body), body.name)
+
+
+def test_recalling_where_statement_without_quantification(handles_and_containers_world):
+    body = variable(Body, domain=handles_and_containers_world.bodies)
+    query = entity(body).where(contains(body.name, "Handle"))
+    query.where(contains(body.name, "1"))
+    assert len(list(query.evaluate())) == 1
+
+
+def test_recalling_where_statement_with_quantification(handles_and_containers_world):
+    body = variable(Body, domain=handles_and_containers_world.bodies)
+    query = an(entity(body).where(contains(body.name, "Handle")))
+    query.where(contains(body.name, "1"))
+    assert len(list(query.evaluate())) == 1
+
+
+def test_modifying_built_query_raises_error(handles_and_containers_world):
+    body = variable(Body, domain=handles_and_containers_world.bodies)
+    query = entity(body).where(contains(body.name, "Handle"))
+    query.evaluate()
+    with pytest.raises(TryingToModifyAnAlreadyBuiltQuery):
+        query.where(contains(body.name, "1"))

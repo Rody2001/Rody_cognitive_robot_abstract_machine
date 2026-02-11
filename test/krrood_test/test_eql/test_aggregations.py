@@ -164,7 +164,10 @@ def test_max_grouped_by(handles_and_containers_world):
         c = res[cabinet]
         d = res[max_drawer]
         assert d in c.drawers
-        assert d.handle.name == max((cd for cd in c.drawers), key=lambda d: d.handle.name).handle.name
+        assert (
+            d.handle.name
+            == max((cd for cd in c.drawers), key=lambda d: d.handle.name).handle.name
+        )
 
 
 def test_having_with_max(handles_and_containers_world):
@@ -491,7 +494,7 @@ def test_having_node_hierarchy(departments_and_employees):
 
     query = a(
         set_of(department, avg_salary).grouped_by(department).having(avg_salary > 20000)
-    )
+    ).build()
 
     # Graph hierarchy check
     assert isinstance(query._child_, Having)
@@ -513,3 +516,41 @@ def test_complex_having_success(departments_and_employees):
     # Should only return Finance department (avg 35000)
     assert len(results) == 1
     assert results[0][department].name == "Finance"
+
+
+def test_recalling_having(departments_and_employees):
+    departments, employees = departments_and_employees
+
+    emp = variable(Employee, domain=None)
+    department = emp.department
+    avg_salary = eql.average(emp.salary)
+    max_salary = eql.max(emp.salary)
+    query = a(
+        set_of(avg_salary, max_salary, department)
+        .grouped_by(department)
+        .having(max_salary > 25000)
+    )
+    query.having(max_salary > 30000)
+    results = list(query.evaluate())
+    result_tuples = []
+    assert len(results) == 1
+    for result in results:
+        result_tuples.append(
+            (result[department], result[avg_salary], result[max_salary])
+        )
+    salary_per_department = defaultdict(list)
+    for emp in employees:
+        salary_per_department[emp.department].append(emp.salary)
+    expected_result_tuples = [
+        (
+            d,
+            sum(salary_per_department[d]) / len(salary_per_department[d]),
+            max(salary_per_department[d]),
+        )
+        for d in departments
+        if max(salary_per_department[d]) > 30000
+    ]
+    for result_tuple, expected_result_tuple in zip(
+        result_tuples, expected_result_tuples
+    ):
+        assert result_tuple == expected_result_tuple

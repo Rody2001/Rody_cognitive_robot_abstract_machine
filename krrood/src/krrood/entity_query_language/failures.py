@@ -140,22 +140,21 @@ class UsageError(DataclassException):
 
 
 @dataclass
-class TryingToBuildAnAlreadyBuiltQuery(UsageError):
+class TryingToModifyAnAlreadyBuiltQuery(UsageError):
     """
     Raised when trying to build an already built `QueryObjectDescriptor`.
 
     Check how to write queries correctly in :doc:`/krrood/doc/eql/writing_queries`.
     """
-    
+
     query_descriptor: QueryObjectDescriptor
     """
     The query object descriptor that has already been built.
     """
-    
+
     def __post_init__(self):
         self.message = f"{self.query_descriptor} was already built."
         super().__post_init__()
-    
 
 
 @dataclass
