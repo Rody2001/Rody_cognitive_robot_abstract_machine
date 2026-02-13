@@ -1,6 +1,8 @@
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Optional
+from uuid import UUID
 
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy
@@ -80,6 +82,11 @@ class VizMarkerPublisher(ModelChangeCallback):
         time.sleep(0.2)
         self.notify()
         time.sleep(0.2)
+
+    def with_tf_publisher(self):
+        """
+        Launches a tf publisher in conjunction with the VizMarkerPublisher.
+        """
         TFPublisher(self.world, self.node)
 
     def _select_shapes(self, body):
@@ -92,13 +99,17 @@ class VizMarkerPublisher(ModelChangeCallback):
         raise ValueError(f"Unsupported shape_source: {self.shape_source!r}")
 
 
-    def _notify(self):
+    def _notify(self, **kwargs):
         self.markers = MarkerArray()
         for body in self.world.bodies:
             shapes = self._select_shapes(body)
             if not shapes:
                 continue
             marker_ns = str(body.name)
+            if self.shape_source is ShapeSource.VISUAL_WITH_COLLISION_BACKUP and len(body.visual) > 0:
+                shapes = body.visual.shapes
+            else:
+                shapes = body.collision.shapes
             for i, shape in enumerate(shapes):
                 marker = SemDTToRos2Converter.convert(shape)
                 marker.frame_locked = True
