@@ -26,7 +26,11 @@ from .symbolic import (
 )
 
 try:
-    from rustworkx_utils import GraphVisualizer, RWXNode as RXUtilsNode
+    from rustworkx_utils import (
+        GraphVisualizer,
+        RWXNode as RXUtilsNode,
+        ColorLegend as RXUtilsColorLegend,
+    )
 except ImportError:
     GraphVisualizer = None
 
@@ -47,7 +51,7 @@ class QueryGraph:
     """
     The graph representation of the query, used for visualization and introspection.
     """
-    expression_node_map: Dict[SymbolicExpression, RWXNode] = field(
+    expression_node_map: Dict[SymbolicExpression, QueryNode] = field(
         init=False, default_factory=dict
     )
     """
@@ -59,7 +63,7 @@ class QueryGraph:
 
     def visualize(
         self,
-        figsize=(35, 30),
+        figure_size=(35, 30),
         node_size=7000,
         font_size=25,
         spacing_x: float = 4,
@@ -76,18 +80,7 @@ class QueryGraph:
         size, layout, spacing, and labeling. Requires the rustworkx_utils library for
         execution.
 
-        :param figsize (tuple of float): Size of the figure in inches (width, height). Default is (35, 30).
-        :param node_size (int): Size of the nodes in the visualization. Default is 7000.
-        :param font_size (int): Size of the font used for node labels. Default is 25.
-        :param spacing_x (float): Horizontal spacing between nodes. Default is 4.
-        :param spacing_y (float): Vertical spacing between nodes. Default is 4.
-        :param curve_scale (float): Scaling factor for edge curvature. Default is 0.5.
-        :param layout (str): Graph layout style (e.g., "tidy"). Default is "tidy".
-        :param edge_style (str): Style of the edges (e.g., "orthogonal"). Default is "orthogonal".
-        :param label_max_chars_per_line (Optional[int]): Maximum characters per line for node labels. Default is 13.
-
         :returns: The rendered visualization object.
-
         :raises: `ModuleNotFoundError` If rustworkx_utils is not installed.
         """
         if not GraphVisualizer:
@@ -96,7 +89,7 @@ class QueryGraph:
             )
         visualizer = GraphVisualizer(
             node=self.expression_node_map[self.query._root_],
-            figsize=figsize,
+            figsize=figure_size,
             node_size=node_size,
             font_size=font_size,
             spacing_x=spacing_x,
@@ -111,7 +104,7 @@ class QueryGraph:
     def construct_graph(
         self,
         expression: Optional[SymbolicExpression] = None,
-    ) -> RWXNode:
+    ) -> QueryNode:
         """
         Construct the graph representation of the query, used for visualization and introspection.
         """
@@ -120,7 +113,7 @@ class QueryGraph:
         if expression in self.expression_node_map:
             return self.expression_node_map[expression]
 
-        node = RWXNode(
+        node = QueryNode(
             expression._name_,
             self.graph,
             color=ColorLegend.from_expression(expression),
@@ -137,7 +130,7 @@ class QueryGraph:
 
     def _add_children_to_graph(
         self,
-        parent_node: RWXNode,
+        parent_node: QueryNode,
     ):
         """
         Adds child nodes to the graph recursively.
@@ -159,14 +152,9 @@ class QueryGraph:
 
 
 @dataclass
-class ColorLegend:
-    name: str = field(default="Other")
+class ColorLegend(RXUtilsColorLegend):
     """
-    The name of the color legend entry.
-    """
-    color: str = field(default="white")
-    """
-    The color associated with the color legend entry.
+    Represents a color legend entry for visualizing query graph nodes. Maps each expression type to a color.
     """
 
     @classmethod
@@ -203,7 +191,7 @@ class ColorLegend:
 
 
 @dataclass
-class RWXNode(RXUtilsNode):
+class QueryNode(RXUtilsNode):
     """
     A node in the query graph. Overrides the default enclosed name to "Selected Variable".
     """
