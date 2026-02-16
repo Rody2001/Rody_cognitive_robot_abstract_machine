@@ -49,6 +49,7 @@ class Tiago(AbstractRobot, SpecifiesLeftRightArm, HasNeck):
                 name=PrefixedName("tiago", prefix=world.name),
                 root=world.get_body_by_name("base_footprint"),
                 _world=world,
+                full_body_controlled=True,
             )
 
             # Create left arm
@@ -71,7 +72,7 @@ class Tiago(AbstractRobot, SpecifiesLeftRightArm, HasNeck):
                 root=world.get_body_by_name("gripper_left_base_link"),
                 tool_frame=world.get_body_by_name("gripper_left_grasping_frame"),
                 front_facing_orientation=Quaternion(0, 0, 0, 1),
-                front_facing_axis=Vector3(0, 0, 1),
+                front_facing_axis=Vector3(1, 0, 0),
                 thumb=left_gripper_thumb,
                 finger=left_gripper_finger,
                 _world=world,
@@ -104,7 +105,7 @@ class Tiago(AbstractRobot, SpecifiesLeftRightArm, HasNeck):
                 root=world.get_body_by_name("gripper_right_base_link"),
                 tool_frame=world.get_body_by_name("gripper_right_grasping_frame"),
                 front_facing_orientation=Quaternion(0, 0, 0, 1),
-                front_facing_axis=Vector3(0, 0, 1),
+                front_facing_axis=Vector3(1, 0, 0),
                 thumb=right_gripper_thumb,
                 finger=right_gripper_finger,
                 _world=world,
