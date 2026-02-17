@@ -169,6 +169,7 @@ class OperationResult:
             self.bindings == other.bindings
             and self.is_true == other.is_true
             and self.operand == other.operand
+            and self.previous_operation_result == other.previous_operation_result
         )
 
 
@@ -3079,11 +3080,10 @@ class Union(MultiArityExpression):
     ) -> Iterable[OperationResult]:
 
         yield from (
-            OperationResult(result.bindings, False, self, result)
+            OperationResult(result.bindings, result.is_false, self, result)
             for result in itertools.chain(
                 *(var._evaluate_(sources, self) for var in self._operation_children_)
             )
-            if result.is_true
         )
 
 

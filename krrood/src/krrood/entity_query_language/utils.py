@@ -122,10 +122,9 @@ def chain_evaluate_variables(
     """
     var_val_gen = [
         (
-            lambda bindings, var=var: (
+            lambda bindings, inner_generator_var=var: (
                 bindings | result.bindings
-                for result in var._evaluate_(copy(bindings), parent=parent)
-                if result.is_true
+                for result in inner_generator_var._evaluate_(copy(bindings), parent=parent)
             )
         )
         for var in variables

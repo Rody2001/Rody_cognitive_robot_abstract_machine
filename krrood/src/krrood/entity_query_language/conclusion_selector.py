@@ -106,9 +106,10 @@ class Next(EQLUnion, ConclusionSelector):
         sources: Bindings,
     ) -> Iterable[OperationResult]:
         for output in EQLUnion._evaluate__(self, sources):
-            self._conclusion_.update(
-                output.previous_operation_result.operand._conclusion_
-            )
+            if output.is_true:
+                self._conclusion_.update(
+                    output.previous_operation_result.operand._conclusion_
+                )
             yield output
             self._conclusion_.clear()
 
