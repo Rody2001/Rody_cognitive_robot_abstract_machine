@@ -6,8 +6,13 @@ from functools import cached_property
 
 from typing_extensions import Any, List, Iterable
 
-from ..core.base_expressions import Bindings, OperationResult, SymbolicExpression
-from ..core.variable import Selectable, Variable
+from ..core.base_expressions import (
+    Bindings,
+    OperationResult,
+    SymbolicExpression,
+    Selectable,
+)
+from ..core.variable import Variable
 
 
 @dataclass(eq=False)

@@ -19,8 +19,8 @@ if TYPE_CHECKING:
     from .query.result_quantifiers import ResultQuantifier
     from .operators.aggregators import Aggregator
     from .query.query_builders import GroupedByBuilder
-    from .core.base_expressions import SymbolicExpression
-    from .core.variable import Selectable, Variable
+    from .core.base_expressions import SymbolicExpression, Selectable
+    from .core.variable import Variable
     from .query.match import Match
 
 

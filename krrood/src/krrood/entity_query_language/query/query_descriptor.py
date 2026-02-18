@@ -27,14 +27,27 @@ from typing_extensions import (
     Iterator,
 )
 
-from ..core.variable import Selectable, CanBehaveLikeAVariable
-from .query_builders import WhereBuilder, HavingBuilder, GroupedByBuilder, QuantifierBuilder, OrderedByBuilder
+from ..core.domain_mapping import CanBehaveLikeAVariable
+from .query_builders import (
+    WhereBuilder,
+    HavingBuilder,
+    GroupedByBuilder,
+    QuantifierBuilder,
+    OrderedByBuilder,
+)
 from .query_descriptor_operations import Where, Having, GroupedBy
 from .result_quantifiers import (
     ResultQuantificationConstraint,
-    ResultQuantifier, An,
+    ResultQuantifier,
+    An,
 )
-from ..core.base_expressions import Bindings, OperationResult, SymbolicExpression, UnaryExpression
+from ..core.base_expressions import (
+    Bindings,
+    OperationResult,
+    SymbolicExpression,
+    UnaryExpression,
+    Selectable,
+)
 from ..cache_data import (
     SeenSet,
 )
@@ -173,10 +186,10 @@ class Query(MultiArityExpressionThatPerformsACartesianProduct, ABC):
         return self
 
     def ordered_by(
-            self,
-            variable: TypingUnion[Selectable[T], Any],
-            descending: bool = False,
-            key: Optional[Callable] = None,
+        self,
+        variable: TypingUnion[Selectable[T], Any],
+        descending: bool = False,
+        key: Optional[Callable] = None,
     ) -> Self:
         """
         Order the results by the given variable, using the given key function in descending or ascending order.
@@ -191,8 +204,8 @@ class Query(MultiArityExpressionThatPerformsACartesianProduct, ABC):
         return self
 
     def distinct(
-            self,
-            *on: TypingUnion[Selectable, Any],
+        self,
+        *on: TypingUnion[Selectable, Any],
     ) -> TypingUnion[Self, T]:
         """
         Apply distinctness constraint to the query object descriptor results.
@@ -207,7 +220,7 @@ class Query(MultiArityExpressionThatPerformsACartesianProduct, ABC):
 
     @modifies_query_structure
     def grouped_by(
-            self, *variables_to_group_by: TypingUnion[Selectable, Any]
+        self, *variables_to_group_by: TypingUnion[Selectable, Any]
     ) -> TypingUnion[Self, T]:
         """
         Specify the variables to group the results by.
@@ -219,9 +232,9 @@ class Query(MultiArityExpressionThatPerformsACartesianProduct, ABC):
         return self
 
     def _quantify_(
-            self,
-            quantifier_type: Type[ResultQuantifier] = An,
-            quantification_constraint: Optional[ResultQuantificationConstraint] = None,
+        self,
+        quantifier_type: Type[ResultQuantifier] = An,
+        quantification_constraint: Optional[ResultQuantificationConstraint] = None,
     ) -> Self:
         """
         Specify the quantifier type and constraint for the query results, also build the query.
@@ -279,8 +292,8 @@ class Query(MultiArityExpressionThatPerformsACartesianProduct, ABC):
         return self
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[OperationResult]:
         """
         Evaluate the query descriptor by constraining values, updating conclusions,
@@ -290,8 +303,8 @@ class Query(MultiArityExpressionThatPerformsACartesianProduct, ABC):
         yield from (
             self._get_operation_result_(result)
             for result in self._apply_results_mapping_(
-            self._evaluate_product_(sources),
-        )
+                self._evaluate_product_(sources),
+            )
         )
 
         if self._seen_results is not None:
@@ -349,7 +362,7 @@ class Query(MultiArityExpressionThatPerformsACartesianProduct, ABC):
         return tuple(k._binding_id_ for k in self._distinct_on)
 
     def _get_distinct_results_(
-            self, results_gen: Iterator[OperationResult]
+        self, results_gen: Iterator[OperationResult]
     ) -> Iterator[OperationResult]:
         """
         Apply distinctness constraint to the query object descriptor results.
@@ -383,12 +396,12 @@ class Query(MultiArityExpressionThatPerformsACartesianProduct, ABC):
         :return: Whether the results should be grouped or not. Is true when an aggregator is selected.
         """
         return (
-                len(self._aggregated_and_non_aggregated_variables_in_selection_[0]) > 0
+            len(self._aggregated_and_non_aggregated_variables_in_selection_[0]) > 0
         ) or (self._grouped_by_builder_ is not None)
 
     @cached_property
     def _aggregated_and_non_aggregated_variables_in_selection_(
-            self,
+        self,
     ) -> Tuple[List[Selectable], List[Selectable]]:
         """
         :return: The aggregated and non-aggregated variables from the selected variables.
@@ -403,7 +416,7 @@ class Query(MultiArityExpressionThatPerformsACartesianProduct, ABC):
         return aggregated_variables, non_aggregated_variables
 
     def _apply_results_mapping_(
-            self, results: Iterator[OperationResult]
+        self, results: Iterator[OperationResult]
     ) -> Iterable[OperationResult]:
         """
         Process and transform an iterable of results based on predefined mappings and ordering.
@@ -444,7 +457,7 @@ class SetOf(Query):
     """
 
     def __getitem__(
-            self, selected_variable: TypingUnion[CanBehaveLikeAVariable[T], T]
+        self, selected_variable: TypingUnion[CanBehaveLikeAVariable[T], T]
     ) -> TypingUnion[T, SetOfSelectable[T]]:
         """
         Select one of the set of variables, this is useful when you have another query that uses this set of and
@@ -482,8 +495,8 @@ class SetOfSelectable(UnaryExpression, CanBehaveLikeAVariable[T]):
         return self._child_
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterator[OperationResult]:
         for v in self._set_of_._evaluate_(sources, self):
             yield OperationResult(

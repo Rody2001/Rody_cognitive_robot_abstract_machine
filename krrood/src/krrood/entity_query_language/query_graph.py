@@ -15,7 +15,8 @@ from .operators.concatenation import Concatenation
 from .operators.aggregators import Aggregator
 from .operators.core_logical_operators import LogicalOperator
 from .core.base_expressions import SymbolicExpression, Filter
-from .core.variable import Variable, Literal, DomainMapping
+from .core.variable import Variable, Literal
+from .core.domain_mapping import DomainMapping
 from .operators.comparator import Comparator
 
 try:
@@ -135,8 +136,7 @@ class QueryGraph:
             child_node = self.construct_graph(child)
             if isinstance(parent_expression, Query):
                 if child._binding_id_ in [
-                    v._binding_id_
-                    for v in parent_expression._selected_variables_
+                    v._binding_id_ for v in parent_expression._selected_variables_
                 ]:
                     child_node.enclosed = True
             child_node.parent = parent_node

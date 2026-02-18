@@ -1,4 +1,3 @@
-
 """
 User interface (grammar & vocabulary) for entity query language.
 """
@@ -18,12 +17,20 @@ from .operators.comparator import Comparator
 from .operators.core_logical_operators import chained_logic, AND, OR, LogicalOperator
 from .operators.logical_quantifiers import ForAll, Exists
 from .operators.concatenation import Concatenation
-from .query.result_quantifiers import ResultQuantifier, ResultQuantificationConstraint, An, The
+from .query.result_quantifiers import (
+    ResultQuantificationConstraint,
+    An,
+    The,
+    ResultQuantifier,
+)
 from .rules.conclusion_selector import ExceptIf, Alternative, Next
 from .query.query_descriptor import Entity, SetOf, Query
 from .utils import is_iterable
-from .core.variable import Selectable, DomainType, Literal, CanBehaveLikeAVariable, \
-    Flatten
+from .core.variable import (
+    DomainType,
+    Literal,
+)
+from .core.domain_mapping import Flatten, CanBehaveLikeAVariable
 from .predicate import *  # type: ignore
 from ..symbol_graph.symbol_graph import Symbol, SymbolGraph
 
@@ -31,6 +38,8 @@ ConditionType = Union[SymbolicExpression, bool, Predicate]
 """
 The possible types for conditions.
 """
+
+# %% Query Construction
 
 
 def entity(selected_variable: T) -> Entity[T]:
@@ -51,6 +60,39 @@ def set_of(*selected_variables: Union[Selectable[T], Any]) -> SetOf:
     :return: Set descriptor.
     """
     return SetOf(_selected_variables_=selected_variables)
+
+
+# %% Match
+
+
+def match(
+    type_: Optional[Union[Type[T], Selectable[T]]] = None,
+) -> Union[Type[T], CanBehaveLikeAVariable[T], Match[T]]:
+    """
+    Create a symbolic variable matching the type and the provided keyword arguments. This is used for easy variable
+     definitions when there are structural constraints.
+
+    :param type_: The type of the variable (i.e., The class you want to instantiate).
+    :return: The Match instance.
+    """
+    return Match(type_=type_)
+
+
+def match_variable(
+    type_: Union[Type[T], Selectable[T]], domain: DomainType
+) -> Union[Type[T], An[T], CanBehaveLikeAVariable[T], MatchVariable[T]]:
+    """
+    Same as :py:func:`krrood.entity_query_language.match.match` but with a domain to use for the variable created
+     by the match.
+
+    :param type_: The type of the variable (i.e., The class you want to instantiate).
+    :param domain: The domain used for the variable created by the match.
+    :return: The Match instance.
+    """
+    return MatchVariable(type_=type_, domain=domain)
+
+
+# %% Variable Declaration
 
 
 def variable(
@@ -108,6 +150,9 @@ def variable_from(
     return Literal(data=domain, name=name, wrap_in_iterator=False)
 
 
+# %% Operators on Variables
+
+
 def concatenation(
     *variables: Union[Iterable[T], Selectable[T]],
 ) -> Union[T, Selectable[T]]:
@@ -115,23 +160,6 @@ def concatenation(
     Concatenation of two or more variables.
     """
     return Concatenation(_operation_children_=variables)
-
-
-def distinct(
-    expression: T,
-    *on: Any,
-) -> T:
-    """
-    Indicate that the result of the expression should be distinct.
-    """
-    if isinstance(expression, Query):
-        return expression.distinct(*on)
-    elif isinstance(expression, ResultQuantifier):
-        return expression._child_.distinct(*on)
-    elif isinstance(expression, Selectable):
-        return entity(expression).distinct(*on)
-    else:
-        raise UnsupportedExpressionTypeForDistinct(type(expression))
 
 
 def contains(
@@ -172,6 +200,7 @@ def flatten(
 
 
 # %% Logical Operators
+
 
 def and_(*conditions: ConditionType):
     """
@@ -235,7 +264,9 @@ def exists(
     """
     return Exists(universal_variable, condition)
 
+
 # %% Result Quantifiers
+
 
 def an(
     entity_: Union[T, Query],
@@ -250,10 +281,12 @@ def an(
     """
     return entity_._quantify_(An, quantification_constraint=quantification)
 
+
 a = an
 """
 This is an alias to accommodate for words not starting with vowels.
 """
+
 
 def the(
     entity_: Union[T, Query],
@@ -266,7 +299,9 @@ def the(
     """
     return entity_._quantify_(The)
 
+
 # %% Rules
+
 
 def inference(
     type_: Type[T],
@@ -283,6 +318,7 @@ def inference(
         _name__=type_.__name__,
         _kwargs_=kwargs,
     )
+
 
 def refinement(*conditions: ConditionType) -> SymbolicExpression:
     """
@@ -402,7 +438,9 @@ def construct_new_conditions_root_for_alternative_or_next(
             )
     return new_conditions_root
 
+
 # %% Aggregators
+
 
 def max(
     variable: Selectable[T],
@@ -419,7 +457,9 @@ def max(
     :param distinct: Whether to only consider distinct values.
     :return: A Max object that can be evaluated to find the maximum value.
     """
-    return Max(variable, _key_function_=key, _default_value_=default, _distinct_=distinct)
+    return Max(
+        variable, _key_function_=key, _default_value_=default, _distinct_=distinct
+    )
 
 
 def min(
@@ -437,7 +477,9 @@ def min(
     :param distinct: Whether to only consider distinct values.
     :return: A Min object that can be evaluated to find the minimum value.
     """
-    return Min(variable, _key_function_=key, _default_value_=default, _distinct_=distinct)
+    return Min(
+        variable, _key_function_=key, _default_value_=default, _distinct_=distinct
+    )
 
 
 def sum(
@@ -455,7 +497,9 @@ def sum(
     :param distinct: Whether to only consider distinct values.
     :return: A Sum object that can be evaluated to find the sum of values.
     """
-    return Sum(variable, _key_function_=key, _default_value_=default, _distinct_=distinct)
+    return Sum(
+        variable, _key_function_=key, _default_value_=default, _distinct_=distinct
+    )
 
 
 def average(
@@ -491,30 +535,19 @@ def count(
     """
     return Count(variable, _distinct_=distinct)
 
-# %% Match
 
-def match(
-    type_: Optional[Union[Type[T], Selectable[T]]] = None,
-) -> Union[Type[T], CanBehaveLikeAVariable[T], Match[T]]:
+def distinct(
+    expression: T,
+    *on: Any,
+) -> T:
     """
-    Create a symbolic variable matching the type and the provided keyword arguments. This is used for easy variable
-     definitions when there are structural constraints.
-
-    :param type_: The type of the variable (i.e., The class you want to instantiate).
-    :return: The Match instance.
+    Indicate that the result of the expression should be distinct.
     """
-    return Match(type_=type_)
-
-
-def match_variable(
-    type_: Union[Type[T], Selectable[T]], domain: DomainType
-) -> Union[Type[T], An[T], CanBehaveLikeAVariable[T], MatchVariable[T]]:
-    """
-    Same as :py:func:`krrood.entity_query_language.match.match` but with a domain to use for the variable created
-     by the match.
-
-    :param type_: The type of the variable (i.e., The class you want to instantiate).
-    :param domain: The domain used for the variable created by the match.
-    :return: The Match instance.
-    """
-    return MatchVariable(type_=type_, domain=domain)
+    if isinstance(expression, Query):
+        return expression.distinct(*on)
+    elif isinstance(expression, ResultQuantifier):
+        return expression._child_.distinct(*on)
+    elif isinstance(expression, Selectable):
+        return entity(expression).distinct(*on)
+    else:
+        raise UnsupportedExpressionTypeForDistinct(type(expression))

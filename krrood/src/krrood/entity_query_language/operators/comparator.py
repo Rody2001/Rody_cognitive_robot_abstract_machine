@@ -4,15 +4,29 @@ import operator
 from copy import copy
 from dataclasses import dataclass
 
-from typing_extensions import Callable, Any, ClassVar, Dict, Tuple, Iterable, TYPE_CHECKING
+from typing_extensions import (
+    Callable,
+    Any,
+    ClassVar,
+    Dict,
+    Tuple,
+    Iterable,
+    TYPE_CHECKING,
+)
 
 from ..query.result_quantifiers import The
-from ..core.base_expressions import Bindings, OperationResult, SymbolicExpression, BinaryExpression
+from ..core.base_expressions import (
+    Bindings,
+    OperationResult,
+    SymbolicExpression,
+    BinaryExpression,
+    Selectable,
+)
 from .set_operations import PerformsCartesianProduct
 from ..utils import is_iterable, make_set
 
 if TYPE_CHECKING:
-    from ..core.variable import Selectable
+    pass
 
 
 @dataclass(eq=False, repr=False)
@@ -44,8 +58,8 @@ class Comparator(BinaryExpression, PerformsCartesianProduct):
         return self.operation.__name__
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[OperationResult]:
         """
         Compares the left and right symbolic variables using the "operation".
@@ -68,9 +82,9 @@ class Comparator(BinaryExpression, PerformsCartesianProduct):
             child_result[self.right._binding_id_],
         )
         if (
-                self.operation in [operator.eq, operator.ne]
-                and is_iterable(left_value)
-                and is_iterable(right_value)
+            self.operation in [operator.eq, operator.ne]
+            and is_iterable(left_value)
+            and is_iterable(right_value)
         ):
             left_value = make_set(left_value)
             right_value = make_set(right_value)
@@ -81,7 +95,7 @@ class Comparator(BinaryExpression, PerformsCartesianProduct):
         return OperationResult(bindings, self._is_false_, self, child_result)
 
     def _optimize_operands_order_(
-            self, sources: Bindings
+        self, sources: Bindings
     ) -> Tuple[SymbolicExpression, SymbolicExpression]:
         left_has_the = any(isinstance(desc, The) for desc in self.left._descendants_)
         right_has_the = any(isinstance(desc, The) for desc in self.right._descendants_)
@@ -90,7 +104,7 @@ class Comparator(BinaryExpression, PerformsCartesianProduct):
         elif not left_has_the and right_has_the:
             return self.right, self.left
         if sources and any(
-                v._binding_id_ in sources for v in self.right._unique_variables_
+            v._binding_id_ in sources for v in self.right._unique_variables_
         ):
             return self.right, self.left
         else:

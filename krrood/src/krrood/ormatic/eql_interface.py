@@ -15,7 +15,8 @@ from ..entity_query_language.query.query_descriptor_operations import Where
 from ..entity_query_language.query.result_quantifiers import ResultQuantifier, An, The
 from ..entity_query_language.operators.core_logical_operators import AND, OR
 from ..entity_query_language.core.base_expressions import SymbolicExpression
-from ..entity_query_language.core.variable import Variable, Literal, Attribute
+from ..entity_query_language.core.variable import Variable, Literal
+from ..entity_query_language.core.domain_mapping import Attribute
 from ..entity_query_language.operators.comparator import Comparator
 
 from .dao import get_dao_class

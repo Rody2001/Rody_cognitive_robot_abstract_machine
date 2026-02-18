@@ -7,9 +7,21 @@ from collections import UserDict
 from copy import copy
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
+from typing import Generic, Type
 
-from typing_extensions import Dict, Any, Optional, ClassVar, List, Iterator, Union as TypingUnion, Tuple, Set, Self, \
-    TYPE_CHECKING
+from typing_extensions import (
+    Dict,
+    Any,
+    Optional,
+    ClassVar,
+    List,
+    Iterator,
+    Union as TypingUnion,
+    Tuple,
+    Set,
+    Self,
+    TYPE_CHECKING,
+)
 
 from ..failures import NoExpressionFoundForGivenID, NonPositiveLimitValue
 from ..utils import make_list, T, make_set
@@ -17,8 +29,7 @@ from ...symbol_graph.symbol_graph import SymbolGraph
 
 if TYPE_CHECKING:
     from ..rules.conclusion import Conclusion
-    from .variable import Variable, Selectable
-
+    from .variable import Variable
 
 Bindings = Dict[int, Any]
 """
@@ -77,7 +88,9 @@ class SymbolicExpression(ABC):
     The current parent symbolic expression of this expression during evaluation. Since a node can have multiple parents,
     this attribute is used to track the current parent that is being evaluated.
     """
-    _expression_: Optional[SymbolicExpression] = field(init=False, repr=False, default=None)
+    _expression_: Optional[SymbolicExpression] = field(
+        init=False, repr=False, default=None
+    )
     """
     Useful when this expression is a builder that wires multiple components together to create the final expression.
     This defaults to Self.
@@ -124,8 +137,8 @@ class SymbolicExpression(ABC):
         return next(self.evaluate())
 
     def evaluate(
-            self,
-            limit: Optional[int] = None,
+        self,
+        limit: Optional[int] = None,
     ) -> Iterator[TypingUnion[T, Dict[TypingUnion[T, SymbolicExpression], T]]]:
         """
         Evaluate the query and map the results to the correct output data structure.
@@ -148,7 +161,7 @@ class SymbolicExpression(ABC):
                     return
 
     def _replace_child_(
-            self, old_child: SymbolicExpression, new_child: SymbolicExpression
+        self, old_child: SymbolicExpression, new_child: SymbolicExpression
     ):
         """
         Replace a child expression with a new child expression.
@@ -165,7 +178,7 @@ class SymbolicExpression(ABC):
 
     @abstractmethod
     def _replace_child_field_(
-            self, old_child: SymbolicExpression, new_child: SymbolicExpression
+        self, old_child: SymbolicExpression, new_child: SymbolicExpression
     ):
         """
         Replace a child field with a new child expression.
@@ -181,12 +194,13 @@ class SymbolicExpression(ABC):
             self._parent_ = None
 
     def _update_children_(
-            self, *children: SymbolicExpression
+        self, *children: SymbolicExpression
     ) -> Tuple[SymbolicExpression, ...]:
         """
         Update multiple children expressions of this symbolic expression.
         """
         from .variable import Literal
+
         children = dict(enumerate(children))
         for k, v in children.items():
             if not isinstance(v, SymbolicExpression):
@@ -210,9 +224,9 @@ class SymbolicExpression(ABC):
         )
 
     def _evaluate_(
-            self,
-            sources: Optional[Bindings | OperationResult] = None,
-            parent: Optional[SymbolicExpression] = None,
+        self,
+        sources: Optional[Bindings | OperationResult] = None,
+        parent: Optional[SymbolicExpression] = None,
     ):
         """
         Wrapper for ``SymbolicExpression._evaluate__*`` methods that automatically
@@ -246,7 +260,7 @@ class SymbolicExpression(ABC):
             self._eval_parent_ = previous_parent
 
     def _evaluate_conclusions_and_update_bindings_(
-            self, current_result: OperationResult
+        self, current_result: OperationResult
     ) -> OperationResult:
         """
         Update the bindings of the results by evaluating the conclusions using the received bindings.
@@ -276,8 +290,8 @@ class SymbolicExpression(ABC):
 
     @abstractmethod
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterator[OperationResult]:
         """
         Evaluate the symbolic expression and set the operands indices.
@@ -398,10 +412,12 @@ class SymbolicExpression(ABC):
 
     def __and__(self, other):
         from ..operators.core_logical_operators import AND
+
         return AND(self, other)
 
     def __or__(self, other):
         from ..operators.core_logical_operators import OR
+
         return OR(self, other)
 
     def _invert_(self):
@@ -409,6 +425,7 @@ class SymbolicExpression(ABC):
         Invert the symbolic expression.
         """
         from ..operators.core_logical_operators import Not
+
         return Not(self)
 
     def __enter__(self) -> Self:
@@ -452,7 +469,7 @@ class UnaryExpression(SymbolicExpression, ABC):
         self._child_ = self._update_children_(self._child_)[0]
 
     def _replace_child_field_(
-            self, old_child: SymbolicExpression, new_child: SymbolicExpression
+        self, old_child: SymbolicExpression, new_child: SymbolicExpression
     ):
         if self._child_ is old_child:
             self._child_ = new_child
@@ -483,14 +500,14 @@ class MultiArityExpression(SymbolicExpression, ABC):
         self.update_children(*self._operation_children_)
 
     def _replace_child_field_(
-            self, old_child: SymbolicExpression, new_child: SymbolicExpression
+        self, old_child: SymbolicExpression, new_child: SymbolicExpression
     ):
         try:
             old_child_index = self._operation_children_.index(old_child)
             self._operation_children_ = (
-                    self._operation_children_[:old_child_index]
-                    + (new_child,)
-                    + self._operation_children_[old_child_index + 1:]
+                self._operation_children_[:old_child_index]
+                + (new_child,)
+                + self._operation_children_[old_child_index + 1 :]
             )
         except ValueError:
             pass
@@ -534,7 +551,7 @@ class BinaryExpression(SymbolicExpression, ABC):
         self.left, self.right = self._update_children_(self.left, self.right)
 
     def _replace_child_field_(
-            self, old_child: SymbolicExpression, new_child: SymbolicExpression
+        self, old_child: SymbolicExpression, new_child: SymbolicExpression
     ):
         if self.left is old_child:
             self.left = new_child
@@ -639,8 +656,8 @@ class OperationResult:
         :return: All the bindings from all the evaluated operations until this one, including this one.
         """
         if (
-                self.previous_operation_result is None
-                or self.previous_operation_result.bindings is self.bindings
+            self.previous_operation_result is None
+            or self.previous_operation_result.bindings is self.bindings
         ):
             return self.bindings
         return self.previous_operation_result.bindings | self.bindings
@@ -683,10 +700,10 @@ class OperationResult:
 
     def __eq__(self, other):
         return (
-                self.bindings == other.bindings
-                and self.is_true == other.is_true
-                and self.operand == other.operand
-                and self.previous_operation_result == other.previous_operation_result
+            self.bindings == other.bindings
+            and self.is_true == other.is_true
+            and self.operand == other.operand
+            and self.previous_operation_result == other.previous_operation_result
         )
 
 
@@ -702,3 +719,56 @@ class UnificationDict(UserDict):
     @cached_property
     def _id_expression_map_(self) -> Dict[int, Selectable[T]]:
         return {key._binding_id_: key for key in self.data.keys()}
+
+
+@dataclass(eq=False, repr=False)
+class Selectable(SymbolicExpression, Generic[T], ABC):
+    _var_: Selectable[T] = field(init=False, default=None)
+    """
+    A variable that is used if the child class to this class want to provide a variable to be tracked other than 
+    itself, this is specially useful for child classes that holds a variable instead of being a variable and want
+     to delegate the variable behaviour to the variable it has instead.
+    For example, this is the case for the ResultQuantifiers & QueryDescriptors that operate on a single selected
+    variable.
+    """
+
+    _type_: Type[T] = field(init=False, default=None)
+    """
+    The type of the variable.
+    """
+
+    @cached_property
+    def _binding_id_(self) -> int:
+        return (
+            self._var_._binding_id_
+            if self._var_ is not None and self._var_ is not self
+            else self._id_
+        )
+
+    @cached_property
+    def _type__(self):
+        return (
+            self._var_._type_
+            if self._var_ is not None and self._var_ is not self
+            else None
+        )
+
+    def _process_result_(self, result: OperationResult) -> T:
+        """
+        Map the result to the correct output data structure for user usage.
+
+        :param result: The result to be mapped.
+        :return: The mapped result.
+        """
+        return result.value
+
+    @property
+    def _is_iterable_(self):
+        """
+        Whether the selectable is iterable.
+
+        :return: True if the selectable is iterable, False otherwise.
+        """
+        if self._var_ and self._var_ is not self:
+            return self._var_._is_iterable_
+        return False

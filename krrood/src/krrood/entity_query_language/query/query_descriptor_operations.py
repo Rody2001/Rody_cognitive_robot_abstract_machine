@@ -7,13 +7,20 @@ from functools import cached_property, lru_cache
 from typing_extensions import Tuple, Any, Iterator, Iterable, Optional, Callable, Dict
 
 from ..operators.aggregators import Aggregator, Count
-from ..core.base_expressions import DerivedExpression, SymbolicExpression, \
-    UnaryExpression, Bindings, OperationResult, BinaryExpression, Filter
+from ..core.base_expressions import (
+    DerivedExpression,
+    SymbolicExpression,
+    UnaryExpression,
+    Bindings,
+    OperationResult,
+    BinaryExpression,
+    Filter,
+    Selectable,
+)
 from ..failures import UnsupportedAggregationOfAGroupedByVariable
 from ..operators.set_operations import MultiArityExpressionThatPerformsACartesianProduct
 from ..utils import ensure_hashable, is_iterable
-from ..core.variable import Selectable, DomainMapping
-
+from ..core.domain_mapping import DomainMapping
 
 GroupKey = Tuple[Any, ...]
 """
@@ -66,8 +73,8 @@ class Having(Filter, BinaryExpression):
         return self.left
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[OperationResult]:
         yield from (
             OperationResult(
@@ -77,8 +84,8 @@ class Having(Filter, BinaryExpression):
             )
             for grouping_result in self.grouped_by._evaluate_(sources, parent=self)
             for annotated_result in self.condition._evaluate_(
-            grouping_result.bindings, parent=self
-        )
+                grouping_result.bindings, parent=self
+            )
             if annotated_result.is_true
         )
 
@@ -187,7 +194,7 @@ class GroupedBy(MultiArityExpressionThatPerformsACartesianProduct):
         yield from groups.values()
 
     def get_groups_and_group_key_count(
-            self, sources: Bindings
+        self, sources: Bindings
     ) -> Tuple[GroupBindings, Dict[GroupKey, int]]:
         """
         Create a dictionary of groups and a dictionary of group keys to their corresponding counts starting from the
@@ -247,9 +254,9 @@ class GroupedBy(MultiArityExpressionThatPerformsACartesianProduct):
     def is_already_grouped(self, var_id: int) -> bool:
         expression = self._get_expression_by_id_(var_id)
         return (
-                len(self.variables_to_group_by) == 1
-                and isinstance(expression, DomainMapping)
-                and expression._child_._binding_id_ in self.ids_of_variables_to_group_by
+            len(self.variables_to_group_by) == 1
+            and isinstance(expression, DomainMapping)
+            and expression._child_._binding_id_ in self.ids_of_variables_to_group_by
         )
 
     @cached_property
@@ -262,7 +269,7 @@ class GroupedBy(MultiArityExpressionThatPerformsACartesianProduct):
 
     @cached_property
     def aggregators_of_grouped_by_variables_that_are_not_count(
-            self,
+        self,
     ) -> Tuple[Aggregator, ...]:
         """
         :return: Aggregators in the selected variables of the query descriptor that are aggregating over
@@ -284,7 +291,7 @@ class GroupedBy(MultiArityExpressionThatPerformsACartesianProduct):
             var
             for var in self.aggregators
             if (var._child_ is None)
-               or (var._child_._binding_id_ in self.ids_of_variables_to_group_by)
+            or (var._child_._binding_id_ in self.ids_of_variables_to_group_by)
         ]
 
     @cached_property

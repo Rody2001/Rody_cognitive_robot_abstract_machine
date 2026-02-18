@@ -3,12 +3,27 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
-from typing_extensions import Optional, Iterator, Iterable, Callable, Any, Collection, Dict
+from typing_extensions import (
+    Optional,
+    Iterator,
+    Iterable,
+    Callable,
+    Any,
+    Collection,
+    Dict,
+)
 
-from ..core.base_expressions import UnaryExpression, Bindings, OperationResult, SymbolicExpression
+from ..core.base_expressions import (
+    UnaryExpression,
+    Bindings,
+    OperationResult,
+    SymbolicExpression,
+    Selectable,
+)
 from ..failures import NestedAggregationError, InvalidChildType
 from ..utils import T
-from ..core.variable import CanBehaveLikeAVariable, Variable, Selectable
+from ..core.variable import Variable
+from ..core.domain_mapping import CanBehaveLikeAVariable
 
 
 @dataclass(eq=False, repr=False)
@@ -44,6 +59,7 @@ class Aggregator(UnaryExpression, CanBehaveLikeAVariable[T], ABC):
         :return: An iterator over the aggregator results.
         """
         from ..query.query_descriptor import Entity
+
         return Entity(_selected_variables_=(self,)).evaluate()
 
     def grouped_by(self, *variables: Variable) -> Entity[T]:
@@ -51,11 +67,12 @@ class Aggregator(UnaryExpression, CanBehaveLikeAVariable[T], ABC):
         Group the results by the given variables.
         """
         from ..query.query_descriptor import Entity
+
         return Entity(_selected_variables_=(self,)).grouped_by(*variables)
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[OperationResult]:
         yield from (
             OperationResult(
@@ -69,7 +86,7 @@ class Aggregator(UnaryExpression, CanBehaveLikeAVariable[T], ABC):
 
     @abstractmethod
     def _apply_aggregation_function_and_get_bindings_(
-            self, child_result: OperationResult
+        self, child_result: OperationResult
     ) -> Bindings:
         """
         Apply the aggregation function to the results of the child.
@@ -93,7 +110,7 @@ class Count(Aggregator[T]):
     """
 
     def _apply_aggregation_function_and_get_bindings_(
-            self, child_result: OperationResult
+        self, child_result: OperationResult
     ) -> Bindings:
         if self._distinct_:
             return {self._binding_id_: len(set(child_result.value))}
@@ -157,7 +174,7 @@ class Sum(EntityAggregator[Number]):
     """
 
     def _apply_aggregation_function_and_get_bindings_(
-            self, child_result: OperationResult
+        self, child_result: OperationResult
     ) -> Dict[int, Optional[Number]]:
         return {
             self._binding_id_: self.get_aggregation_result_from_child_result(
@@ -188,7 +205,7 @@ class Extreme(EntityAggregator[T], ABC):
     """
 
     def _apply_aggregation_function_and_get_bindings_(
-            self, child_result: OperationResult
+        self, child_result: OperationResult
     ) -> Bindings:
         extreme_val = self.get_aggregation_result_from_child_result(child_result)
         bindings = child_result.bindings.copy()

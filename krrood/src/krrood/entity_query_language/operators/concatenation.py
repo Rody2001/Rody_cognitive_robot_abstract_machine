@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Tuple, Iterable
 
-from ..core.base_expressions import Bindings, OperationResult
+from ..core.base_expressions import Bindings, OperationResult, Selectable
 from ..operators.set_operations import Union
 from ..utils import T
-from ..core.variable import CanBehaveLikeAVariable, Selectable
+from ..core.domain_mapping import CanBehaveLikeAVariable
 
 
 @dataclass(eq=False, repr=False)
@@ -22,7 +22,7 @@ class Concatenation(Union, CanBehaveLikeAVariable[T]):
 
     def __post_init__(self):
         if not all(
-                isinstance(child, Selectable) for child in self._operation_children_
+            isinstance(child, Selectable) for child in self._operation_children_
         ):
             raise ValueError(
                 f"All children of Concatenate must be Selectable instances."

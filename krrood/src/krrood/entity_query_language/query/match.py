@@ -13,7 +13,8 @@ from typing_extensions import (
     List,
     Union,
     Self,
-    Generic, TYPE_CHECKING,
+    Generic,
+    TYPE_CHECKING,
 )
 
 from ..failures import (
@@ -21,7 +22,9 @@ from ..failures import (
 )
 from ..predicate import HasType
 from .result_quantifiers import An
-from ..core.variable import Selectable, CanBehaveLikeAVariable, Literal, Attribute, Flatten, DomainType
+from ..core.variable import Literal, DomainType
+from ..core.base_expressions import Selectable
+from ..core.domain_mapping import Attribute, Flatten, CanBehaveLikeAVariable
 from ..utils import T
 
 
@@ -213,6 +216,7 @@ class Match(AbstractMatchExpression[T]):
 
     def create_variable(self):
         from ..factories import variable
+
         self.variable = variable(self.type, domain=None)
 
     def evaluate(self):
@@ -250,6 +254,7 @@ class MatchVariable(Match[T]):
 
     def create_variable(self):
         from ..factories import variable
+
         self.variable = variable(self.type, domain=self.domain)
 
     def __call__(self, **kwargs) -> Union[An[T], T]:

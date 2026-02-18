@@ -6,15 +6,20 @@ from functools import cached_property, lru_cache
 
 from typing_extensions import Tuple, List, Type, Optional, Callable, TYPE_CHECKING
 
-from ..core.base_expressions import SymbolicExpression
+from ..core.base_expressions import SymbolicExpression, Selectable
 from ..operators.core_logical_operators import chained_logic, AND
-from ..failures import NoConditionsProvided, LiteralConditionError, \
-    AggregatorInWhereConditionsError, NonAggregatorInHavingConditionsError, NonAggregatedSelectedVariablesError
+from ..failures import (
+    NoConditionsProvided,
+    LiteralConditionError,
+    AggregatorInWhereConditionsError,
+    NonAggregatorInHavingConditionsError,
+    NonAggregatedSelectedVariablesError,
+)
 from .result_quantifiers import ResultQuantificationConstraint, ResultQuantifier, An
 from .query_descriptor_operations import Where, Having, OrderedBy, GroupedBy
 from ..operators.aggregators import Aggregator
-from ..core.variable import Selectable, Literal, DomainMapping, Variable
-
+from ..core.variable import Literal, Variable
+from ..core.domain_mapping import DomainMapping
 
 if TYPE_CHECKING:
     from ..factories import ConditionType
@@ -76,7 +81,7 @@ class FilterBuilder(ExpressionBuilder, ABC):
 
     @cached_property
     def aggregators_and_non_aggregators_in_conditions(
-            self,
+        self,
     ) -> Tuple[Tuple[Aggregator, ...], Tuple[Selectable, ...]]:
         """
         :return: A tuple containing the aggregators and non-aggregators in the conditions.
@@ -91,7 +96,7 @@ class FilterBuilder(ExpressionBuilder, ABC):
                 if isinstance(var, Aggregator):
                     aggregators.append(var)
                 elif isinstance(var, DomainMapping) and any(
-                        isinstance(v, Aggregator) for v in var._descendants_
+                    isinstance(v, Aggregator) for v in var._descendants_
                 ):
                     aggregators.append(var)
                 elif isinstance(var, Selectable) and not isinstance(var, Literal):
@@ -203,8 +208,8 @@ class GroupedByBuilder(ExpressionBuilder):
             self.query_descriptor._aggregated_and_non_aggregated_variables_in_selection_
         )
         if aggregators and not all(
-                self.variable_is_in_or_derived_from_a_grouped_by_variable(v)
-                for v in non_aggregated_variables
+            self.variable_is_in_or_derived_from_a_grouped_by_variable(v)
+            for v in non_aggregated_variables
         ):
             raise NonAggregatedSelectedVariablesError(
                 self,
@@ -215,7 +220,7 @@ class GroupedByBuilder(ExpressionBuilder):
 
     @lru_cache
     def variable_is_in_or_derived_from_a_grouped_by_variable(
-            self, variable: SymbolicExpression
+        self, variable: SymbolicExpression
     ) -> bool:
         """
         Check if the variable is in or derived from a grouped by variable.
@@ -227,16 +232,16 @@ class GroupedByBuilder(ExpressionBuilder):
         elif variable._binding_id_ in self.ids_of_aggregated_variables:
             return False
         elif isinstance(variable, DomainMapping) and any(
-                self.variable_is_in_or_derived_from_a_grouped_by_variable(d)
-                for d in variable._descendants_
+            self.variable_is_in_or_derived_from_a_grouped_by_variable(d)
+            for d in variable._descendants_
         ):
             return True
         elif (
-                isinstance(variable, Variable)
-                and isinstance(variable._domain_source_, Selectable)
-                and self.variable_is_in_or_derived_from_a_grouped_by_variable(
-            variable._domain_source_
-        )
+            isinstance(variable, Variable)
+            and isinstance(variable._domain_source_, Selectable)
+            and self.variable_is_in_or_derived_from_a_grouped_by_variable(
+                variable._domain_source_
+            )
         ):
             return True
         else:
@@ -262,7 +267,7 @@ class GroupedByBuilder(ExpressionBuilder):
 
     @cached_property
     def aggregators_and_non_aggregators(
-            self,
+        self,
     ) -> Tuple[List[Aggregator], List[Selectable]]:
         """
         :return: A tuple of lists of aggregator and non-aggregator variables used in the query.
@@ -290,7 +295,7 @@ class GroupedByBuilder(ExpressionBuilder):
             var._child_
             for var in aggregated_variables
             if var._child_ is not None
-               and var._child_._id_ not in ids_of_non_aggregated_variables
+            and var._child_._id_ not in ids_of_non_aggregated_variables
         ]
         ids_of_non_aggregators = [v._id_ for v in all_non_aggregators]
         all_non_aggregators.extend(
@@ -301,7 +306,7 @@ class GroupedByBuilder(ExpressionBuilder):
 
     @cached_property
     def aggregators_and_non_aggregators_in_ordered_by(
-            self,
+        self,
     ) -> Tuple[List[Aggregator], List[Selectable]]:
         non_aggregated_variables, aggregators = [], []
         if self.query_descriptor._ordered_by_builder_:

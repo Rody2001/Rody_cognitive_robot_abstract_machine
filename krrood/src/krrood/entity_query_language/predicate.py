@@ -10,17 +10,20 @@ from typing_extensions import (
     Any,
     Type,
     Tuple,
-    ClassVar, Sized,
+    ClassVar,
+    Sized,
+    Dict,
 )
 
 from .enums import PredicateType
 from .utils import T, merge_args_and_kwargs
-from .core.variable import Variable, _any_of_the_kwargs_is_a_variable, InstantiatedVariable
+from .core.variable import Variable, InstantiatedVariable
+from .core.base_expressions import Selectable
 from ..symbol_graph.symbol_graph import Symbol
 
 
 def symbolic_function(
-        function: Callable[..., T],
+    function: Callable[..., T],
 ) -> Callable[..., Variable[T]]:
     """
     Function decorator that constructs a symbolic expression representing the function call
@@ -131,3 +134,11 @@ def length(iterable: Sized) -> int:
     :return: The length of the iterable.
     """
     return len(iterable)
+
+
+def _any_of_the_kwargs_is_a_variable(bindings: Dict[str, Any]) -> bool:
+    """
+    :param bindings: A kwarg like dict mapping strings to objects
+    :return: Rather any of the objects is a variable or not.
+    """
+    return any(isinstance(binding, Selectable) for binding in bindings.values())
