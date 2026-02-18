@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import cached_property
 import threading
-from typing import ClassVar, Optional, Type, List, Dict
+from typing import ClassVar, Optional, Set, Type, List, Dict
 from uuid import UUID
 
 import numpy as np
@@ -48,9 +48,9 @@ class Synchronizer(ABC):
     The topic name of the publisher and subscriber.
     """
 
-    ack_topic_name: Optional[str] = "/ack"
+    acknowledge_topic_name: Optional[str] = "/acknowledge"
     """
-    The name of the acknowledgment topic. Synchronous publication of world state waits until all subscribers acknowledged on this topic.
+    The name of the acknowledgment topic. Synchronous publication of world state waits until all subscribers have acknowledged on this topic.
     """
 
     publisher: Optional[Publisher] = field(init=False, default=None)
@@ -63,15 +63,42 @@ class Synchronizer(ABC):
     The subscriber to the world state.
     """
 
+    acknowledge_publisher: Optional[Publisher] = field(init=False, default=None)
+    """
+    The publisher used to send acknowledgment messages on the acknowledge topic.
+    """
+
+    acknowledge_subscriber: Optional[Subscription] = field(init=False, default=None)
+    """
+    The subscriber that receives acknowledgment messages from other nodes.
+    """
+
     message_type: ClassVar[Optional[Type[SubclassJSONSerializer]]] = None
     """
     The type of the message that is sent and received.
     """
 
-    _current_event_id = None
-    _expected_acks = set()
-    _received_acks = set()
-    _cv_ack = threading.Condition()
+    _current_event_id: Optional[UUID] = None
+    """
+    The UUID of the most recently published event awaiting acknowledgment.
+    """
+
+    _expected_acknowledgments: Set[String] = field(default_factory=set)
+    """
+    Node names of all subscribers that must acknowledge the current event before synchronous publication unblocks.
+    """
+
+    _received_acknowledgments: Set[String] = field(default_factory=set)
+    """
+    Node names of subscribers that have acknowledged the current event so far.
+    """
+
+    _acknowledge_condition_variable: threading.Condition = field(
+        default_factory=threading.Condition
+    )
+    """
+    Condition variable used to block synchronous publication until all expected acknowledgments have been received.
+    """
 
     def __post_init__(self):
         self.publisher = self.node.create_publisher(
@@ -83,13 +110,13 @@ class Synchronizer(ABC):
             callback=self.subscription_callback,
             qos_profile=10,
         )
-        self.ack_publisher = self.node.create_publisher(
-            std_msgs.msg.String, topic=self.ack_topic_name, qos_profile=10
+        self.acknowledge_publisher = self.node.create_publisher(
+            std_msgs.msg.String, topic=self.acknowledge_topic_name, qos_profile=10
         )
-        self.ack_subscriber = self.node.create_subscription(
+        self.acknowledge_subscriber = self.node.create_subscription(
             std_msgs.msg.String,
-            topic=self.ack_topic_name,
-            callback=self.ack_callback,
+            topic=self.acknowledge_topic_name,
+            callback=self.acknowledge_callback,
             qos_profile=10,
         )
 
@@ -110,15 +137,11 @@ class Synchronizer(ABC):
         msg = self.message_type.from_json(
             json.loads(msg.data), **tracker.create_kwargs()
         )
-        if hasattr(msg, "event_id"):
-            event_id = str(msg.event_id)
-        else:
-            event_id = str(uuid.uuid4())
 
-        self.ack_publisher.publish(
+        self.acknowledge_publisher.publish(
             std_msgs.msg.String(
                 data=json.dumps(
-                    {"event_id": event_id, "node_name": self.node.get_name()}
+                    {"event_id": str(msg.event_id), "node_name": self.node.get_name()}
                 )
             )
         )
@@ -127,26 +150,29 @@ class Synchronizer(ABC):
         self._skip_next_world_callback = True
         self._subscription_callback(msg)
 
-    def ack_callback(self, msg: std_msgs.msg.String):
+    def acknowledge_callback(self, msg: std_msgs.msg.String):
         """
-        Called when subscribers of the sync topic acknowledge receipt of sync notifications.
+        Called when subscribers of the sync topic acknowledge receipt of synchronization notifications.
         """
         msg_dic = json.loads(msg.data)
 
-        with self._cv_ack:
-            if not self._expected_acks or not self._current_event_id:
+        with self._acknowledge_condition_variable:
+            if not self._expected_acknowledgments or not self._current_event_id:
                 return
 
             if msg_dic["event_id"] != str(self._current_event_id):
                 return
 
-            if msg_dic["node_name"] in self._expected_acks:
-                self._received_acks.add(msg_dic["node_name"])
+            if msg_dic["node_name"] in self._expected_acknowledgments:
+                self._received_acknowledgments.add(msg_dic["node_name"])
 
-            if self._received_acks == self._expected_acks:
-                self._cv_ack.notify_all()
+            if self._received_acknowledgments == self._expected_acknowledgments:
+                self._acknowledge_condition_variable.notify_all()
 
-    def _snapshot_subscribers(self):
+    def _snapshot_subscribers(self) -> Set[String]:
+        """
+        Return the node names of all current subscribers to the synchronization topic.
+        """
         infos = self.node.get_subscriptions_info_by_topic(self.topic_name)
         expected = set()
         for info in infos:
@@ -161,8 +187,39 @@ class Synchronizer(ABC):
         """
         raise NotImplementedError
 
-    def publish(self, msg: Message):
-        self.publisher.publish(std_msgs.msg.String(data=json.dumps(msg.to_json())))
+    def publish(self, msg: Message, synchronous: bool = False):
+        """
+        Publish a message to the synchronization topic.
+
+        :param msg: The message to publish.
+        :param synchronous: If True, block until all subscribers acknowledge receipt.
+        """
+        self._current_event_id = msg.event_id
+
+        if synchronous:
+            with self._acknowledge_condition_variable:
+                self._expected_acknowledgments = self._snapshot_subscribers()
+                self._received_acknowledgments = set()
+
+                self.publisher.publish(
+                    std_msgs.msg.String(data=json.dumps(msg.to_json()))
+                )
+
+                success = self._acknowledge_condition_variable.wait_for(
+                    lambda: self._received_acknowledgments
+                    == self._expected_acknowledgments,
+                    timeout=5,
+                )
+                if not success:
+                    self.node.get_logger().warning(
+                        "Message was not acknowledged, timeout"
+                    )
+
+                self._current_event_id = None
+                self._expected_acknowledgments = set()
+                self._received_acknowledgments = set()
+        else:
+            self.publisher.publish(std_msgs.msg.String(data=json.dumps(msg.to_json())))
 
     def close(self):
         """
@@ -286,30 +343,12 @@ class StateSynchronizer(StateChangeCallback, SynchronizerOnCallback):
 
         self.update_previous_world_state()
 
-        self._current_event_id = uuid.uuid4()
-
         msg = WorldStateUpdate(
-            event_id=self._current_event_id,
             ids=list(changes.keys()),
             states=list(changes.values()),
             meta_data=self.meta_data,
         )
-
-        if synchronous:
-            with self._cv_ack:
-                self._expected_acks = self._snapshot_subscribers()
-                self._received_acks = set()
-
-                self.publish(msg)
-
-                success = self._cv_ack.wait_for(
-                    lambda: self._received_acks == self._expected_acks,
-                    timeout=5,
-                )
-                if not success:
-                    print("Message was not acknowledged, timeout")
-        else:
-            self.publish(msg)
+        self.publish(msg, synchronous=synchronous)
 
     def compute_state_changes(self) -> Dict[UUID, float]:
         """
@@ -323,7 +362,7 @@ class StateSynchronizer(StateChangeCallback, SynchronizerOnCallback):
         prev = self.previous_world_state_data  # np.ndarray shape (N,)
 
         # If the number of DOFs changed (model update), send everything once
-        # so the other side can resync, then the snapshot will be updated afterward.
+        # so the other side can resynchronize, then the snapshot will be updated afterward.
         if prev.shape != curr.shape:
             return {n: float(v) for n, v in zip(ids, curr)}
 
@@ -371,7 +410,7 @@ class ModelSynchronizer(
                 -1
             ],
         )
-        self.publish(msg)
+        self.publish(msg, synchronous=synchronous)
 
 
 @dataclass

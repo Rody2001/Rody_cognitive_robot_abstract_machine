@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from uuid import UUID
 import uuid
@@ -64,9 +64,17 @@ class Message(SubclassJSONSerializer, ABC):
     Message origin meta data.
     """
 
+    event_id: UUID = field(default_factory=uuid.uuid4, kw_only=True)
+    """
+    UUID identifying the event that caused the publication of this message.
+    This allows the publication/subscription mechanism to track what messages have
+    been received and acknowledged.
+    """
+
     def to_json(self) -> Dict[str, Any]:
         return {
             **super().to_json(),
+            "event_id": str(self.event_id),
             "meta_data": self.meta_data.to_json(),
         }
 
@@ -75,11 +83,6 @@ class Message(SubclassJSONSerializer, ABC):
 class WorldStateUpdate(Message):
     """
     Class describing the updates to the free variables of a world state.
-    """
-
-    event_id: UUID
-    """
-    UUID of the update (for syn/ack tracking purposes)
     """
 
     ids: List[UUID]
@@ -95,7 +98,6 @@ class WorldStateUpdate(Message):
     def to_json(self) -> Dict[str, Any]:
         return {
             **super().to_json(),
-            "event_id": str(self.event_id),
             "ids": to_json(self.ids),
             "states": list(self.states),
         }
@@ -103,7 +105,7 @@ class WorldStateUpdate(Message):
     @classmethod
     def _from_json(cls, data: Dict[str, Any], **kwargs) -> Self:
         return cls(
-            event_id=data["event_id"] if "event_id" in data.keys() else uuid.uuid4(),
+            event_id=data["event_id"] if "event_id" in data else uuid.uuid4(),
             meta_data=MetaData.from_json(data["meta_data"], **kwargs),
             ids=from_json(data["ids"]),
             states=data["states"],
@@ -130,6 +132,7 @@ class ModificationBlock(Message):
     @classmethod
     def _from_json(cls, data: Dict[str, Any], **kwargs) -> Self:
         return cls(
+            event_id=data["event_id"] if "event_id" in data else uuid.uuid4(),
             meta_data=MetaData.from_json(data["meta_data"], **kwargs),
             modifications=WorldModelModificationBlock.from_json(
                 data["modifications"], **kwargs
@@ -157,6 +160,7 @@ class LoadModel(Message):
     @classmethod
     def _from_json(cls, data: Dict[str, Any], **kwargs) -> Self:
         return cls(
+            event_id=data["event_id"] if "event_id" in data else uuid.uuid4(),
             meta_data=MetaData.from_json(data["meta_data"], **kwargs),
             primary_key=data["primary_key"],
         )
