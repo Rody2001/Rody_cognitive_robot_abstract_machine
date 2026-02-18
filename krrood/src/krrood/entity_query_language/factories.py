@@ -17,14 +17,14 @@ from .operators.comparator import Comparator
 from .operators.core_logical_operators import chained_logic, AND, OR, LogicalOperator
 from .operators.logical_quantifiers import ForAll, Exists
 from .operators.concatenation import Concatenation
-from .query.result_quantifiers import (
+from .query.quantifiers import (
     ResultQuantificationConstraint,
     An,
     The,
     ResultQuantifier,
 )
 from .rules.conclusion_selector import ExceptIf, Alternative, Next
-from .query.query_descriptor import Entity, SetOf, Query
+from .query.query import Entity, SetOf, Query
 from .utils import is_iterable
 from .core.variable import (
     DomainType,

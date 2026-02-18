@@ -6,11 +6,11 @@ from typing_extensions import ClassVar, Optional, Dict
 
 from .rules.conclusion import Conclusion
 from .rules.conclusion_selector import ConclusionSelector
-from .query.query_descriptor import (
+from .query.query import (
     Query,
 )
-from .query.query_descriptor_operations import OrderedBy, GroupedBy
-from .query.result_quantifiers import ResultQuantifier
+from .query.operations import OrderedBy, GroupedBy
+from .query.quantifiers import ResultQuantifier
 from .operators.concatenation import Concatenation
 from .operators.aggregators import Aggregator
 from .operators.core_logical_operators import LogicalOperator

@@ -28,15 +28,15 @@ from typing_extensions import (
 )
 
 from ..core.domain_mapping import CanBehaveLikeAVariable
-from .query_builders import (
+from .builders import (
     WhereBuilder,
     HavingBuilder,
     GroupedByBuilder,
     QuantifierBuilder,
     OrderedByBuilder,
 )
-from .query_descriptor_operations import Where, Having, GroupedBy
-from .result_quantifiers import (
+from .operations import Where, Having, GroupedBy
+from .quantifiers import (
     ResultQuantificationConstraint,
     ResultQuantifier,
     An,

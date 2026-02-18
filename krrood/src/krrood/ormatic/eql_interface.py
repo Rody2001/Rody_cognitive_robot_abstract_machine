@@ -8,11 +8,11 @@ import sqlalchemy.inspection
 from sqlalchemy import and_, or_, select, Select, func, literal, not_ as sa_not
 from sqlalchemy.orm import Session
 
-from ..entity_query_language.query.query_descriptor import (
+from ..entity_query_language.query.query import (
     Query,
 )
-from ..entity_query_language.query.query_descriptor_operations import Where
-from ..entity_query_language.query.result_quantifiers import ResultQuantifier, An, The
+from ..entity_query_language.query.operations import Where
+from ..entity_query_language.query.quantifiers import ResultQuantifier, An, The
 from ..entity_query_language.operators.core_logical_operators import AND, OR
 from ..entity_query_language.core.base_expressions import SymbolicExpression
 from ..entity_query_language.core.variable import Variable, Literal

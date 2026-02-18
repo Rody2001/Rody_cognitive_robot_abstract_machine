@@ -12,13 +12,13 @@ from typing_extensions import TYPE_CHECKING, Type, Any, List, Tuple, Optional
 from ..utils import DataclassException
 
 if TYPE_CHECKING:
-    from .query.query_descriptor import (
+    from .query.query import (
         Query,
     )
-    from .query.query_descriptor_operations import GroupedBy
-    from .query.result_quantifiers import ResultQuantifier
+    from .query.operations import GroupedBy
+    from .query.quantifiers import ResultQuantifier
     from .operators.aggregators import Aggregator
-    from .query.query_builders import GroupedByBuilder
+    from .query.builders import GroupedByBuilder
     from .core.base_expressions import SymbolicExpression, Selectable
     from .core.variable import Variable
     from .query.match import Match

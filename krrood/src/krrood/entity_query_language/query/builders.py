@@ -15,15 +15,15 @@ from ..failures import (
     NonAggregatorInHavingConditionsError,
     NonAggregatedSelectedVariablesError,
 )
-from .result_quantifiers import ResultQuantificationConstraint, ResultQuantifier, An
-from .query_descriptor_operations import Where, Having, OrderedBy, GroupedBy
+from .quantifiers import ResultQuantificationConstraint, ResultQuantifier, An
+from .operations import Where, Having, OrderedBy, GroupedBy
 from ..operators.aggregators import Aggregator
 from ..core.variable import Literal, Variable
 from ..core.domain_mapping import DomainMapping
 
 if TYPE_CHECKING:
     from ..factories import ConditionType
-    from .query_descriptor import Query
+    from .query import Query
 
 
 @dataclass

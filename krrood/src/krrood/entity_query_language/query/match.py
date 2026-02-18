@@ -21,7 +21,7 @@ from ..failures import (
     NoKwargsInMatchVar,
 )
 from ..predicate import HasType
-from .result_quantifiers import An
+from .quantifiers import An
 from ..core.variable import Literal, DomainType
 from ..core.base_expressions import Selectable
 from ..core.domain_mapping import Attribute, Flatten, CanBehaveLikeAVariable
@@ -30,7 +30,7 @@ from ..utils import T
 
 if TYPE_CHECKING:
     from ..factories import ConditionType
-    from .query_descriptor import Entity
+    from .query import Entity
 
 
 @dataclass

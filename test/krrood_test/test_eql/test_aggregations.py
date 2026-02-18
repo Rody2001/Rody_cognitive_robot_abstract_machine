@@ -5,8 +5,16 @@ import pytest
 import krrood.entity_query_language.factories as eql
 
 from krrood.entity_query_language import factories
-from krrood.entity_query_language.factories import entity, set_of, variable, variable_from, distinct, \
-    contains, an, a
+from krrood.entity_query_language.factories import (
+    entity,
+    set_of,
+    variable,
+    variable_from,
+    distinct,
+    contains,
+    an,
+    a,
+)
 from krrood.entity_query_language.predicate import length
 from ..dataset.example_classes import NamedNumbers
 from krrood.entity_query_language.failures import (
@@ -15,7 +23,7 @@ from krrood.entity_query_language.failures import (
     NestedAggregationError,
     UnsupportedAggregationOfAGroupedByVariable,
 )
-from krrood.entity_query_language.query.query_descriptor_operations import GroupedBy
+from krrood.entity_query_language.query.operations import GroupedBy
 from ..dataset.department_and_employee import Department, Employee
 from ..dataset.semantic_world_like_classes import Cabinet, Body, Container, Drawer
 

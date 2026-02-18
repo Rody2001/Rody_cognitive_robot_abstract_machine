@@ -14,7 +14,7 @@ from typing_extensions import (
     TYPE_CHECKING,
 )
 
-from ..query.result_quantifiers import The
+from ..query.quantifiers import The
 from ..core.base_expressions import (
     Bindings,
     OperationResult,

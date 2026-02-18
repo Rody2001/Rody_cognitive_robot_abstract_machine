@@ -6,8 +6,25 @@ import pytest
 
 import krrood.entity_query_language.factories as eql
 
-from krrood.entity_query_language.factories import entity, set_of, variable, variable_from, distinct, \
-    concatenation, and_, or_, not_, contains, in_, flatten, for_all, exists, an, a, the
+from krrood.entity_query_language.factories import (
+    entity,
+    set_of,
+    variable,
+    variable_from,
+    distinct,
+    concatenation,
+    and_,
+    or_,
+    not_,
+    contains,
+    in_,
+    flatten,
+    for_all,
+    exists,
+    an,
+    a,
+    the,
+)
 from krrood.entity_query_language.failures import (
     MultipleSolutionFound,
     UnsupportedNegation,
@@ -23,7 +40,7 @@ from krrood.entity_query_language.predicate import (
     symbolic_function,
     Predicate,
 )
-from krrood.entity_query_language.query.result_quantifiers import (
+from krrood.entity_query_language.query.quantifiers import (
     ResultQuantificationConstraint,
     Exactly,
     AtLeast,
@@ -31,7 +48,9 @@ from krrood.entity_query_language.query.result_quantifiers import (
     Range,
 )
 from krrood.entity_query_language.query_graph import QueryGraph
-from krrood.entity_query_language.utils import cartesian_product_while_passing_the_bindings_around
+from krrood.entity_query_language.utils import (
+    cartesian_product_while_passing_the_bindings_around,
+)
 from ...dataset.example_classes import VectorsWithProperty
 from ...dataset.semantic_world_like_classes import (
     Handle,

@@ -58,7 +58,7 @@ class Aggregator(UnaryExpression, CanBehaveLikeAVariable[T], ABC):
         :param limit: The maximum number of results to return. If None, all results are returned.
         :return: An iterator over the aggregator results.
         """
-        from ..query.query_descriptor import Entity
+        from ..query.query import Entity
 
         return Entity(_selected_variables_=(self,)).evaluate()
 
@@ -66,7 +66,7 @@ class Aggregator(UnaryExpression, CanBehaveLikeAVariable[T], ABC):
         """
         Group the results by the given variables.
         """
-        from ..query.query_descriptor import Entity
+        from ..query.query import Entity
 
         return Entity(_selected_variables_=(self,)).grouped_by(*variables)
 
