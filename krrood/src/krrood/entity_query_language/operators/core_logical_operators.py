@@ -1,3 +1,9 @@
+"""
+This module defines the core logical operators for the Entity Query Language.
+
+It contains implementations of basic logical operations like AND, OR, and NOT.
+"""
+
 from __future__ import annotations
 
 from abc import ABC
@@ -6,8 +12,14 @@ from typing import Callable, Union as TypingUnion, Type
 
 from typing_extensions import Iterable
 
-from ..core.base_expressions import TruthValueOperator, UnaryExpression, Bindings, \
-    OperationResult, BinaryExpression, SymbolicExpression
+from ..core.base_expressions import (
+    TruthValueOperator,
+    UnaryExpression,
+    Bindings,
+    OperationResult,
+    BinaryExpression,
+    SymbolicExpression,
+)
 
 
 @dataclass(eq=False, repr=False)
@@ -31,8 +43,8 @@ class Not(LogicalOperator, UnaryExpression):
     """
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[OperationResult]:
 
         for v in self._child_._evaluate_(sources, parent=self):
@@ -54,8 +66,8 @@ class AND(LogicalBinaryOperator):
     """
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[OperationResult]:
 
         left_values = self.left._evaluate_(sources, parent=self)
@@ -80,8 +92,8 @@ class OR(LogicalBinaryOperator):
     """
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[OperationResult]:
         """
         Evaluate the left operand, if it is False, then evaluate the right operand.
@@ -116,7 +128,7 @@ OperatorOptimizer = Callable[[SymbolicExpression, SymbolicExpression], LogicalOp
 
 
 def chained_logic(
-        operator: TypingUnion[Type[LogicalOperator], OperatorOptimizer], *conditions
+    operator: TypingUnion[Type[LogicalOperator], OperatorOptimizer], *conditions
 ) -> LogicalOperator:
     """
     A chian of logic operation over multiple conditions, e.g. cond1 | cond2 | cond3.

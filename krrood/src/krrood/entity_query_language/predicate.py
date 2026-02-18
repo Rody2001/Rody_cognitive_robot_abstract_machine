@@ -1,3 +1,10 @@
+"""
+Predicates and symbolic function utilities for the Entity Query Language.
+
+This module defines predicate classes for boolean checks and a decorator to build symbolic expressions
+from regular Python functions when variables are present.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

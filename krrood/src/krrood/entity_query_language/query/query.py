@@ -1,8 +1,8 @@
 """
-Core symbolic expression system used to build and evaluate entity queries.
+Query abstractions for the Entity Query Language.
 
-This module defines the symbolic types (variables, sources, logical and
-comparison operators) and the evaluation mechanics.
+This module implements query composition and evaluation, including selection, filtering, grouping, ordering,
+distinct handling, and quantification over symbolic expressions.
 """
 
 from __future__ import annotations

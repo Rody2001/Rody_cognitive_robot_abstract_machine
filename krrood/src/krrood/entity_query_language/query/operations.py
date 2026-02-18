@@ -1,3 +1,10 @@
+"""
+Query operations for the Entity Query Language.
+
+This module implements core query operations such as filtering (Where/Having), grouping, and ordering over
+symbolic expressions and their aggregated results.
+"""
+
 from __future__ import annotations
 
 from collections import defaultdict

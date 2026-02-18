@@ -1,3 +1,10 @@
+"""
+Comparators for the Entity Query Language.
+
+This module provides binary comparison operators that evaluate relationships between symbolic expressions,
+including equality, ordering, and membership-style checks.
+"""
+
 from __future__ import annotations
 
 import operator

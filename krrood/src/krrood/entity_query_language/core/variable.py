@@ -1,3 +1,9 @@
+"""
+This module defines variable and literal representations for the Entity Query Language.
+
+It contains classes for simple variables, constant literals, and variables that are instantiated from other expressions.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field, MISSING

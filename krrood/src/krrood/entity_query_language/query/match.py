@@ -1,3 +1,10 @@
+"""
+Pattern-matching helpers for the Entity Query Language.
+
+This module provides high-level match abstractions that build symbolic expressions for variables and attributes
+from concise, readable matching syntax.
+"""
+
 from __future__ import annotations
 
 import uuid

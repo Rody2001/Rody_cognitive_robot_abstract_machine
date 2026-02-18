@@ -1,3 +1,9 @@
+"""
+This module defines the fundamental symbolic expression classes for the Entity Query Language.
+
+It contains the base classes for all expressions, results, and binding management used during query evaluation.
+"""
+
 from __future__ import annotations
 
 import typing

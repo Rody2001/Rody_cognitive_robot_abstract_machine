@@ -1,3 +1,10 @@
+"""
+Query builders for the Entity Query Language.
+
+This module defines builder classes that collect metadata and produce symbolic expressions for filtering,
+ grouping, ordering, and quantifying query results.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

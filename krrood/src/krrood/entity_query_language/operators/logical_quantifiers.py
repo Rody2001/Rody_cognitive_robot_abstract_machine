@@ -1,3 +1,10 @@
+"""
+Logical quantifiers for the Entity Query Language.
+
+This module provides quantified conditionals such as universal (ForAll) and existential (Exists) operators
+that evaluate conditions over the values of a variable.
+"""
+
 from __future__ import annotations
 
 from abc import ABC
@@ -50,8 +57,8 @@ class ForAll(QuantifiedConditional):
         ]
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[OperationResult]:
         solution_set = None
 
@@ -105,8 +112,8 @@ class Exists(QuantifiedConditional):
     """
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[OperationResult]:
         seen_var_values = []
         for val in self.condition._evaluate_(sources, parent=self):

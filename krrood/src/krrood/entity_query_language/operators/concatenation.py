@@ -1,3 +1,9 @@
+"""
+Concatenation utilities for the Entity Query Language.
+
+This module defines the Concatenation operator that merges values from multiple selectable expressions.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

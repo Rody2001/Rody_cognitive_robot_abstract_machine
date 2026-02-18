@@ -1,3 +1,10 @@
+"""
+Conclusion selection operators for the Entity Query Language.
+
+This module provides operators that control which conclusions from operands propagate, such as ExceptIf,
+Alternative, and Next.
+"""
+
 from __future__ import annotations
 
 import typing
@@ -8,7 +15,12 @@ from typing_extensions import Optional, Iterable
 from .conclusion import Conclusion
 from ..operators.set_operations import Union as EQLUnion
 from ..operators.core_logical_operators import LogicalBinaryOperator, OR
-from ..core.base_expressions import Bindings, OperationResult, SymbolicExpression, TruthValueOperator
+from ..core.base_expressions import (
+    Bindings,
+    OperationResult,
+    SymbolicExpression,
+    TruthValueOperator,
+)
 
 
 @dataclass(eq=False)

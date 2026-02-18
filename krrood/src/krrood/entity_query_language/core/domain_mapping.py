@@ -1,3 +1,9 @@
+"""
+This module provides mechanisms for mapping symbolic expressions to object domains.
+
+It contains classes for attribute access, indexing, and function calls on symbolic expressions.
+"""
+
 from __future__ import annotations
 
 import operator

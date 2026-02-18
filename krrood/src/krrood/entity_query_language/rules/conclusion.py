@@ -1,3 +1,9 @@
+"""
+Conclusion rules for the Entity Query Language.
+
+This module defines side-effecting clauses that adjust outputs or bindings (for example, Add) during query evaluation.
+"""
+
 from __future__ import annotations
 
 from abc import ABC

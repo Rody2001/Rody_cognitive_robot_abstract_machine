@@ -1,3 +1,10 @@
+"""
+Result quantifiers and constraints for the Entity Query Language.
+
+This module defines quantifiers that control how many results are acceptable (e.g., an/the) and the
+constraints used to evaluate result counts.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -5,12 +12,21 @@ from dataclasses import dataclass, field
 
 from typing_extensions import Optional, Iterable, Union as TypingUnion, Dict
 
-from ..core.base_expressions import UnaryExpression, DerivedExpression, SymbolicExpression, Bindings, OperationResult
+from ..core.base_expressions import (
+    UnaryExpression,
+    DerivedExpression,
+    SymbolicExpression,
+    Bindings,
+    OperationResult,
+)
 from ..failures import (
     NegativeQuantificationError,
     QuantificationConsistencyError,
     GreaterThanExpectedNumberOfSolutions,
-    LessThanExpectedNumberOfSolutions, UnsupportedNegation, NoSolutionFound, MultipleSolutionFound,
+    LessThanExpectedNumberOfSolutions,
+    UnsupportedNegation,
+    NoSolutionFound,
+    MultipleSolutionFound,
 )
 from ..utils import T
 
@@ -160,8 +176,8 @@ class ResultQuantifier(UnaryExpression, DerivedExpression, ABC):
         return self._child_
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[T]:
 
         result_count = 0
@@ -177,7 +193,7 @@ class ResultQuantifier(UnaryExpression, DerivedExpression, ABC):
         )
 
     def _assert_satisfaction_of_quantification_constraints_(
-            self, result_count: int, done: bool
+        self, result_count: int, done: bool
     ):
         """
         Assert the satisfaction of quantification constraints.
@@ -219,8 +235,8 @@ class The(ResultQuantifier):
     )
 
     def _evaluate__(
-            self,
-            sources: Bindings,
+        self,
+        sources: Bindings,
     ) -> Iterable[TypingUnion[T, Dict[TypingUnion[T, SymbolicExpression], T]]]:
         """
         Evaluates the query object descriptor with the given bindings and yields the results.

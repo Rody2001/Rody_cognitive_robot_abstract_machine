@@ -1,3 +1,9 @@
+"""
+This module defines aggregator functions for the Entity Query Language.
+
+It contains classes for counting, summing, averaging, and finding extreme values in query results.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
