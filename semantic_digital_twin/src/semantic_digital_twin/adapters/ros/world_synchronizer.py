@@ -49,7 +49,9 @@ class Synchronizer(ABC):
         will wait for the full timeout on every synchronous publish because the dead process
         never acknowledges.
 
-        To mitigate this, always clean up synchronizers when shutting down::
+        To mitigate this, always clean up synchronizers when shutting down:
+
+        .. code-block:: python
 
             import atexit
             atexit.register(synchronizer.close)
@@ -104,11 +106,11 @@ class Synchronizer(ABC):
     _current_publication_event_id: Optional[UUID] = None
     """The UUID of the most recently published message awaiting acknowledgment."""
 
-    _expected_acknowledgments: Set[str] = field(default_factory=set)
-    """Node names of all subscribers that must acknowledge the current event before synchronous publication unblocks."""
+    _expected_acknowledgment_count: int = 0
+    """Number of remote subscribers that must acknowledge the current event before synchronous publication unblocks."""
 
-    _received_acknowledgments: Set[str] = field(default_factory=set)
-    """Node names of subscribers that have acknowledged the current event so far."""
+    _received_acknowledgments: Set[MetaData] = field(default_factory=set)
+    """Metadata of subscribers that have acknowledged the current event so far."""
 
     _acknowledge_condition_variable: threading.Condition = field(
         default_factory=threading.Condition
@@ -158,15 +160,16 @@ class Synchronizer(ABC):
 
         msg = from_json(json.loads(msg.data), **tracker.create_kwargs())
 
+        if msg.meta_data == self.meta_data:
+            return
+
         acknowledgment = Acknowledgment(
             publication_event_id=msg.publication_event_id,
-            node_name=self.node.get_name(),
+            node_meta_data=self.meta_data,
         )
         self.acknowledge_publisher.publish(
             std_msgs.msg.String(data=json.dumps(to_json(acknowledgment)))
         )
-        if msg.meta_data == self.meta_data:
-            return
         self._subscription_callback(msg)
 
     def acknowledge_callback(self, msg: std_msgs.msg.String):
@@ -179,35 +182,40 @@ class Synchronizer(ABC):
 
         with self._acknowledge_condition_variable:
             if (
-                not self._expected_acknowledgments
-                or not self._current_publication_event_id
+                self._expected_acknowledgment_count == 0
+                or self._current_publication_event_id is None
             ):
+                # Not waiting for any acknowledgments at the moment
                 return
 
             if (
                 acknowledgment.publication_event_id
                 != self._current_publication_event_id
             ):
+                # This acknowledgment is not about the event we want to have acknowledged
                 return
 
-            if acknowledgment.node_name in self._expected_acknowledgments:
-                self._received_acknowledgments.add(acknowledgment.node_name)
+            self._received_acknowledgments.add(acknowledgment.node_meta_data)
 
-            if self._received_acknowledgments == self._expected_acknowledgments:
+            if (
+                len(self._received_acknowledgments)
+                >= self._expected_acknowledgment_count
+            ):
                 self._acknowledge_condition_variable.notify_all()
 
-    def _snapshot_subscribers(self) -> Set[str]:
+    def _snapshot_subscribers(self) -> int:
         """
-        Return the node names of all current subscribers to the synchronization topic.
+        Count the remote subscribers to the synchronization topic.
 
-        :return: Set of node name strings for all current subscribers on this synchronizer's topic.
+        The publishing node's own subscription is excluded because self-originated
+        messages are already filtered out in :meth:`subscription_callback`.
+
+        :return: Number of remote subscriptions on this synchronizer's topic.
         """
         infos = self.node.get_subscriptions_info_by_topic(self.topic_name)
-        expected = set()
-        for info in infos:
-            expected.add(info.node_name)
-
-        return expected
+        own_name = self.node.get_name()
+        own_count = sum(1 for info in infos if info.node_name == own_name)
+        return len(infos) - own_count
 
     @abstractmethod
     def _subscription_callback(self, msg: message_type):
@@ -227,7 +235,7 @@ class Synchronizer(ABC):
 
         if synchronous:
             with self._acknowledge_condition_variable:
-                self._expected_acknowledgments = self._snapshot_subscribers()
+                self._expected_acknowledgment_count = self._snapshot_subscribers()
                 self._received_acknowledgments = set()
 
                 self.publisher.publish(
@@ -235,8 +243,8 @@ class Synchronizer(ABC):
                 )
 
                 success = self._acknowledge_condition_variable.wait_for(
-                    lambda: self._received_acknowledgments
-                    == self._expected_acknowledgments,
+                    lambda: len(self._received_acknowledgments)
+                    >= self._expected_acknowledgment_count,
                     timeout=5,
                 )
                 if not success:
@@ -245,7 +253,7 @@ class Synchronizer(ABC):
                     )
 
                 self._current_publication_event_id = None
-                self._expected_acknowledgments = set()
+                self._expected_acknowledgment_count = 0
                 self._received_acknowledgments = set()
         else:
             self.publisher.publish(std_msgs.msg.String(data=json.dumps(to_json(msg))))

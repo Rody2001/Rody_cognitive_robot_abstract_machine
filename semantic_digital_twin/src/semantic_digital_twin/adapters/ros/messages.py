@@ -73,14 +73,14 @@ class Acknowledgment:
     Message acknowledging receipt of a published event.
 
     :param publication_event_id: The UUID of the publication event being acknowledged.
-    :param node_name: The name of the node sending the acknowledgment.
+    :param node_meta_data: The metadata identifying the acknowledging node.
     """
 
     publication_event_id: UUID
     """The UUID of the publication event being acknowledged."""
 
-    node_name: str
-    """The name of the node sending the acknowledgment."""
+    node_meta_data: MetaData
+    """The metadata identifying the acknowledging node."""
 
 
 @dataclass

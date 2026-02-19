@@ -503,65 +503,99 @@ def test_synchronous_state_synchronization(rclpy_node):
     """When synchronous=True the notify_state_change call blocks until
     all subscribers have acknowledged receipt, so the remote world is
     already up-to-date when the call returns."""
-    w1 = create_dummy_world()
-    w2 = create_dummy_world()
+    import rclpy
+    from rclpy.executors import SingleThreadedExecutor
 
-    synchronizer_1 = StateSynchronizer(
-        node=rclpy_node,
-        world=w1,
-        synchronous=True,
+    receiver_node = rclpy.create_node("test_sync_state_receiver")
+    receiver_executor = SingleThreadedExecutor()
+    receiver_executor.add_node(receiver_node)
+    receiver_thread = threading.Thread(
+        target=receiver_executor.spin, daemon=True, name="sync-state-receiver"
     )
-    synchronizer_2 = StateSynchronizer(
-        node=rclpy_node,
-        world=w2,
-    )
+    receiver_thread.start()
+    time.sleep(0.1)
 
-    # Allow time for publishers/subscribers to discover each other
-    time.sleep(0.2)
+    try:
+        w1 = create_dummy_world()
+        w2 = create_dummy_world()
 
-    w1.state.data[0, 0] = 1.0
-    w1.notify_state_change()
+        synchronizer_1 = StateSynchronizer(
+            node=rclpy_node,
+            world=w1,
+            synchronous=True,
+        )
+        synchronizer_2 = StateSynchronizer(
+            node=receiver_node,
+            world=w2,
+        )
 
-    # With synchronous publishing the state must already be propagated
-    # by the time notify_state_change returns.
-    assert w1.state.data[0, 0] == w2.state.data[0, 0]
+        # Allow time for publishers/subscribers to discover each other
+        time.sleep(0.2)
 
-    synchronizer_1.close()
-    synchronizer_2.close()
+        w1.state.data[0, 0] = 1.0
+        w1.notify_state_change()
+
+        # With synchronous publishing the state must already be propagated
+        # by the time notify_state_change returns.
+        assert w1.state.data[0, 0] == w2.state.data[0, 0]
+
+        synchronizer_1.close()
+        synchronizer_2.close()
+    finally:
+        receiver_executor.shutdown()
+        receiver_thread.join(timeout=2.0)
+        receiver_node.destroy_node()
 
 
 def test_synchronous_model_synchronization(rclpy_node):
     """When synchronous=True the modify_world call blocks until all subscribers
     acknowledge receipt, so the remote world is already up-to-date when the call
     returns."""
-    w1 = World(name="w1")
-    w2 = World(name="w2")
+    import rclpy
+    from rclpy.executors import SingleThreadedExecutor
 
-    synchronizer_1 = ModelSynchronizer(
-        node=rclpy_node,
-        world=w1,
-        synchronous=True,
+    receiver_node = rclpy.create_node("test_sync_model_receiver")
+    receiver_executor = SingleThreadedExecutor()
+    receiver_executor.add_node(receiver_node)
+    receiver_thread = threading.Thread(
+        target=receiver_executor.spin, daemon=True, name="sync-model-receiver"
     )
-    synchronizer_2 = ModelSynchronizer(
-        node=rclpy_node,
-        world=w2,
-    )
+    receiver_thread.start()
+    time.sleep(0.1)
 
-    # Allow time for publishers/subscribers to discover each other
-    time.sleep(0.2)
+    try:
+        w1 = World(name="w1")
+        w2 = World(name="w2")
 
-    with w1.modify_world():
-        new_body = Body(name=PrefixedName("b3"))
-        b3_id = new_body.id
-        w1.add_kinematic_structure_entity(new_body)
+        synchronizer_1 = ModelSynchronizer(
+            node=rclpy_node,
+            world=w1,
+            synchronous=True,
+        )
+        synchronizer_2 = ModelSynchronizer(
+            node=receiver_node,
+            world=w2,
+        )
 
-    # With synchronous publishing the model must already be propagated
-    # by the time modify_world returns.
-    assert len(w2.kinematic_structure_entities) == 1
-    assert w2.get_kinematic_structure_entity_by_id(b3_id)
+        # Allow time for publishers/subscribers to discover each other
+        time.sleep(0.2)
 
-    synchronizer_1.close()
-    synchronizer_2.close()
+        with w1.modify_world():
+            new_body = Body(name=PrefixedName("b3"))
+            b3_id = new_body.id
+            w1.add_kinematic_structure_entity(new_body)
+
+        # With synchronous publishing the model must already be propagated
+        # by the time modify_world returns.
+        assert len(w2.kinematic_structure_entities) == 1
+        assert w2.get_kinematic_structure_entity_by_id(b3_id)
+
+        synchronizer_1.close()
+        synchronizer_2.close()
+    finally:
+        receiver_executor.shutdown()
+        receiver_thread.join(timeout=2.0)
+        receiver_node.destroy_node()
 
 
 def test_synchronous_publish_blocks_until_receiver_acknowledges(rclpy_node):
@@ -1076,16 +1110,16 @@ def test_acknowledgment_serialization_round_trip():
     Verify that Acknowledgment survives a to_json/from_json round trip.
     """
     event_id = uuid.uuid4()
-    original = Acknowledgment(
-        publication_event_id=event_id, node_name="acknowledgment_node"
-    )
+    meta = MetaData(node_name="acknowledgment_node", process_id=1)
+    original = Acknowledgment(publication_event_id=event_id, node_meta_data=meta)
 
     serialized = to_json(original)
     restored = from_json(serialized)
 
     assert isinstance(restored, Acknowledgment)
     assert restored.publication_event_id == event_id
-    assert restored.node_name == "acknowledgment_node"
+    assert restored.node_meta_data.node_name == "acknowledgment_node"
+    assert restored.node_meta_data.process_id == 1
 
 
 if __name__ == "__main__":
