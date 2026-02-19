@@ -565,7 +565,11 @@ class MJCFParser:
             MujocoCamera(
                 name=camera_name,
                 mode=mujoco_camera.mode,
-                orthographic=mujoco_camera.orthographic,
+                orthographic=(
+                    mujoco_camera.orthographic
+                    if mujoco.mj_version() < 3005000
+                    else False
+                ),
                 fovy=mujoco_camera.fovy,
                 resolution=resolution,
                 focal_length=focal_length,
