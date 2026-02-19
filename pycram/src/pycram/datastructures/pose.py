@@ -185,10 +185,10 @@ class PyCramQuaternion:
         # TODO fix this
         # if the object is not fully constructed yet
         if not (
-            hasattr(self, "x")
-            and hasattr(self, "y")
-            and hasattr(self, "z")
-            and hasattr(self, "w")
+            hasattr(self, "x") and isinstance(self.x, float)
+            and hasattr(self, "y") and isinstance(self.y, float)
+            and hasattr(self, "z") and isinstance(self.z, float)
+            and hasattr(self, "w") and isinstance(self.w, float)
         ):
             return
 

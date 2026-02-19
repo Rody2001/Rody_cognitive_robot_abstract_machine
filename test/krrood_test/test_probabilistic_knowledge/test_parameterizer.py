@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from random_events.interval import reals
-from random_events.product_algebra import SimpleEvent
+import datetime
+
 from random_events.set import Set
 from random_events.variable import Continuous, Symbolic
 
@@ -9,13 +9,15 @@ from krrood.entity_query_language.entity import variable_from
 from krrood.ormatic.dao import to_dao
 from krrood.probabilistic_knowledge.object_access_variable import ObjectAccessVariable
 from krrood.probabilistic_knowledge.parameterizer import Parameterizer, Parameterization
-from krrood_test.dataset.example_classes import TestEnum
-from test.krrood_test.dataset.example_classes import (
+from ..dataset.example_classes import (
     Position,
     Pose,
     Orientation,
     Positions,
     ListOfEnum,
+    TestEnum,
+    Atom,
+    Element,
 )
 
 
@@ -136,27 +138,26 @@ def test_create_fully_factorized_distribution():
     )
 
 
-def test_parameterize_object():
+def test_parameterize_object_with_given_values():
     """
-    Test parameterization of a single object via parameterize.
+    Test parameterization of a single object via generate_parameterizations.
     """
     position = Position(x=1.0, y=2.0, z=3.0)
     parameterizer = Parameterizer()
     parameterization = parameterizer.parameterize(position)
 
-    result_by_hand = SimpleEvent(
-        {
-            Continuous("PositionDAO.x"): 1.0,
-            Continuous("PositionDAO.y"): 2.0,
-            Continuous("PositionDAO.z"): 3.0,
-        }
-    )
-    assert parameterization.simple_event == result_by_hand
+    result_by_hand = {
+        Continuous("PositionDAO.x"): 1.0,
+        Continuous("PositionDAO.y"): 2.0,
+        Continuous("PositionDAO.z"): 3.0,
+    }
+
+    assert parameterization.assignments_for_pm == result_by_hand
 
 
 def test_parameterize_nested_object():
     """
-    Test parameterization of a nested object via parameterize.
+    Test parameterization of a nested object via generate_parameterizations.
     """
     pose = Pose(
         position=Position(x=1.0, y=2.0, z=3.0),
@@ -165,36 +166,32 @@ def test_parameterize_nested_object():
     parameterizer = Parameterizer()
     parameterization = parameterizer.parameterize(pose)
 
-    result_by_hand = SimpleEvent(
-        {
-            Continuous("PoseDAO.position.x"): 1.0,
-            Continuous("PoseDAO.position.y"): 2.0,
-            Continuous("PoseDAO.position.z"): 3.0,
-            Continuous("PoseDAO.orientation.x"): 0.0,
-            Continuous("PoseDAO.orientation.y"): 0.0,
-            Continuous("PoseDAO.orientation.z"): 0.0,
-            Continuous("PoseDAO.orientation.w"): 1.0,
-        }
-    )
-    assert parameterization.simple_event == result_by_hand
+    result_by_hand = {
+        Continuous("PoseDAO.position.x"): 1.0,
+        Continuous("PoseDAO.position.y"): 2.0,
+        Continuous("PoseDAO.position.z"): 3.0,
+        Continuous("PoseDAO.orientation.x"): 0.0,
+        Continuous("PoseDAO.orientation.y"): 0.0,
+        Continuous("PoseDAO.orientation.z"): 0.0,
+        Continuous("PoseDAO.orientation.w"): 1.0,
+    }
+    assert parameterization.assignments_for_pm == result_by_hand
 
 
 def test_one_to_many_and_collection_of_builtins():
     p = Positions([Position(1, 2, 3), Position(4, 5, 6)], ["a", ...])
     parameters = Parameterizer().parameterize(p)
 
-    result_by_hand = SimpleEvent(
-        {
-            Continuous("PositionsDAO.positions[0].target.x"): 1.0,
-            Continuous("PositionsDAO.positions[0].target.y"): 2.0,
-            Continuous("PositionsDAO.positions[0].target.z"): 3.0,
-            Continuous("PositionsDAO.positions[1].target.x"): 4.0,
-            Continuous("PositionsDAO.positions[1].target.y"): 5.0,
-            Continuous("PositionsDAO.positions[1].target.z"): 6.0,
-        }
-    )
+    result_by_hand = {
+        Continuous("PositionsDAO.positions[0].target.x"): 1.0,
+        Continuous("PositionsDAO.positions[0].target.y"): 2.0,
+        Continuous("PositionsDAO.positions[0].target.z"): 3.0,
+        Continuous("PositionsDAO.positions[1].target.x"): 4.0,
+        Continuous("PositionsDAO.positions[1].target.y"): 5.0,
+        Continuous("PositionsDAO.positions[1].target.z"): 6.0,
+    }
 
-    assert parameters.simple_event == result_by_hand
+    assert parameters.assignments_for_pm == result_by_hand
 
 
 def test_symbolic_variables():
@@ -204,27 +201,40 @@ def test_symbolic_variables():
     parameterization = parameterizer.parameterize(obj)
 
     test_enum_set = Set.from_iterable(TestEnum)
-
-    result_by_hand = SimpleEvent(
-        {
-            Symbolic("ListOfEnumDAO.list_of_enum[0]", test_enum_set): test_enum_set,
-            Symbolic("ListOfEnumDAO.list_of_enum[1]", test_enum_set): test_enum_set,
-        }
-    )
-    assert parameterization.simple_event == result_by_hand
+    assert parameterization.random_events_variables == [
+        Symbolic("ListOfEnumDAO.list_of_enum[0]", test_enum_set),
+        Symbolic("ListOfEnumDAO.list_of_enum[1]", test_enum_set),
+    ]
+    assert parameterization.assignments_for_pm == {}
 
 
 def test_not_follow_none_relationships():
     p = Pose(position=Position(..., ..., ...), orientation=None)
     parameterizer = Parameterizer()
     parameterization = parameterizer.parameterize(p)
+    variables = [
+        Continuous("PoseDAO.position.x"),
+        Continuous("PoseDAO.position.y"),
+        Continuous("PoseDAO.position.z"),
+    ]
 
-    result_by_hand = SimpleEvent(
-        {
-            Continuous("PoseDAO.position.x"): reals(),
-            Continuous("PoseDAO.position.y"): reals(),
-            Continuous("PoseDAO.position.z"): reals(),
-        }
+    assert parameterization.random_events_variables == variables
+    assert parameterization.assignments == {}
+
+
+def test_parameterize_object_from_sample():
+    obj = Atom(..., ..., ..., datetime.datetime.now())
+    parameterizer = Parameterizer()
+    parameterization = parameterizer.parameterize(obj)
+    distribution = parameterization.create_fully_factorized_distribution()
+    sample = distribution.sample(1)[0]
+    sample_dict = parameterization.create_assignment_from_variables_and_sample(
+        distribution.variables, sample
     )
 
-    assert parameterization.simple_event == result_by_hand
+    parameterized_obj: Atom = parameterization.parameterize_object_with_sample(
+        obj, sample_dict
+    )
+    assert parameterized_obj.timestamp == obj.timestamp
+    assert isinstance(parameterized_obj.charge, float)
+    assert isinstance(parameterized_obj.element, Element)

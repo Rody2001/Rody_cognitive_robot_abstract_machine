@@ -4,6 +4,7 @@ import enum
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Dict, Iterable
 
 import numpy as np
 
@@ -43,29 +44,27 @@ class Parameterization:
     """
     A list of random event variables that are being parameterized.
     """
-    simple_event: SimpleEvent = field(default_factory=lambda: SimpleEvent({}))
+
+    assignments: Dict[ObjectAccessVariable, Any] = field(default_factory=dict)
     """
-    A SimpleEvent containing the values of the variables.
+    A dict containing the assignments of the variables to concrete values.
+    This may contain less variables than `variables` if some variables are not being specified (using ...).
+    These assignments are intended for conditioning probabilistic models.
     """
 
     @property
     def random_events_variables(self) -> List[Variable]:
         return [v.variable for v in self.variables]
 
-    def fill_missing_variables(self):
-        self.simple_event.fill_missing_variables(self.random_events_variables)
+    @property
+    def assignments_for_pm(self) -> Dict[Variable, Any]:
+        return {v.variable: value for v, value in self.assignments.items()}
 
     def extend_variables(self, variables: List[ObjectAccessVariable]):
         """
         Update the variables by extending them with the given variables.
         """
         self.variables.extend(variables)
-
-    def update_simple_event(self, simple_event: SimpleEvent):
-        """
-        Update the simple event by extending it with the given simple event.
-        """
-        self.simple_event = SimpleEvent({**simple_event, **self.simple_event})
 
     def create_fully_factorized_distribution(self) -> ProbabilisticCircuit:
         """
@@ -83,20 +82,63 @@ class Parameterization:
             },
         )
 
-    def merge_parameterization(self, other: Parameterization):
+    def parameterize_data_access_object_with_sample(
+        self, dao: DataAccessObject, sample: Dict[ObjectAccessVariable, Any]
+    ):
         """
-        Update the parameterization with another parameterization by extending the variables and updating the simple event.
+        Parameterize a DataAccessObject with a sample in place.
+        The structure of `dao` has to be compatible with the access patterns of this parameterizers variables.
 
-        :param other: The parameterization to update with.
+        :param dao: The DataAccessObject to parameterize in place.
+        :param sample: The sample to apply to the object.
         """
-        self.variables.extend(other.variables)
-        self.update_simple_event(other.simple_event)
+        [variable.set_value(dao, value) for variable, value in sample.items()]
+
+    def parameterize_object_with_sample(
+        self, obj: Any, sample: Dict[ObjectAccessVariable, Any]
+    ) -> Any:
+        """
+        Parameterize an object with a sample.
+
+        :param obj: The object to parameterize.
+        :param sample: The sample to parameterize the object with.
+        :return: A new copy of the object with the parameters.
+        """
+        dao = to_dao(obj)
+        self.parameterize_data_access_object_with_sample(dao, sample)
+        result = dao.from_dao()
+        return result
+
+    def get_variable_by_name(self, name: str):
+        return [v for v in self.variables if v.variable.name == name][0]
+
+    def create_assignment_from_variables_and_sample(
+        self, variables: Iterable[Variable], sample: np.ndarray
+    ) -> Dict[ObjectAccessVariable, Any]:
+        """
+        The sample has to be constructed from a circuit that matches the variables of this parameterizer.
+        """
+        result = {}
+        for variable, value in zip(variables, sample):
+            object_access_variable = self.get_variable_by_name(variable.name)
+
+            if not object_access_variable.variable.is_numeric:
+                value = [
+                    domain_value.element
+                    for domain_value in object_access_variable.variable.domain
+                    if hash(domain_value) == value
+                ][0]
+            else:
+                value = value.item()
+            result[object_access_variable] = value
+
+        return result
 
 
 @dataclass
 class Parameterizer:
     """
-    A class that can be used to parameterize an object into object access variables and a simple event
+    A class that can be used to generate parameterizations an object into object access variables and an assignment event
     containing the values of the variables.
 
     For this, the target object first is converted into a DataAccessObject. Use the Ellipsis (...) to signal that a
@@ -105,7 +147,7 @@ class Parameterizer:
     For example
 
     .. code-block:: python
-        parameterization = Parameterizer().parameterize(Orientation(..., 3.14, ..., None))
+        parameterization = Parameterizer().generate_parameterizations(Orientation(..., 3.14, ..., None))
 
     will create 3 variables for the `x, y,` and `z` fields of the Orientation class and a simple event containing the
     assignment of `y` to 3.14. `w` will not be parameterized.
@@ -122,7 +164,7 @@ class Parameterizer:
         """
         Create variables for all fields of an object.
 
-        :param obj: The object to parameterize.
+        :param obj: The object to generate_parameterizations.
 
         :return: Parameterization containing the variables and simple event.
         """
@@ -134,6 +176,7 @@ class Parameterizer:
         dao = to_dao(obj)
 
         dao_variable = variable_from([dao])
+
         self._parameterize_dao(dao, dao_variable)
 
         return self.parameterization
@@ -144,7 +187,7 @@ class Parameterizer:
         """
         Create variables for all fields of a DataAccessObject.
 
-        :param dao: The DataAccessObject to parameterize.
+        :param dao: The DataAccessObject to generate_parameterizations.
         :param dao_variable: The EQL variable corresponding to the DataAccessObject for symbolic access.
 
         :return: A Parameterization containing the variables and simple event.
@@ -167,12 +210,11 @@ class Parameterizer:
                 variables, attribute_values = self._process_column(
                     column, wrapped_field, dao, dao_variable
                 )
-                self._update_variables_and_event(variables, attribute_values)
+                self._update_variables_and_assignments(variables, attribute_values)
 
-        self.parameterization.fill_missing_variables()
         return self.parameterization
 
-    def _update_variables_and_event(
+    def _update_variables_and_assignments(
         self, variables: List[ObjectAccessVariable], attribute_values: List[Any]
     ):
         """
@@ -187,9 +229,7 @@ class Parameterizer:
             if attribute_value == Ellipsis:
                 continue
 
-            self.parameterization.update_simple_event(
-                SimpleEvent({variable.variable: attribute_value})
-            )
+            self.parameterization.assignments[variable] = attribute_value
 
     def _process_relationship(
         self,
@@ -362,12 +402,3 @@ class Parameterizer:
         :return: A fully factorized probabilistic circuit.
         """
         return self.parameterization.create_fully_factorized_distribution()
-
-    def construct_object_from_sample(self, sample: np.ndarray) -> Any:
-        """
-        Construct an object from a sample.
-        The sample has to be constructed from a circuit that matches the variables of this parameterizer.
-
-        :param sample: The sample to construct an object from.
-        :return: The constructed object.
-        """
