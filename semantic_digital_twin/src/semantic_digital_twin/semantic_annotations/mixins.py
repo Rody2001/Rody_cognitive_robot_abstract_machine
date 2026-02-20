@@ -706,7 +706,6 @@ class HasSupportingSurface(HasStorageSpace, ABC):
         body_to_sample_for: Optional[HasRootBody] = None,
         category_of_interest: Optional[Type[SemanticAnnotation]] = None,
         amount: int = 100,
-        calculate_supporting_surface_if_not_set: bool = False,
     ) -> List[Point3]:
         """
         Samples points from a surface considering constraints such as object collisions, object
@@ -718,11 +717,11 @@ class HasSupportingSurface(HasStorageSpace, ABC):
 
         :return: A list of sampled points, sorted by distance to the around_object.
         """
-        if calculate_supporting_surface_if_not_set and self.supporting_surface is None:
-            with self._world.modify_world():
-                surface_region = self.calculate_supporting_surface()
-            with self._world.modify_world():
-                self.add_supporting_surface(surface_region)
+        if self.supporting_surface is None:
+            raise ValueError(
+                "No known supporting surface for this object. To dynamically calculate a supporting surface, call "
+                "self.calculate_supporting_surface() first, and add the resulting region to self."
+            )
         largest_xy_object_dimension = body_to_sample_for.root.combined_mesh.extents[
             :2
         ].max()

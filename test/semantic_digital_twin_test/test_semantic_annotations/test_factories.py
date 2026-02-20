@@ -564,11 +564,14 @@ class TestFactories(unittest.TestCase):
                 scale=Scale(0.1, 0.03, 0.2),
             )
 
+            surface_region = table.calculate_supporting_surface()
+        with world.modify_world():
+            table.add_supporting_surface(surface_region)
+
         points = table.sample_points_from_surface(
             cereal_to_place,
             type(cereal),
             amount=10,
-            calculate_supporting_surface_if_not_set=True,
         )
         self.assertEqual(len(points), 10)
         for p in points:
