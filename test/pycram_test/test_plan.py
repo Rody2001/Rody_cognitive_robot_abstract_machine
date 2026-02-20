@@ -707,3 +707,4 @@ def test_algebra_sequential_plan(immutable_model_world):
     new_plan = SequentialPlan(context, *new_actions)
     with simulated_robot:
         new_plan.perform()
+    print(robot_view.root.global_pose)
