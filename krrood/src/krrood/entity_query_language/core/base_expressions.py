@@ -729,16 +729,17 @@ class Selectable(SymbolicExpression, Generic[T], ABC):
     """
 
     def _build_operation_result_and_update_truth_value_(
-        self, bindings: Bindings
+        self, bindings: Bindings, child_result: Optional[OperationResult] = None
     ) -> OperationResult:
         """
         Build an OperationResult instance and update the truth value based on the bindings.
 
         :param bindings: The bindings of the result.
+        :param child_result: The result of the child operation, if any.
         :return: The OperationResult instance with an updated truth value.
         """
         self._update_truth_value_(bindings[self._binding_id_])
-        return OperationResult(bindings, self._is_false_, self)
+        return OperationResult(bindings, self._is_false_, self, child_result)
 
     def _update_truth_value_(self, current_value: Any) -> None:
         """

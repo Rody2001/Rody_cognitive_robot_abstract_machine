@@ -29,7 +29,7 @@ from ..core.base_expressions import (
 from ..failures import NestedAggregationError, InvalidChildType
 from ..utils import T
 from ..core.variable import Variable
-from ..core.domain_mapping import CanBehaveLikeAVariable
+from ..core.mapped_variable import CanBehaveLikeAVariable
 
 
 @dataclass(eq=False, repr=False)

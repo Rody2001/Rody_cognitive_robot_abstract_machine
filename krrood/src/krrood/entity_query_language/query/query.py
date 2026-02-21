@@ -27,7 +27,7 @@ from typing_extensions import (
     Iterator,
 )
 
-from ..core.domain_mapping import CanBehaveLikeAVariable
+from ..core.mapped_variable import CanBehaveLikeAVariable
 from .builders import (
     WhereBuilder,
     HavingBuilder,

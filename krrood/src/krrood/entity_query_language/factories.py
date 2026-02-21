@@ -29,11 +29,13 @@ from .query.query import Entity, SetOf, Query
 from .utils import is_iterable
 from .core.variable import (
     DomainType,
-    Literal, ExternallySetVariable,
+    Literal,
+    ExternallySetVariable,
 )
-from .core.domain_mapping import Flatten, CanBehaveLikeAVariable
+from .core.mapped_variable import FlatVariable, CanBehaveLikeAVariable
 from .predicate import *  # type: ignore
 from ..symbol_graph.symbol_graph import Symbol, SymbolGraph
+from ..symbolic_math.symbolic_math import FloatVariable
 
 ConditionType = Union[SymbolicExpression, bool, Predicate]
 """
@@ -141,7 +143,7 @@ def deduced_variable(
     :param type_: The type of the variable values.
     :return: An instance of `ExternallySetVariable[T]`.
     """
-    return ExternallySetVariable(_type_=type_, _domain_source_=DomainSource.DEDUCED)
+    return ExternallySetVariable(_type_=type_, _domain_source_=DomainSource.DEDUCTION)
 
 
 def variable_from(
@@ -191,7 +193,7 @@ def in_(item: Any, container: Union[Iterable, CanBehaveLikeAVariable[T]]):
     return Comparator(container, item, operator.contains)
 
 
-def flattened_variable(
+def flat_variable(
     var: Union[CanBehaveLikeAVariable[T], Iterable[T]],
 ) -> Union[CanBehaveLikeAVariable[T], T]:
     """
@@ -199,7 +201,7 @@ def flattened_variable(
     This returns a DomainMapping that, when evaluated, yields one solution per inner element
     (similar to SQL UNNEST), keeping existing variable bindings intact.
     """
-    return Flatten(var)
+    return FlatVariable(var)
 
 
 # %% Logical Operators
@@ -351,7 +353,7 @@ def alternative(*conditions: ConditionType) -> SymbolicExpression:
     :param conditions: Conditions to chain with AND and attach as an alternative.
     :returns: The newly created branch node for further chaining.
     """
-    return alternative_or_next(RDREdge.Alternative, *conditions)
+    return _alternative_or_next(RDREdge.Alternative, *conditions)
 
 
 def next_rule(*conditions: ConditionType) -> SymbolicExpression:
@@ -364,10 +366,10 @@ def next_rule(*conditions: ConditionType) -> SymbolicExpression:
     :param conditions: Conditions to chain with AND and attach as an alternative.
     :returns: The newly created branch node for further chaining.
     """
-    return alternative_or_next(RDREdge.Next, *conditions)
+    return _alternative_or_next(RDREdge.Next, *conditions)
 
 
-def alternative_or_next(
+def _alternative_or_next(
     condition_edge_type: Union[RDREdge.Alternative, RDREdge.Next],
     *conditions: ConditionType,
 ) -> SymbolicExpression:
@@ -383,11 +385,11 @@ def alternative_or_next(
     """
     new_condition = chained_logic(AND, *conditions)
 
-    current_conditions_root = get_current_conditions_root_for_alternative_or_next()
+    current_conditions_root = _get_current_conditions_root_for_alternative_or_next()
 
     prev_parent = current_conditions_root._parent_
 
-    new_conditions_root = construct_new_conditions_root_for_alternative_or_next(
+    new_conditions_root = _construct_new_conditions_root_for_alternative_or_next(
         condition_edge_type, current_conditions_root, new_condition
     )
 
@@ -397,7 +399,7 @@ def alternative_or_next(
     return new_condition
 
 
-def get_current_conditions_root_for_alternative_or_next() -> ConditionType:
+def _get_current_conditions_root_for_alternative_or_next() -> ConditionType:
     """
     :return: the current conditions root to use for creating a new condition connected via alternative or next edge.
     """
@@ -412,7 +414,7 @@ def get_current_conditions_root_for_alternative_or_next() -> ConditionType:
     return current_node
 
 
-def construct_new_conditions_root_for_alternative_or_next(
+def _construct_new_conditions_root_for_alternative_or_next(
     condition_edge_type: Union[RDREdge.Next, RDREdge.Alternative],
     current_conditions_root: SymbolicExpression,
     new_condition: LogicalOperator,

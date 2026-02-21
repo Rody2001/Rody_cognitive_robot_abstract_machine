@@ -58,11 +58,12 @@ class DomainSource(Enum):
     """
     The domain source of a variable.
     """
+
     EXPLICIT = auto()
     """
     Explicitly provided domain.
     """
-    DEDUCED = auto()
+    DEDUCTION = auto()
     """
     Inferred using deductive reasoning.
     """

@@ -26,7 +26,7 @@ from .quantifiers import ResultQuantificationConstraint, ResultQuantifier, An
 from .operations import Where, Having, OrderedBy, GroupedBy
 from ..operators.aggregators import Aggregator
 from ..core.variable import Literal, Variable
-from ..core.domain_mapping import DomainMapping
+from ..core.mapped_variable import MappedVariable
 
 if TYPE_CHECKING:
     from ..factories import ConditionType
@@ -102,7 +102,7 @@ class FilterBuilder(ExpressionBuilder, ABC):
             for var in cond._children_:
                 if isinstance(var, Aggregator):
                     aggregators.append(var)
-                elif isinstance(var, DomainMapping) and any(
+                elif isinstance(var, MappedVariable) and any(
                     isinstance(v, Aggregator) for v in var._descendants_
                 ):
                     aggregators.append(var)
@@ -238,7 +238,7 @@ class GroupedByBuilder(ExpressionBuilder):
             return True
         elif variable._binding_id_ in self.ids_of_aggregated_variables:
             return False
-        elif isinstance(variable, DomainMapping) and any(
+        elif isinstance(variable, MappedVariable) and any(
             self.variable_is_in_or_derived_from_a_grouped_by_variable(d)
             for d in variable._descendants_
         ):
