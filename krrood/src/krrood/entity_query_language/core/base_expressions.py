@@ -784,4 +784,4 @@ class Selectable(SymbolicExpression, Generic[T], ABC):
         if self._type_:
             return self._type_.__name__
         else:
-            return f"{self.__class__.__name__}({type(next(iter(self._domain_source_))).__name__, ...})"
+            return self.__class__.__name__
