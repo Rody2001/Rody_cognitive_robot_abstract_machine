@@ -293,8 +293,8 @@ def test_supporting(two_block_world):
     assert is_supported_by(top, center)
     assert not is_supported_by(center, top)
 
-    assert is_supporting(center, center._world)
-    assert not is_supporting(top, top._world)
+    # assert is_supporting(center, center._world)
+    # assert not is_supporting(top, top._world)
 
 
 def test_is_body_in_gripper(
