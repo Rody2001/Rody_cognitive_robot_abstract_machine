@@ -55,6 +55,10 @@ class QueryGraph:
     """
 
     def __post_init__(self):
+        if GraphVisualizer is None:
+            raise ModuleNotFoundError(
+                "rustworkx_utils is not installed. Please install it with `pip install rustworkx_utils`"
+            )
         self.construct_graph()
 
     def visualize(
@@ -79,10 +83,6 @@ class QueryGraph:
         :returns: The rendered visualization object.
         :raises: `ModuleNotFoundError` If rustworkx_utils is not installed.
         """
-        if not GraphVisualizer:
-            raise ModuleNotFoundError(
-                "rustworkx_utils is not installed. Please install it with `pip install rustworkx_utils`"
-            )
         visualizer = GraphVisualizer(
             node=self.expression_node_map[self.query._root_],
             figsize=figure_size,
