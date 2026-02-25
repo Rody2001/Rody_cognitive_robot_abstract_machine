@@ -122,6 +122,11 @@ class Handle(HasRootBody):
             }
         )
 
+@dataclass(eq=False)
+class Dishwasher(HasCaseAsRootBody, HasDoors, HasDrawers):
+    """
+    A dishwasher is a kitchen appliance used for cleaning dishes, utensils, and cookware. It typically has a front door that opens to reveal racks for loading dirty items and a control panel for selecting wash cycles.
+    """
 
 @dataclass(eq=False)
 class Aperture(HasRootRegion):
