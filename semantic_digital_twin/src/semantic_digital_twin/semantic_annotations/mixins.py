@@ -284,7 +284,6 @@ class HasRootBody(HasRootKinematicStructureEntity, ABC):
         connection_multiplier: float = 1.0,
         connection_offset: float = 0.0,
         scale: Scale = None,
-        color: Color = field(default_factory=Color),
         **kwargs,
     ) -> Self:
         """
