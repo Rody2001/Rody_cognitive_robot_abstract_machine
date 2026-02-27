@@ -73,6 +73,53 @@ class Color:
     def to_rgba(self) -> Tuple[float, float, float, float]:
         return (self.R, self.G, self.B, self.A)
 
+    @classmethod
+    def RED(self):
+        return Color(255, 0, 0)
+
+    @classmethod
+    def YELLOW(self):
+        return Color(255, 255, 0)
+
+    @classmethod
+    def GREEN(self):
+        return Color(0, 255, 0)
+
+    @classmethod
+    def CYAN(self):
+        return Color(0, 255, 255)
+
+    @classmethod
+    def BLUE(self):
+        return Color(0, 0, 255)
+
+    @classmethod
+    def MAGENTA(self):
+        return Color(255, 0, 255)
+
+    @classmethod
+    def WHITE(self):
+        return Color(255, 255, 255)
+
+    @classmethod
+    def BLACK(self):
+        return Color(0, 0, 0)
+
+    @classmethod
+    def GRAY(self):
+        return Color(127, 127, 127)
+
+    @classmethod
+    def TRANSPARENT(self):
+        return Color(0, 0, 0, 0)
+
+    @classmethod
+    def BEIGE(SELF):
+        return Color(1, 0.827, 0.6078)
+
+    @classmethod
+    def ORANGE(SELF):
+        return Color(1, 0.647, 0)
 
 @dataclass
 class Scale:
