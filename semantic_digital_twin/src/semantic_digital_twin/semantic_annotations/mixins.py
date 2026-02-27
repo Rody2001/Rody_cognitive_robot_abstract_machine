@@ -30,7 +30,7 @@ from ..world_description.connections import (
     FixedConnection,
 )
 from ..world_description.degree_of_freedom import DegreeOfFreedomLimits
-from ..world_description.geometry import Scale, Color
+from ..world_description.geometry import Scale
 from ..world_description.shape_collection import BoundingBoxCollection
 from ..world_description.world_entity import (
     SemanticAnnotation,
