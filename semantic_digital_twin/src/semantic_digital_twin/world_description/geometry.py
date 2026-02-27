@@ -114,11 +114,11 @@ class Color:
         return Color(0, 0, 0, 0)
 
     @classmethod
-    def BEIGE(SELF):
+    def BEIGE(self):
         return Color(1, 0.827, 0.6078)
 
     @classmethod
-    def ORANGE(SELF):
+    def ORANGE(self):
         return Color(1, 0.647, 0)
 
 @dataclass
