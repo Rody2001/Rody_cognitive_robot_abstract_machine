@@ -4,7 +4,10 @@ from typing import Iterable, TypeVar
 
 from sqlalchemy.orm import sessionmaker
 
-from krrood.entity_query_language.failures import NoSolutionFound
+from krrood.entity_query_language.failures import (
+    NoSolutionFound,
+    GenerativeBackendQueryIsNotMatch,
+)
 from krrood.entity_query_language.query.match import Match
 from krrood.entity_query_language.query.query import Query
 from krrood.ormatic.eql_interface import eql_to_sql
@@ -17,26 +20,8 @@ from krrood.probabilistic_knowledge.probable_variable import (
     MatchToInstanceTranslator,
     QueryToRandomEventTranslator,
 )
-from krrood.utils import DataclassException
 
 T = TypeVar("T")
-
-
-@dataclass
-class GenerativeBackendQueryIsNotMatch(DataclassException):
-    """
-    Exception raised when a query is not a match inside a generative backend.
-    """
-
-    expression: Query
-    """
-    The query that was passed to the generative backend.
-    """
-
-    def __post_init__(self):
-        self.message = (
-            f"Query {self.expression} is not a match inside a generative backend."
-        )
 
 
 @dataclass
