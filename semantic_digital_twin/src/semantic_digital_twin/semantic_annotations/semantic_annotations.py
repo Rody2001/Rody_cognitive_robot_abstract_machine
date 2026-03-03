@@ -15,6 +15,7 @@ from .mixins import (
     HasRootRegion,
     HasDrawers,
     HasDoors,
+    HasShelfLayers,
     HasHandle,
     HasCaseAsRootBody,
     HasHinge,
@@ -357,6 +358,13 @@ class Drawer(Furniture, HasCaseAsRootBody, HasHandle, HasSlider, HasStorageSpace
 
 
 @dataclass(eq=False)
+class ShelfLayer(HasSupportingSurface):
+    """
+    A horizontal surface used for storing objects, typically found inside cabinets or on walls.
+    """
+
+
+@dataclass(eq=False)
 class Table(Furniture, HasSupportingSurface):
     """
     A semantic annotation that represents a table.
@@ -385,12 +393,17 @@ class Dresser(Cabinet, HasDrawers, HasDoors): ...
 
 
 @dataclass(eq=False)
-class Cupboard(Cabinet, HasDoors): ...
+class Cupboard(Cabinet, HasDoors, HasShelfLayers): ...
 
 
 @dataclass(eq=False)
 class Wardrobe(Cabinet, HasDrawers, HasDoors): ...
 
+@dataclass(eq=False)
+class Sink(HasRootBody):
+    """
+    A bowl-shaped plumbing fixture used for washing hands, dishware, and other small objects.
+    """
 
 @dataclass(eq=False)
 class Floor(HasSupportingSurface):
@@ -714,7 +727,7 @@ class Milk(Food, IsPerceivable):
     A container of milk.
     """
 
-    ...
+
 
 
 @dataclass(eq=False)
@@ -864,14 +877,6 @@ class Sofa(Furniture, HasSupportingSurface):
     A sofa.
     """
 
-
-@dataclass(eq=False)
-class Sink(HasRootBody):
-    """
-    A sink.
-    """
-
-
 @dataclass(eq=False)
 class Kettle(CookingContainer): ...
 
@@ -914,7 +919,6 @@ class GarbageBin(HasRootBody):
     """
     A garbage bin.
     """
-
 
 @dataclass(eq=False)
 class Drone(HasRootBody): ...
