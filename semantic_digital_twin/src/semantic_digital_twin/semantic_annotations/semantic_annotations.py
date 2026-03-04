@@ -41,7 +41,7 @@ from ..world_description.connections import (
     FixedConnection,
 )
 from ..world_description.degree_of_freedom import DegreeOfFreedomLimits
-from ..world_description.geometry import Scale, TriangleMesh
+from ..world_description.geometry import Scale, TriangleMesh, Color, Box
 from ..world_description.shape_collection import BoundingBoxCollection, ShapeCollection
 from ..world_description.world_entity import (
     SemanticAnnotation,
@@ -876,6 +876,117 @@ class Sofa(Furniture, HasSupportingSurface):
     """
     A sofa.
     """
+    @classmethod
+    def create_with_new_body_in_world(
+        cls,
+        name: PrefixedName,
+        world: World,
+        world_root_T_self: Optional[HomogeneousTransformationMatrix] = None,
+        length: float = 2.0,  # Total width (x-axis)
+        width: float = 0.90,  # Total depth (y-axis)
+        height: float = 0.85, # Total height (z-axis)
+        color: Color = Color(0.5, 0.5, 0.5), # Grey default
+        **kwargs,
+    ) -> Self:
+        """
+        Creates a sofa composed of a seat, backrest, and armrests.
+        """
+        # Dimensions
+        seat_height = height * 0.45
+        backrest_depth = width * 0.20
+        armrest_width = length * 0.10
+        armrest_height = height * 0.70
+
+        # 1. Seat (Base)
+        # The seat fills the space between armrests and in front of the backrest
+        seat_w = length - 2 * armrest_width
+        seat_d = width - backrest_depth
+        seat_h = seat_height
+        
+        # 2. Backrest
+        # Spans the full length at the back
+        back_w = length
+        back_d = backrest_depth
+        back_h = height
+
+        # 3. Armrests (Left and Right)
+        # Span the full depth (minus backrest if we want them flush, or full depth)
+        # Let's make them full depth for a classic look
+        arm_w = armrest_width
+        arm_d = width - backrest_depth # flush with backrest front
+        arm_h = armrest_height
+
+        # 1. Seat (Root Body)
+        seat_scale = Scale(seat_w, seat_d, seat_h)
+        seat_geom = ShapeCollection([Box(scale=seat_scale, color=color)])
+        seat_body = Body(name=name, collision=seat_geom, visual=seat_geom)
+
+        # Adjust pose:
+        # The input world_root_T_self is the Geometric Center of the Sofa (to match Box behavior).
+        # We need to calculate where the Seat Center is relative to the Sofa Center.
+        # Sofa Center Z = height / 2. Seat Center Z = seat_h / 2.
+        # Offset Z = seat_h / 2 - height / 2.
+        # Sofa Center Y = 0. Seat Center Y = -backrest_depth / 2.
+        # Offset Y = -backrest_depth / 2.
+        
+        offset_matrix = HomogeneousTransformationMatrix.from_xyz_rpy(
+            x=0, 
+            y=-backrest_depth / 2, 
+            z=seat_h / 2 - height / 2
+        )
+        
+        if world_root_T_self is None:
+            world_root_T_self = HomogeneousTransformationMatrix()
+            
+        seat_pose = world_root_T_self @ offset_matrix
+
+        sofa = cls._create_with_connection_in_world(
+            name, world, seat_body, seat_pose
+        )
+
+        # 2. Backrest
+        back_scale = Scale(back_w, back_d, back_h)
+        back_geom = ShapeCollection([Box(scale=back_scale, color=color)])
+        back_body = Body(name=PrefixedName(f"{name.name}_backrest", name.prefix), collision=back_geom, visual=back_geom)
+        
+        # Relative to Seat
+        back_T = HomogeneousTransformationMatrix.from_xyz_rpy(
+            x=0,
+            y=width / 2,
+            z=(back_h - seat_h) / 2
+        )
+        world.add_connection(FixedConnection(seat_body, back_body, back_T))
+
+        # 3. Left Armrest
+        arm_l_scale = Scale(arm_w, arm_d, arm_h)
+        arm_l_geom = ShapeCollection([Box(scale=arm_l_scale, color=color)])
+        arm_l_body = Body(name=PrefixedName(f"{name.name}_arm_l", name.prefix), collision=arm_l_geom, visual=arm_l_geom)
+        
+        # Relative to Seat
+        arm_l_T = HomogeneousTransformationMatrix.from_xyz_rpy(
+            x=-length / 2 + arm_w / 2,
+            y=0,
+            z=(arm_h - seat_h) / 2
+        )
+        world.add_connection(FixedConnection(seat_body, arm_l_body, arm_l_T))
+
+        # 4. Right Armrest
+        arm_r_scale = Scale(arm_w, arm_d, arm_h)
+        arm_r_geom = ShapeCollection([Box(scale=arm_r_scale, color=color)])
+        arm_r_body = Body(name=PrefixedName(f"{name.name}_arm_r", name.prefix), collision=arm_r_geom, visual=arm_r_geom)
+        
+        # Relative to Seat
+        arm_r_T = HomogeneousTransformationMatrix.from_xyz_rpy(
+            x=length / 2 - arm_w / 2,
+            y=0,
+            z=(arm_h - seat_h) / 2
+        )
+        world.add_connection(FixedConnection(seat_body, arm_r_body, arm_r_T))
+        
+        # Calculate supporting surface (the seat)
+        sofa.calculate_supporting_surface()
+        
+        return sofa
 
 @dataclass(eq=False)
 class Kettle(CookingContainer): ...
