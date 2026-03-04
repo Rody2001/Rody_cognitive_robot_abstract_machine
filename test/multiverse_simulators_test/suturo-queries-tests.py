@@ -1,16 +1,19 @@
-from krrood.entity_query_language.query.query import query_semantic_annotations_on_surfaces
+from krrood.entity_query_language.query.query import query_semantic_annotations_on_surfaces, \
+    query_get_next_object_euclidean_x_y, query_surface_of_most_similar_obj, query_annotations_by_color
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.world import World
 from semantic_digital_twin.world_description.geometry import Color
 
+from test.conftest import test_load_world
 
-def test_load_environment_returns_world():
-    """
-    Tests that loading the environment returns a World object with the correct root name.
-    """
-    world = load_environment()
-    assert isinstance(world, World)
-    assert world.root.name == PrefixedName("root")
+
+# def test_load_environment_returns_world():
+#     """
+#     Tests that loading the environment returns a World object with the correct root name.
+#     """
+#     world = load_environment()
+#     assert isinstance(world, World)
+#     assert world.root.name == PrefixedName("root")
 
 
 def test_query_semantic_annotations_on_surfaces():
@@ -33,10 +36,6 @@ def test_query_semantic_annotations_on_surfaces():
     ]]
     assert set(query_semantic_annotations_on_surfaces([table3], world).tolist()) == set([])
     assert set(query_semantic_annotations_on_surfaces([], world).tolist()) == set([])
-
-
-def query_get_next_object_euclidean_x_y(toya, table1):
-    pass
 
 
 def test_query_get_next_object_euclidean_x_y():
@@ -64,10 +63,6 @@ def test_query_get_next_object_euclidean_x_y():
         lettuce,
     ]
     assert query_get_next_object_euclidean_x_y(toya, table3).tolist() == []
-
-
-def query_surface_of_most_similar_obj(banana, param):
-    pass
 
 
 def test_query_surface_of_most_similar_obj():
@@ -104,10 +99,6 @@ def test_query_surface_of_most_similar_obj():
     # trying with 2 empty tables
     assert query_surface_of_most_similar_obj(apple, [table2, table3, table4]) == table3
     assert query_surface_of_most_similar_obj(apple, [table2, table4, table3]) == table4
-
-
-def query_annotations_by_color(param, param1):
-    pass
 
 
 def test_query_body_by_color():
