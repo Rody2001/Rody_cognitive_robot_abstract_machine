@@ -10,6 +10,7 @@ import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, is_dataclass, fields, field
 from functools import cached_property
+from typing import Self
 
 from typing_extensions import (
     Iterable,
@@ -18,6 +19,7 @@ from typing_extensions import (
     Optional,
     Tuple,
     Dict,
+    List,
 )
 
 from krrood.entity_query_language.core.base_expressions import (
@@ -176,7 +178,7 @@ class MappedVariable(UnaryExpression, CanBehaveLikeAVariable[T], ABC):
             result.append(current)
         return result[:-1][::-1]
 
-    def _set_external_instace_value_(self, instance: Any, value: Any):
+    def _set_external_instance_value_(self, instance: Any, value: Any):
         """
         Set the field of the instance at this access path to the given value.
         This modifies instance in-place.
@@ -192,9 +194,9 @@ class MappedVariable(UnaryExpression, CanBehaveLikeAVariable[T], ABC):
         for domain_mapping in self._access_path_[:-1]:
             current = next(domain_mapping._apply_mapping_(current))
 
-        self._apply_final_operation_set_external_instace_value_(current, value)
+        self._apply_final_operation_set_external_instance_value_(current, value)
 
-    def _apply_final_operation_set_external_instace_value_(
+    def _apply_final_operation_set_external_instance_value_(
         self, instance: Any, value: Any
     ):
         """
@@ -240,8 +242,8 @@ class Attribute(MappedVariable):
     def _name_(self):
         return f"{self._child_._name_}.{self._attribute_name_}"
 
-    def _apply_final_operation_set_external_instace_value_(self, obj: Any, value: Any):
-        setattr(current, self.attribute._attribute_name_, value)
+    def _apply_final_operation_set_external_instance_value_(self, obj: Any, value: Any):
+        setattr(obj, self.attribute._attribute_name_, value)
 
 
 @dataclass(eq=False, repr=False)
@@ -262,7 +264,7 @@ class Index(MappedVariable):
     def _name_(self):
         return f"{self._child_._var_._name_}[{self._key_}]"
 
-    def _apply_final_operation_set_external_instace_value_(
+    def _apply_final_operation_set_external_instance_value_(
         self, instance: Any, value: Any
     ):
         instance[self._key_] = value

@@ -2,23 +2,23 @@ from abc import abstractmethod, ABC
 from dataclasses import dataclass
 from typing import Iterable, TypeVar
 
+from krrood.probabilistic_knowledge.parameterizer import (
+    UnderspecifiedToCallableAndKwargsTranslator,
+    CallableAndKwargs,
+)
 from sqlalchemy.orm import sessionmaker
 
 from krrood.entity_query_language.factories import and_
 from krrood.entity_query_language.failures import (
     NoSolutionFound,
-    GenerativeBackendQueryIsNotMatch,
+    GenerativeBackendQueryIsNotUnderspecifiedVariable,
 )
-from krrood.entity_query_language.query.match import Match
+from krrood.entity_query_language.query.match import Match, UnderspecifiedVariable
 from krrood.entity_query_language.query.query import Query
 from krrood.ormatic.eql_interface import eql_to_sql
 from krrood.probabilistic_knowledge.model_registries import ModelRegistry
-from krrood.probabilistic_knowledge.parameterizer import (
-    MatchParameterizer,
-    copy_partial_object,
-)
+
 from krrood.probabilistic_knowledge.probable_variable import (
-    MatchToInstanceTranslator,
     QueryToRandomEventTranslator,
 )
 
@@ -58,20 +58,22 @@ class GenerativeBackend(QueryBackend, ABC):
     `Match` is the only way to do so.
     """
 
-    def _generate_instance_from_match(self, expression: Match[T]) -> T:
+    def _generate_factory_from_expression(
+        self, expression: UnderspecifiedVariable
+    ) -> CallableAndKwargs:
         """
         :param expression: A match expression describing the structure of an instance.
         :return: An instance described by the match expression.
         """
-        return MatchToInstanceTranslator(expression).translate()
+        return UnderspecifiedToCallableAndKwargsTranslator(expression).translate()
 
     def evaluate(self, expression: Query) -> Iterable[T]:
-        if not isinstance(expression, Match):
-            raise GenerativeBackendQueryIsNotMatch(expression)
+        if not isinstance(expression, UnderspecifiedVariable):
+            raise GenerativeBackendQueryIsNotUnderspecifiedVariable(expression)
         yield from self._evaluate(expression)
 
     @abstractmethod
-    def _evaluate(self, expression: Match[T]) -> Iterable[T]: ...
+    def _evaluate(self, expression: UnderspecifiedVariable) -> Iterable[T]: ...
 
 
 @dataclass
@@ -117,9 +119,9 @@ class ProbabilisticBackend(GenerativeBackend):
     The number of samples to generate.
     """
 
-    def _evaluate(self, expression: Match[T]) -> Iterable[T]:
+    def _evaluate(self, expression: UnderspecifiedVariable) -> Iterable[T]:
 
-        example_instance = self._generate_instance_from_match(expression)
+        factory = self._generate_factory_from_expression(expression)
 
         # translate where conditions to random event
         random_events_translator = QueryToRandomEventTranslator(
@@ -128,8 +130,6 @@ class ProbabilisticBackend(GenerativeBackend):
         truncation_event = random_events_translator.translate()
 
         # generate parameters from example instance values
-        instance_parameterizer = MatchParameterizer(example_instance)
-        parameters = instance_parameterizer.parameterize()
 
         # apply conditions from the parameters
         conditioned, _ = self.model_registry.get_model(expression).conditional(

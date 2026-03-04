@@ -11,6 +11,8 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import cached_property
+from inspect import isclass, ismethod
+from typing import Callable
 
 import rustworkx as rx
 from typing_extensions import (
@@ -61,6 +63,12 @@ class AbstractMatchExpression(Generic[T], ABC):
     """
     The type of the variable.
     """
+
+    factory: Callable[..., T] = field(default=None, kw_only=True)
+    """
+    The factory function to create the variable from the type and kwargs.
+    """
+
     variable: Optional[Selectable[T]] = field(default=None, kw_only=True)
     """
     The created variable from the type and kwargs.
@@ -85,6 +93,12 @@ class AbstractMatchExpression(Generic[T], ABC):
     """
     The child matches of this match expression.
     """
+
+    def __post_init__(self):
+        if self.type_ is None:
+            self.type_ = self.factory.__class__
+        elif self.factory is None:
+            self.factory = self.type_
 
     @cached_property
     @abstractmethod
@@ -173,6 +187,9 @@ class Match(AbstractMatchExpression[T]):
     """
 
     _where_expression: List[ConditionType] = field(init=False, default_factory=list)
+    """
+    A list of all conditions that have been applied to this instance using the `where` method.
+    """
 
     def __call__(self, **kwargs) -> Union[Self, T, CanBehaveLikeAVariable[T]]:
         """

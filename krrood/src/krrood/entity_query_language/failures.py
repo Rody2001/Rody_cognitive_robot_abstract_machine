@@ -608,7 +608,7 @@ class NoChildToReplace(DataclassException):
 
 
 @dataclass
-class GenerativeBackendQueryIsNotMatch(DataclassException):
+class GenerativeBackendQueryIsNotUnderspecifiedVariable(DataclassException):
     """
     Exception raised when a query is not a match inside a generative backend.
     """
@@ -619,6 +619,4 @@ class GenerativeBackendQueryIsNotMatch(DataclassException):
     """
 
     def __post_init__(self):
-        self.message = (
-            f"Query {self.expression} is not a match inside a generative backend."
-        )
+        self.message = f"Query {self.expression} is not an underspecified variable inside a generative backend."

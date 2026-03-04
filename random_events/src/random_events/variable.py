@@ -1,7 +1,9 @@
+import enum
 from abc import abstractmethod
+from typing import assert_never
 
 import random_events_lib as rl
-from typing_extensions import Self, Dict, Any, Optional, Iterable
+from typing_extensions import Self, Dict, Any, Optional, Iterable, Type
 
 from random_events.interval import reals, Interval, closed, singleton, SimpleInterval
 from random_events.set import Set, SetElement
@@ -170,10 +172,14 @@ class Symbolic(Variable):
 
             # if not, try to find the matching element
             else:
-                matches = [elem for elem in self.domain.simple_sets if elem.element == v]
+                matches = [
+                    elem for elem in self.domain.simple_sets if elem.element == v
+                ]
                 if len(matches) == 0:
-                    raise ValueError(f"Value {value} not in domain of variable {self}. "
-                                     f"Domain is {self.domain}")
+                    raise ValueError(
+                        f"Value {value} not in domain of variable {self}. "
+                        f"Domain is {self.domain}"
+                    )
                 parsed_value += matches
 
         return Set(*parsed_value)
@@ -205,3 +211,25 @@ class Integer(Variable):
 
     def make_value(self, value: Any) -> Interval:
         return Continuous.make_value(self, value)
+
+
+def variable_from_name_and_type(name: str, type_: Type) -> Variable:
+    """
+    Create a variable from a name and type.
+
+    :param name: The name of the variable
+    :param type_: The type of the variable
+    :return: The created variable
+    """
+    if issubclass(type_, enum.Enum):
+        result = Symbolic(name, Set.from_iterable(type_))
+    elif issubclass(type_, bool):
+        result = Symbolic(name, Set.from_iterable([True, False]))
+    elif issubclass(type_, int):
+        result = Integer(name)
+    elif issubclass(type_, float):
+        result = Continuous(name)
+    else:
+        assert_never((name, type_))
+
+    return result

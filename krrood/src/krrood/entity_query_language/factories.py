@@ -5,8 +5,9 @@ User interface (grammar & vocabulary) for entity query language.
 from __future__ import annotations
 
 import operator
+from inspect import ismethod, isclass
 
-from typing_extensions import Union, Iterable
+from typing_extensions import Union, Iterable, assert_never
 
 from krrood.entity_query_language.core.base_expressions import SymbolicExpression
 from krrood.entity_query_language.enums import DomainSource
@@ -115,7 +116,7 @@ def match_variable(
 
 
 def underspecified(
-    type_: Union[Type[T], Selectable[T]],
+    expression: Union[Type[T], Selectable[T], Callable[..., T]],
 ) -> Union[Type[T], MatchVariable[T]]:
     """
     Same as :py:func:`krrood.entity_query_language.match.match_variable` but instead of searching for solutions in
@@ -126,7 +127,15 @@ def underspecified(
 
         Calling an UnderspecifiedVariable will return an UnderspecifiedVariable instead of its expression.
     """
-    return UnderspecifiedVariable(type_=type_)
+
+    if ismethod(expression):
+        return UnderspecifiedVariable(factory=expression)
+
+    elif isclass(expression):
+        return UnderspecifiedVariable(type_=expression)
+
+    else:
+        assert_never(expression)
 
 
 # %% Variable Declaration

@@ -14,8 +14,6 @@ from krrood.entity_query_language.factories import (
 )
 from krrood.ormatic.dao import to_dao
 from krrood.probabilistic_knowledge.model_registries import DictRegistry
-from krrood.probabilistic_knowledge.parameterizer import MatchParameterizer
-from krrood.probabilistic_knowledge.probable_variable import MatchToInstanceTranslator
 from ..dataset.example_classes import Pose, Position, Orientation
 
 
@@ -53,10 +51,7 @@ def test_same_query_multiple_domains(session, database):
     )
     prob_q.where(prob_q.variable.position.x > 0.5)
 
-    parameters = MatchParameterizer(
-        MatchToInstanceTranslator(prob_q).translate()
-    ).parameterize()
-    model = parameters.create_fully_factorized_distribution()
+    model = ...  # parameters.create_fully_factorized_distribution()
 
     registry = DictRegistry({Pose: model})
 

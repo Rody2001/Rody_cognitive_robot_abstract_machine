@@ -1,11 +1,5 @@
-from copy import deepcopy
-from typing import Callable
-
 import numpy as np
-from random_events.interval import singleton, open, closed, closed_open
-from random_events.product_algebra import SimpleEvent, Event
-from random_events.variable import Continuous
-
+from isort.literal import assignments
 from krrood.entity_query_language.factories import (
     variable,
     entity,
@@ -17,15 +11,16 @@ from krrood.entity_query_language.query.match import (
     UnderspecifiedVariable,
 )
 from krrood.probabilistic_knowledge.parameterizer import (
-    copy_partial_object,
-    MatchParameterizer,
-    UnderspecifiedToParametersTranslator,
+    UnderspecifiedToCallableAndKwargsTranslator,
 )
 from krrood.probabilistic_knowledge.probable_variable import (
     QueryToRandomEventTranslator,
     is_disjunctive_normal_form,
-    MatchToInstanceTranslator,
 )
+from random_events.interval import singleton, open, closed, closed_open
+from random_events.product_algebra import SimpleEvent, Event
+from random_events.variable import Continuous
+
 from ..dataset.example_classes import Pose, Position, Orientation
 from ..dataset.ormatic_interface import *  # type: ignore
 
@@ -128,16 +123,13 @@ def test_query_writing_with_match_and_copy():
         position=underspecified(Position)(x=0.1, y=..., z=...), orientation=None
     )
 
-    translator = MatchToInstanceTranslator(var)
-    obj = translator.translate()
+    translator = UnderspecifiedToCallableAndKwargsTranslator(var)
+    factory = translator.translate()
+    obj = factory.construct_instance()
     assert obj.position.x == 0.1
     assert obj.position.y == ...
     assert obj.position.z == ...
     assert obj.orientation is None
-
-    copied = copy_partial_object(obj)
-    assert obj is not copied
-    assert obj == copied
 
 
 def test_probable_variable_with_concrete_kwarg():
@@ -148,27 +140,28 @@ def test_probable_variable_with_concrete_kwarg():
         orientation=Orientation(x=0.0, y=0.0, z=0.0, w=1.0),
     ).where(probable_pose.variable.position.x > 0.5)
 
-    instance = MatchToInstanceTranslator(prob_q).translate()
+    factory = UnderspecifiedToCallableAndKwargsTranslator(prob_q).translate()
+    instance = factory.construct_instance()
     assert instance.orientation == Orientation(x=0.0, y=0.0, z=0.0, w=1.0)
 
-    parameters = MatchParameterizer(instance).parameterize()
-    assert len(parameters.variables) == 7
-    assert len(parameters.assignments) == 4
+    assert len(factory.flat_assignments) == 4
 
 
 def test_new_underspecified_translator():
+
     probable_pose = underspecified(Pose)
     prob_q = probable_pose(
-        position=underspecified(Position)(x=..., y=..., z=...),
+        position=underspecified(Position.from_abc)(a=..., b=..., c=...),
         orientation=Orientation(x=0.0, y=0.0, z=0.0, w=1.0),
     ).where(probable_pose.variable.position.x > 0.5)
 
-    a = UnderspecifiedToParametersTranslator(prob_q).parameterize()
-    assignments = a.flat_assignments
-    for v, k in assignments.items():
+    factory = UnderspecifiedToCallableAndKwargsTranslator(prob_q).translate()
+    assignments = factory.flat_assignments
+    print(factory.flat_assignments)
+    for v, k in factory.flat_assignments.items():
         if isinstance(k, type(...)):
             assignments[v] = 0.0
 
-    a.apply_assignments(assignments)
-    r = a.construct_instance()
+    factory.apply_assignments(assignments)
+    r = factory.construct_instance()
     assert r == Pose(Position(0.0, 0.0, 0.0), Orientation(0.0, 0.0, 0.0, 1.0))
