@@ -35,7 +35,7 @@ from krrood.entity_query_language.query.builders import (
     QuantifierBuilder,
     OrderedByBuilder,
 )
-from krrood.entity_query_language.query.operations import Where, Having, GroupedBy
+from krrood.entity_query_language.query.operations import Where, Having, GroupedBy, OrderedBy
 from krrood.entity_query_language.query.quantifiers import (
     ResultQuantificationConstraint,
     ResultQuantifier,
@@ -133,6 +133,16 @@ class Query(
     Whether the query has built the query (wired the query operations) or not. If built already, it
     cannot be modified further and an error will be raised if a user tries to modify the query.
     """
+    _update_ordered_by_: bool = field(default=True, init=False)
+    """
+    Whether the query has updated the ordered by expression or not. If updated already, it
+    cannot be modified further and an error will be raised if a user tries to modify the query.
+    """
+    _update_quantifier_: bool = field(default=True, init=False)
+    """
+    Whether the query has updated the quantifier expression or not. If updated already, it
+    cannot be modified further and an error will be raised if a user tries to modify the query.
+    """
 
     def __post_init__(self):
         self._operation_children_ = tuple(self._selected_variables_)
@@ -164,7 +174,10 @@ class Query(
          returning an iterator over the results.
         """
         self.build()
-        return self._expression_.evaluate()
+        if self._expression_ is not self:
+            return self._expression_.evaluate()
+        else:
+            return MultiArityExpressionThatPerformsACartesianProduct.evaluate(self)
 
     @modifies_query_structure
     def where(self, *conditions: ConditionType) -> Self:
@@ -210,6 +223,7 @@ class Query(
         self._ordered_by_builder_ = OrderedByBuilder(
             self, variable, descending=descending, key=key
         )
+        self._update_ordered_by_ = True
         return self
 
     def distinct(
@@ -269,6 +283,7 @@ class Query(
         self._quantifier_builder_ = QuantifierBuilder(
             self, quantifier_type, quantification_constraint
         )
+        self._update_quantifier_ = True
         return self
 
     def __enter__(self):
@@ -287,6 +302,9 @@ class Query(
         :return: This query.
         """
         if self._built_:
+            # TODO: This is a temporary fix, a coming PR will clean it up.
+            self._update_ordered_by_expression_()
+            self._update_quantifier_expression_()
             return self
 
         self._built_ = True
@@ -321,11 +339,35 @@ class Query(
 
         self.update_children(*children)
 
-        if self._ordered_by_builder_ is not None:
-            self._ordered_by_builder_.data_source = self._expression_
-            self._expression_ = self._ordered_by_builder_.expression
+        self._update_ordered_by_expression_()
 
-        self._quantifier_builder_.child = self._expression_
+        self._update_quantifier_expression_()
+
+        return self
+
+    # TODO: This is a temporary fix, a coming PR will clean it up.
+    def _update_ordered_by_expression_(self):
+        if (self._ordered_by_builder_ is None) or not self._update_ordered_by_:
+            return self
+        og_child = self._expression_
+        if isinstance(self._expression_, OrderedBy):
+            og_child = self._expression_._child_
+            self._remove_parent_(self._expression_)
+        self._update_ordered_by_ = False
+        self._ordered_by_builder_.data_source = og_child
+        self._expression_ = self._ordered_by_builder_.expression
+        return self
+
+    # TODO: This is a temporary fix, a coming PR will clean it up.
+    def _update_quantifier_expression_(self):
+        if (self._quantifier_builder_ is None) or not self._update_quantifier_:
+            return self
+        og_child = self._expression_
+        if isinstance(self._expression_, ResultQuantifier):
+            og_child = self._expression_._child_
+            self._remove_parent_(self._expression_)
+        self._update_quantifier_ = False
+        self._quantifier_builder_.child = og_child
         self._expression_ = self._quantifier_builder_.expression
         self._expression_._limit_ = self._limit_
         return self
@@ -479,7 +521,9 @@ class Query(
         """
         Make sure to set the parent of the built expression of the query instead of the query itself.
         """
-        self.build()
+        # TODO: A hot fix for now, will be cleaned in a coming PR.
+        if not isinstance(parent, (ResultQuantifier, OrderedBy)):
+            self.build()
         if self._expression_ is not self:
             self._expression_._parent_ = parent
         else:

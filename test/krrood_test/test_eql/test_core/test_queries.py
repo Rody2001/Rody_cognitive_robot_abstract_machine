@@ -1054,7 +1054,6 @@ def test_order_by_not_evaluated_variable(handles_and_containers_world):
         handles_and_containers_world.bodies, key=lambda b: b.name, reverse=False
     )
 
-@pytest.mark.skip("Not Supported Yet, Will SoonTM in a new PR")
 def test_ordering_the_query_by_the_query_itself(handles_and_containers_world):
     body = variable(Body, domain=handles_and_containers_world.bodies)
     query = entity(body).where(contains(body.name, "Handle"))

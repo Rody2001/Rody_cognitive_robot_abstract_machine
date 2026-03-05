@@ -174,6 +174,8 @@ class SymbolicExpression(ABC):
         :param old_child: The old child expression.
         :param new_child: The new child expression.
         """
+        if old_child is new_child:
+            return
         _children_ids_ = [v._id_ for v in self._children_]
         child_idx = _children_ids_.index(old_child._id_)
         self._children_[child_idx] = new_child
