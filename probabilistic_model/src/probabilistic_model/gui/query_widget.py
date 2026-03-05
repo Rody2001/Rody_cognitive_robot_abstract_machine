@@ -203,10 +203,8 @@ class QueryWidget(QWidget):
                 # (actually Dash might handle multiple rows as intersection or union depending on logic)
                 # In components.py div_to_event intersections were used.
                 if var in simple_event:
-                    # random_events SimpleEvent intersection is likely intersection_with
-                    # But val might be Interval or Set, while simple_event[var] is same.
-                    # Usually SimpleEvent stores the simple set.
-                    simple_event[var] = simple_event[var].intersection_with(val)
+                    # Treat multiple constraints on the same variable as a union
+                    simple_event[var] = simple_event[var].union_with(val)
                 else:
                     simple_event[var] = val
 

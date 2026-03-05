@@ -124,28 +124,41 @@ class NumericIntervalWidget(QWidget):
         secondary_light = get_secondary_light_color()
 
         # Enhanced stylesheet for slider visibility
-        self.slider.setStyleSheet(
+        self.setStyleSheet(
+            f"NumericIntervalWidget {{ "
+            f"   min-height: 40px; "
+            f"}} "
             f"QRangeSlider, QDoubleRangeSlider {{ "
-            f"   qproperty-barColor: {primary}; "
             f"   min-height: 24px; "
+            f"   background: none; "
+            f"   border: none; "
             f"}} "
             f"QRangeSlider::handle, QDoubleRangeSlider::handle {{ "
             f"   background-color: {primary}; "
-            f"   border: 2px solid white; "
+            f"   border: 1px solid {primary}; "
             f"   width: 14px; "
             f"   height: 14px; "
             f"   margin: -4px 0; "
             f"   border-radius: 8px; "
             f"}} "
+            f"QRangeSlider::handle:hover, QDoubleRangeSlider::handle:hover {{ "
+            f"   background-color: white; "
+            f"   border: 1px solid {primary}; "
+            f"}} "
             f"QRangeSlider::groove, QDoubleRangeSlider::groove {{ "
             f"   background-color: {secondary_light}; "
-            f"   height: 6px; "
-            f"   border-radius: 3px; "
+            f"   height: 4px; "
+            f"   border-radius: 2px; "
+            f"}} "
+            f"QRangeSlider::bar, QDoubleRangeSlider::bar {{ "
+            f"   background-color: {primary}; "
             f"}} "
         )
 
         # Connections
-        self.slider.valueChanged.connect(self._on_slider_changed)
+        self.slider.sliderMoved.connect(self._on_slider_changed)
+        self.slider.sliderPressed.connect(self._on_slider_pressed)
+        self.slider.sliderReleased.connect(self._on_slider_released)
         self.minimum_spin_box.valueChanged.connect(self._on_spin_changed)
         self.maximum_spin_box.valueChanged.connect(self._on_spin_changed)
 
@@ -163,10 +176,21 @@ class NumericIntervalWidget(QWidget):
         """
         Updates the spin boxes when the slider values change.
         """
-        self.minimum_spin_box.blockSignals(True)
-        self.maximum_spin_box.blockSignals(True)
         self.minimum_spin_box.setValue(values[0])
         self.maximum_spin_box.setValue(values[1])
+        self.changed.emit()
+
+    def _on_slider_pressed(self):
+        """
+        Blocks signals from spin boxes when the slider is pressed.
+        """
+        self.minimum_spin_box.blockSignals(True)
+        self.maximum_spin_box.blockSignals(True)
+
+    def _on_slider_released(self):
+        """
+        Unblocks signals from spin boxes and emits changed when the slider is released.
+        """
         self.minimum_spin_box.blockSignals(False)
         self.maximum_spin_box.blockSignals(False)
         self.changed.emit()
@@ -175,6 +199,9 @@ class NumericIntervalWidget(QWidget):
         """
         Updates the slider when the spin box values change.
         """
+        if self.minimum_spin_box.signalsBlocked():
+            return
+
         value_1 = self.minimum_spin_box.value()
         value_2 = self.maximum_spin_box.value()
         low, high = min(value_1, value_2), max(value_1, value_2)
@@ -332,35 +359,47 @@ class VariableConstraintWidget(QFrame):
         self.constraint_container = QWidget()
         self.constraint_layout = QVBoxLayout(self.constraint_container)
         self.constraint_layout.setContentsMargins(0, 0, 0, 0)
+        # Avoid unnecessary re-layouts during heavy widget manipulation
+        self.constraint_layout.setEnabled(False)
         self.main_layout.addWidget(self.constraint_container)
+        self.constraint_layout.setEnabled(True)
 
         self.constraint_widget = None
 
     def on_variable_changed(self):
         # Clear previous constraint widgets
-        while self.constraint_layout.count():
-            item = self.constraint_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-            else:
-                # Could be a layout
-                sub_layout = item.layout()
-                if sub_layout:
-                    # Clear sub_layout
-                    while sub_layout.count():
-                        sub_item = sub_layout.takeAt(0)
-                        sub_widget = sub_item.widget()
-                        if sub_widget:
-                            sub_widget.deleteLater()
-        self.constraint_widget = None
+        self.constraint_layout.setEnabled(False)
+        try:
+            while self.constraint_layout.count():
+                item = self.constraint_layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    # Disconnect all signals before hiding/deleting to avoid issues during teardown
+                    widget.blockSignals(True)
+                    widget.hide()
+                    widget.deleteLater()
+                else:
+                    # Could be a layout
+                    sub_layout = item.layout()
+                    if sub_layout:
+                        # Clear sub_layout
+                        while sub_layout.count():
+                            sub_item = sub_layout.takeAt(0)
+                            sub_widget = sub_item.widget()
+                            if sub_widget:
+                                sub_widget.blockSignals(True)
+                                sub_widget.hide()
+                                sub_widget.deleteLater()
+            self.constraint_widget = None
 
-        variable = self.variable_combo.currentData()
-        if variable:
-            self.create_constraint_widget(variable)
+            variable = self.variable_combo.currentData()
+            if variable:
+                self.create_constraint_widget(variable)
 
-        if self._read_only:
-            self.set_read_only(True)
+            if self._read_only:
+                self.set_read_only(True)
+        finally:
+            self.constraint_layout.setEnabled(True)
 
         self.changed.emit()
 

@@ -234,7 +234,8 @@ class ModeWidget(QWidget):
             if constraint:
                 var, val = constraint
                 if var in simple_event:
-                    simple_event[var] = simple_event[var].intersection_with(val)
+                    # Treat multiple constraints on the same variable as a union
+                    simple_event[var] = simple_event[var].union_with(val)
                 else:
                     simple_event[var] = val
 
