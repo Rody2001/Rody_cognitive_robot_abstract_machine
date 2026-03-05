@@ -1,26 +1,23 @@
 from __future__ import annotations
 
-import inspect
 import typing
 from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Dict, Callable, Type, Optional
 
-from krrood.adapters.json_serializer import list_like_classes, leaf_types
+from typing_extensions import Any
+
+import random_events.variable
+from krrood.adapters.json_serializer import list_like_classes
 from krrood.entity_query_language.core.base_expressions import SymbolicExpression
 from krrood.entity_query_language.core.mapped_variable import MappedVariable
 from krrood.entity_query_language.factories import variable, and_
 from krrood.entity_query_language.query.match import UnderspecifiedVariable
-
 from krrood.probabilistic_knowledge.probable_variable import (
     QueryToRandomEventTranslator,
 )
 from random_events.set import Set
-from random_events.variable import Symbolic
-
-from typing_extensions import Any
-
 from random_events.variable import variable_from_name_and_type
 
 
@@ -50,7 +47,7 @@ class CallableAndKwargs:
     @cached_property
     def flat_assignments(
         self,
-    ) -> Dict[VariableThatAppearsKwargsAndWhereConditions, Any]:
+    ) -> Dict[ParametrizationVariable, Any]:
         """
         :return: A dictionary mapping all variables mentioned in the CallableAndKwargs to their values.
         """
@@ -58,8 +55,11 @@ class CallableAndKwargs:
 
         symbolic_access_for_kwargs = variable(self.callable, [])
         symbolic_access_for_where = variable(self.callable, [])
-        symbolic_access = VariableThatAppearsKwargsAndWhereConditions(
-            symbolic_access_for_kwargs, symbolic_access_for_where
+        symbolic_access = ParametrizationVariable(
+            variable_in_kwargs=symbolic_access_for_kwargs,
+            variable_in_where_conditions=symbolic_access_for_where,
+            type_hint=None,
+            value=None,
         )
 
         self._flat_assignments(symbolic_access, result)
@@ -76,7 +76,7 @@ class CallableAndKwargs:
 
     def _flat_assignments(
         self,
-        symbolic_access: VariableThatAppearsKwargsAndWhereConditions,
+        symbolic_access: ParametrizationVariable,
         result: Dict,
     ):
         """
@@ -111,6 +111,7 @@ class CallableAndKwargs:
                             result,
                         )
                     else:
+                        current_symbolic_access.is_leaf = True
                         result[current_symbolic_access_index] = element
 
             elif isinstance(value, CallableAndKwargs):
@@ -119,11 +120,10 @@ class CallableAndKwargs:
                     result,
                 )
             else:
+                current_symbolic_access.is_leaf = True
                 result[current_symbolic_access] = value
 
-    def apply_assignments(
-        self, bindings: Dict[VariableThatAppearsKwargsAndWhereConditions, Any]
-    ):
+    def apply_assignments(self, bindings: Dict[ParametrizationVariable, Any]):
         """
         Apply the given bindings to the CallableAndKwargs instance.
         This updates the `kwarg` attribute in-place.
@@ -213,25 +213,90 @@ class UnderspecifiedToCallableAndKwargsTranslator:
 
 
 @dataclass
-class VariableThatAppearsKwargsAndWhereConditions:
+class ParametrizationVariable:
+    """
+    Grouping of variables that appear in different expressions but mean the same thing.
+    """
+
     variable_in_kwargs: MappedVariable
+    """
+    The variable in the kwargs of the factory used for constructing the final object.
+    This one is guaranteed to appear.
+    """
+
     variable_in_where_conditions: MappedVariable
+    """
+    The variable in the where conditions. This one is very likely to exist. 
+    """
+
+    value: Any = None
+    """
+    The value this variable has in the Kwargs"""
+
     type_hint: Optional[Type] = None
+    """
+    The type hint of the variable extracted from the signature of the factory.
+    """
+
+    is_leaf: bool = False
+    """
+    Whether this variable is a leaf variable.
+    A leaf variable is a variable where its value was not an `underspecified` statement.
+    """
 
     def __hash__(self):
         return hash(self.variable_in_kwargs)
 
+    @property
+    def name(self) -> str:
+        return self.variable_in_where_conditions._name_
+
     def apply_attribute_access(self, attribute: str):
+        """
+        Apply attribute access to the EQL variables.
+        :param attribute: The namee of the attribute
+        :return: A new ParametrizationVariable with the attribute access applied.
+        """
+        if self.is_leaf:
+            raise ValueError("Cannot apply attribute access to leaf variable")
         return self.__class__(
-            self.variable_in_kwargs[attribute],
-            getattr(self.variable_in_where_conditions, attribute),
+            variable_in_kwargs=self.variable_in_kwargs[attribute],
+            variable_in_where_conditions=getattr(
+                self.variable_in_where_conditions, attribute
+            ),
+            value=None,
+            type_hint=None,
+            is_leaf=False,
         )
 
     def apply_index_access(self, index: Any):
+        """
+        Apply index access to the EQL variables.
+        :param index: The index to access
+        :return: A new ParametrizationVariable with the index access applied.
+        """
+        if self.is_leaf:
+            raise ValueError("Cannot apply index access to leaf variable")
         return self.__class__(
-            self.variable_in_kwargs[index],
-            self.variable_in_where_conditions[index],
+            variable_in_kwargs=self.variable_in_kwargs[index],
+            variable_in_where_conditions=self.variable_in_where_conditions[index],
+            value=None,
+            type_hint=None,
+            is_leaf=False,
         )
+
+    @cached_property
+    def random_events_variable(self) -> Optional[random_events.variable.Variable]:
+        if not self.is_leaf:
+            return None
+
+        if isinstance(self.value, SymbolicExpression):
+            return random_events.variable.Symbolic(
+                self.name,
+                Set.from_iterable(self.value.tolist()),
+            )
+
+        return variable_from_name_and_type(self.name, self.type_hint)
 
 
 @dataclass
@@ -248,29 +313,3 @@ class Parameters:
         self._random_event_compiler = QueryToRandomEventTranslator(
             and_(*self.statement._where_expression)
         )
-
-    @property
-    def random_event_variables(self):
-        for (
-            variable,
-            value,
-        ) in self._factory_compiler.translate().flat_assignments.items():
-            if isinstance(value, type(Ellipsis)):
-                random_events_variable = variable_from_name_and_type(
-                    variable.variable_in_where_conditions.name, variable.type_hint
-                )
-            elif isinstance(value, leaf_types):
-                random_events_variable = variable_from_name_and_type(
-                    variable.variable_in_where_conditions.name, type(value)
-                )
-            elif isinstance(value, SymbolicExpression):
-                random_events_variable = self.random_event_variable_from_expression(
-                    variable.variable_in_where_conditions.name, value
-                )
-            return random_events_variable
-
-    def random_event_variable_from_expression(
-        self, name: str, expression: SymbolicExpression
-    ):
-        variable = Symbolic(name, Set.from_iterable(expression.tolist()))
-        return variable
