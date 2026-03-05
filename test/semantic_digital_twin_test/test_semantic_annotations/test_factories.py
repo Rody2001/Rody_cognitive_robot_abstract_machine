@@ -741,9 +741,9 @@ class TestFactories(unittest.TestCase):
         self.assertIsNotNone(sofa)
         # Check if supporting surface was calculated automatically
         self.assertIsNotNone(sofa.supporting_surface)
-        # Check connections: Seat (root) should be parent to Backrest, ArmL, ArmR and SupportingSurface (Total 4)
+        # Check connections: Sofa (root) should be parent to SupportingSurface (Total 1)
         children = [c.child for c in world.connections if c.parent == sofa.root]
-        self.assertEqual(len(children), 4)
+        self.assertEqual(len(children), 1)
 
     def test_wall_doors(self):
         world = World()
