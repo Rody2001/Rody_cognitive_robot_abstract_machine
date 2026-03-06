@@ -104,7 +104,7 @@ def execute(link_length: float, vel_limit: float, rclpy_node):
             world=fucking_huge_robot,
             qp_controller_config=QPControllerConfig(
                 target_frequency=100,
-                prediction_horizon=35,
+                prediction_horizon=50,
                 # qp_solver_id=SupportedQPSolver.gurobi,
             ),
         ),
@@ -122,7 +122,7 @@ def execute(link_length: float, vel_limit: float, rclpy_node):
 
 
 def test_cart_goal(rclpy_node):
-    execute(0.1, 0.1, rclpy_node)
+    execute(1000.0, 0.1, rclpy_node)
 
 
 def test_cart_goal3(rclpy_node):

@@ -13,14 +13,6 @@ from giskardpy.qp.qp_data import QPDataExplicit
 from giskardpy.qp.solvers.qp_solver import QPSolver
 
 
-class QPSWIFTExitFlags(IntEnum):
-    Optimal = 0  # Solution Found
-    KKT_Failure = 1  # Failure in factorising KKT matrix
-    MAX_ITER_REACHED = 2  # Maximum Number of Iterations Reached
-    ERROR = 3  # Unknown Problem in Solver
-    INFEASIBLE = 4  # Unknown Problem in Solver
-
-
 @dataclass
 class QPSolverPIQP(QPSolver[QPDataExplicit]):
     """
@@ -34,6 +26,18 @@ class QPSolverPIQP(QPSolver[QPDataExplicit]):
     def solver_call_explicit_interface(self, qp_data: QPDataExplicit) -> np.ndarray:
         H = sp.diags(qp_data.quadratic_weights, offsets=0, format="csc")
         solver = piqp.SparseSolver()
+        # solver.settings.eps_abs = 1e-3
+        # solver.settings.eps_rel = 1e-4
+        # solver.settings.eps_duality_gap_rel = 5e-7
+        # solver.settings.iterative_refinement_always_enabled = True
+        # solver.settings.delta_init = 7e-3
+        # solver.settings.preconditioner_scale_cost = True
+        solver.settings.eps_abs = 1e-6  # Relaxed from 1e-8
+        solver.settings.eps_rel = 1e-7  # Relaxed from 1e-9
+        solver.settings.eps_duality_gap_abs = 1e-4  # Add this
+        solver.settings.eps_duality_gap_rel = 1e-5  # Add this
+        # solver.settings.verbose = True
+        # solver.settings.preconditioner_scale_cost = True  # Enable this
         if len(qp_data.neq_upper_bounds) == 0:
             solver.setup(
                 P=H,
@@ -59,6 +63,7 @@ class QPSolverPIQP(QPSolver[QPDataExplicit]):
         status = solver.solve()
         if status.value != piqp.PIQP_SOLVED:
             raise InfeasibleException(f"Solver status: {status.value}")
+        # print(f"Solver status: {solver.result.info.iter}")
         return solver.result.x
 
     solver_call = solver_call_explicit_interface

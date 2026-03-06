@@ -11,6 +11,7 @@ from typing_extensions import TYPE_CHECKING
 from giskardpy.qp.exceptions import QPSolverException
 from giskardpy.qp.qp_formulation import QPFormulation
 from giskardpy.qp.solvers.qp_solver_ids import SupportedQPSolver
+from giskardpy.qp.solvers.qp_solver_piqp import QPSolverPIQP
 from giskardpy.qp.solvers.qp_solver_qpSWIFT import QPSolverQPSwift
 from giskardpy.utils.utils import get_all_classes_in_module
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
@@ -124,7 +125,7 @@ class QPControllerConfig:
     .. warning:: Don't change this.  
     """
 
-    qp_solver_class: Type[QPSolver] = field(default=QPSolverQPSwift)
+    qp_solver_class: Type[QPSolver] = field(default=QPSolverPIQP)
     """
     Reference to the resolved QP solver class.
     """
