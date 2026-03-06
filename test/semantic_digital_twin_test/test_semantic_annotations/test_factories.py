@@ -596,25 +596,33 @@ class TestFactories(unittest.TestCase):
                 scale=Scale(0.1, 0.03, 0.2),
                 world_root_T_self=HomogeneousTransformationMatrix.from_xyz_rpy(x=-0.5),
             )
+            cereal2 = Cereal.create_with_new_body_in_world(
+                name=PrefixedName("cereal"),
+                world=world,
+                scale=Scale(0.1, 0.03, 0.2),
+                world_root_T_self=HomogeneousTransformationMatrix.from_xyz_rpy(y=0.2),
+            )
             table = Table.create_with_new_body_in_world(
                 name=PrefixedName("table"), world=world, scale=Scale(1.0, 1.0, 0.1)
             )
             table.add_object(milk)
             table.add_object(cereal)
+            table.add_object(cereal2)
 
-        points = table.sample_points_from_surface(
-            category_of_interest=type(cereal),
-            amount=10,
+        with world.modify_world():
+            table.calculate_supporting_surface()
+        objects_of_interest = [cereal, cereal2]
+        sampler = table._untruncated_2d_gaussian_sampler(
+            objects_of_interest=objects_of_interest, variance=1
         )
-        self.assertEqual(len(points), 10)
-
-        min_point, max_point = table.min_max_points
-        assert all(p.reference_frame == table.root for p in points)
-        assert all(p.x >= min_point.x for p in points)
-        assert all(p.x <= max_point.x for p in points)
-        assert all(p.y >= min_point.y for p in points)
-        assert all(p.y <= max_point.y for p in points)
-        assert np.allclose([p.z for p in points], 0.0025)
+        [_, x_variable, y_variable] = sampler.variables
+        for object in objects_of_interest:
+            expectation = sampler.expectation([x_variable, y_variable])
+            surface_T_object = world.transform(
+                object.global_pose, table.supporting_surface
+            )
+            assert expectation[x_variable] == surface_T_object.x
+            assert expectation[y_variable] == surface_T_object.y
 
     def test_sample_points_from_surface_with_object(self):
         world = World()

@@ -2,6 +2,13 @@ import unittest
 from enum import IntEnum
 
 from probabilistic_model.distributions.distributions import *
+from probabilistic_model.distributions.helper import make_dirac
+from probabilistic_model.probabilistic_circuit.rx.probabilistic_circuit import (
+    ProductUnit,
+    ProbabilisticCircuit,
+    SumUnit,
+    leaf,
+)
 from probabilistic_model.utils import MissingDict
 from random_events.utils import SubclassJSONSerializer
 
@@ -203,6 +210,47 @@ class DiracDeltaDistributionTestCase(unittest.TestCase):
 
     def test_expectation(self):
         self.assertEqual(self.model.expectation([self.x])[self.x], 0)
+
+    def test_subset_of_continuous_variables_expectation(self):
+        circuit = ProbabilisticCircuit()
+        circuit_root = SumUnit(probabilistic_circuit=circuit)
+        subcircuit_root = ProductUnit(probabilistic_circuit=circuit)
+        circuit_root.add_subcircuit(subcircuit_root, 1.0)
+        x_var = Continuous("x")
+        x_dist = make_dirac(x_var, 0)
+
+        subcircuit_root.add_subcircuit(leaf(x_dist, circuit))
+        y_var = Continuous("y")
+        y_dist = make_dirac(y_var, 0)
+        subcircuit_root.add_subcircuit(leaf(y_dist, circuit))
+        self.assertEqual(circuit.expectation([x_var])[x_var], 0)
+
+    def test_subset_of_symbolic_variables_expectation(self):
+        circuit = ProbabilisticCircuit()
+        circuit_root = SumUnit(probabilistic_circuit=circuit)
+        subcircuit_root = ProductUnit(probabilistic_circuit=circuit)
+        circuit_root.add_subcircuit(subcircuit_root, 1.0)
+        x_var = Symbolic("x", Set.from_iterable(TestEnum))
+        x_dist = make_dirac(x_var, TestEnum.A)
+
+        subcircuit_root.add_subcircuit(leaf(x_dist, circuit))
+        y_var = Symbolic("y", Set.from_iterable(TestEnum))
+        y_dist = make_dirac(y_var, TestEnum.B)
+        subcircuit_root.add_subcircuit(leaf(y_dist, circuit))
+        self.assertEqual(circuit.expectation([x_var])[x_var], 0)
+
+    def test_subset_of_integer_variables_expectation(self):
+        circuit = ProbabilisticCircuit()
+        circuit_root = SumUnit(probabilistic_circuit=circuit)
+        subcircuit_root = ProductUnit(probabilistic_circuit=circuit)
+        circuit_root.add_subcircuit(subcircuit_root, 1.0)
+        x_var = Integer("x")
+        x_dist = make_dirac(x_var, 0)
+        subcircuit_root.add_subcircuit(leaf(x_dist, circuit))
+        y_var = Integer("y")
+        y_dist = make_dirac(y_var, 0)
+        subcircuit_root.add_subcircuit(leaf(y_dist, circuit))
+        self.assertEqual(circuit.expectation([x_var])[x_var], 0)
 
     def test_variance(self):
         self.assertEqual(self.model.variance([self.x])[self.x], 0)
