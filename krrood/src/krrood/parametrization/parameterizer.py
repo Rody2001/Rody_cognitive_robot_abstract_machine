@@ -277,7 +277,7 @@ class UnderspecifiedParameters:
         """
         return {
             v.random_events_variable: v.value
-            for v in self._random_event_compiler.leaf_variables_with_topology
+            for v in self._random_event_compiler.leaf_variables_with_random_events_variable
             if v.value is not None and isinstance(v.value, leaf_types)
         }
 

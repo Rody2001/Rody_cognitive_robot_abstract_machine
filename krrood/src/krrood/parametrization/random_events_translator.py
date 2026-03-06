@@ -49,7 +49,10 @@ class WhereExpressionToRandomEventTranslator:
             raise WhereExpressionNotInDisjunctiveNormalForm(self.conditions_root)
 
     @property
-    def leaf_variables_with_topology(self):
+    def leaf_variables_with_random_events_variable(self):
+        """
+        :return: All variables that are leaves and have a random events variable.
+        """
         return [
             v
             for v in self.parametrization_variables
@@ -61,7 +64,7 @@ class WhereExpressionToRandomEventTranslator:
     ) -> ParametrizationVariable:
         [parameterization_variable] = [
             v
-            for v in self.leaf_variables_with_topology
+            for v in self.leaf_variables_with_random_events_variable
             if v.name == expression.left._name_
         ]
         return parameterization_variable
@@ -89,7 +92,7 @@ class WhereExpressionToRandomEventTranslator:
                 simple_event = SimpleEvent(
                     {
                         v.random_events_variable: v.random_events_variable.domain
-                        for v in self.leaf_variables_with_topology
+                        for v in self.leaf_variables_with_random_events_variable
                     }
                 )
 
