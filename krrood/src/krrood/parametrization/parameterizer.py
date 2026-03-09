@@ -62,11 +62,12 @@ class UnderspecifiedParameters:
         """
         result = {v.name: v for v in self._random_event_compiler.variables.values()}
 
-        for literal in self.statement.literals:
+        for literal in self.statement.matches_with_variables:
+            name = literal.variable._access_path_[-1]._name_
 
             if isinstance(literal.assigned_value, SymbolicExpression):
                 random_events_variable = random_events.variable.Symbolic(
-                    literal.assigned_variable._name_,
+                    name,
                     Set.from_iterable(literal.assigned_value.tolist()),
                 )
                 result[random_events_variable.name] = random_events_variable
@@ -79,7 +80,7 @@ class UnderspecifiedParameters:
                 continue
 
             random_events_variable = random_events.variable.variable_from_name_and_type(
-                literal.assigned_variable._name_, literal.assigned_variable._type_
+                name, literal.assigned_variable._type_
             )
 
             result[random_events_variable.name] = random_events_variable
@@ -94,7 +95,7 @@ class UnderspecifiedParameters:
         conditioning a probabilistic model. These values ignore the `where` conditions.
         """
         result = {}
-        for literal in self.statement.literals:
+        for literal in self.statement.matches_with_variables:
             variable = self.variables.get(literal.assigned_variable._name_, None)
             if variable is None or isinstance(
                 literal.assigned_variable._value_, (type(Ellipsis), SymbolicExpression)

@@ -147,7 +147,7 @@ def test_probable_variable_with_concrete_kwarg():
     correct_instance = Pose(Position(..., ..., ...), Orientation(0.0, 0.0, 0.0, 1.0))
 
     assert instance == correct_instance
-    assert len(list(prob_q.literals)) == 4
+    assert len(list(prob_q.matches_with_variables)) == 4
 
 
 def test_new_underspecified_with_factory():
@@ -168,7 +168,7 @@ def test_underspecified_with_list():
         some_strings=["a", "b"],
     )
 
-    for literal in q.literals:
+    for literal in q.matches_with_variables:
         if literal.assigned_value is ...:
             literal.assigned_variable._value_ = 0.0
 

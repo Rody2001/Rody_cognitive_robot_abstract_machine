@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
+from collections import deque
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import assert_never, Any
@@ -40,9 +41,10 @@ from krrood.entity_query_language.core.mapped_variable import (
     MappedVariable,
     Index,
 )
-from krrood.entity_query_language.core.variable import Literal, DomainType
+from krrood.entity_query_language.core.variable import Literal, DomainType, Variable
 from krrood.entity_query_language.failures import (
     NoKwargsInMatchVar,
+    CalledMatchMultipleTimes,
 )
 from krrood.entity_query_language.predicate import HasType
 from krrood.entity_query_language.query.quantifiers import An
@@ -156,15 +158,24 @@ class AbstractMatchExpression(Generic[T], ABC):
 
     @property
     def descendants(self) -> Iterator[AbstractMatchExpression]:
-        yield from self.children
-        for child in self.children:
-            yield from child.descendants
+        """
+        :return: All descendants of this expression in breadth first order
+        """
+        queue = deque(self.children)
+        while queue:
+            node = queue.popleft()
+            yield node
+            queue.extend(node.children)
 
     @property
-    def literals(self) -> Iterator[AttributeMatch]:
+    def matches_with_variables(self) -> Iterator[AttributeMatch]:
+        """
+        :return: All attribute matches where the assigned variable is a variable.
+        These matches are typically the leaves of a match expression.
+        """
         self.resolve()
         for expression in self.descendants:
-            if isinstance(expression.assigned_variable, Literal):
+            if isinstance(expression.assigned_variable, Variable):
                 yield expression
 
 
@@ -221,7 +232,7 @@ class Match(AbstractMatchExpression[T], HasFactoryAndKwargs[T]):
         :return: The current match instance after updating it with the new keyword arguments.
         """
         if self._has_been_called:
-            raise ValueError("Match instance has already been called")
+            raise CalledMatchMultipleTimes(self)
         self.kwargs = kwargs
         self._has_been_called = True
         return self
@@ -250,12 +261,11 @@ class Match(AbstractMatchExpression[T], HasFactoryAndKwargs[T]):
         parent: Optional[MatchVariable] = None,
     ):
         """
-        Resolve the match by creating the variable and conditions expressions.
+        Resolve the match by creating the variable and conditions expressions in-place.
 
         :param variable: An optional pre-existing variable to use for the match; if not provided, a new variable will
          be created.
         :param parent: The parent match if this is a nested match.
-        :return:
         """
 
         parent = parent or self
@@ -267,30 +277,59 @@ class Match(AbstractMatchExpression[T], HasFactoryAndKwargs[T]):
             ):
                 self._resolve_list_like_value(attr_name, attr_assigned_value, parent)
                 continue
-            attr_match = AttributeMatch(
+            self._create_attribute_match_and_resolve(
                 parent=parent,
                 attribute_name=attr_name,
                 assigned_value=attr_assigned_value,
             )
-            attr_match.resolve()
-            self.children.append(attr_match)
-            self.conditions.extend(attr_match.conditions)
+
+    def _create_attribute_match_and_resolve(
+        self,
+        parent: MatchVariable,
+        attribute_name: str,
+        assigned_value: Any,
+        index_access: Optional[Any] = None,
+    ) -> AttributeMatch:
+        """
+        Create an attribute match and resolve it recursively.
+
+        :param parent: The parent match instance.
+        :param attribute_name: The name of the attribute to create.
+        :param assigned_value: The value assigned to the attribute.
+        :param index_access: The index access to the attribute.
+        :return: The created instance after every child has been resolved.
+        """
+        attr_match = AttributeMatch(
+            parent=parent,
+            attribute_name=attribute_name,
+            index_access=index_access,
+            assigned_value=assigned_value,
+        )
+        attr_match.resolve()
+        self.children.append(attr_match)
+        self.conditions.extend(attr_match.conditions)
+        return attr_match
 
     def _resolve_list_like_value(
         self, key: str, value: Union[list, tuple], parent: MatchVariable
     ):
+        """
+        Resolves list-like values by iterating over their elements and creating attribute
+        matches for the parent match variable.
+
+        :param key: The attribute name being processed.
+        :param value: The list or tuple containing elements to be resolved.
+        :param parent: The parent match variable associated with the provided key.
+        """
 
         # handle list like classes by wrapping the index access
         for index, element in enumerate(value):
-            attr_match = AttributeMatch(
+            self._create_attribute_match_and_resolve(
                 parent=parent,
                 attribute_name=key,
-                index_access=index,
                 assigned_value=element,
+                index_access=index,
             )
-            attr_match.resolve()
-            self.children.append(attr_match)
-            self.conditions.extend(attr_match.conditions)
 
     def update_fields(
         self,
@@ -341,13 +380,13 @@ class Match(AbstractMatchExpression[T], HasFactoryAndKwargs[T]):
         return self
 
     def _update_kwargs_from_literal_values(self):
-        for literal in self.literals:
+        for literal in self.matches_with_variables:
             literal._update_kwargs_from(self)
 
     def _get_mapped_variable_by_name(self, name: str) -> MappedVariable:
         [result] = [
             literal.assigned_variable
-            for literal in self.literals
+            for literal in self.matches_with_variables
             if literal.assigned_variable._name_ == name
         ]
         return result
