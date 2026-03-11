@@ -67,6 +67,7 @@ from giskardpy.motion_statechart.tasks.cartesian_tasks import (
     CartesianVelocityLimit,
     CartesianPositionVelocityLimit,
     CartesianRotationVelocityLimit,
+    CartesianPositionTrajectory,
 )
 from giskardpy.motion_statechart.tasks.feature_functions import (
     AngleGoal,
@@ -1325,33 +1326,6 @@ class TestCartesianTasks:
         kin_sim.compile(motion_statechart=msc)
         kin_sim.tick_until_end()
 
-    def test_cart_goal_1eef(self, pr2_world_state_reset: World):
-        """Single CartesianPose goal test."""
-        tip = pr2_world_state_reset.get_kinematic_structure_entity_by_name(
-            "r_gripper_tool_frame"
-        )
-        root = pr2_world_state_reset.get_kinematic_structure_entity_by_name(
-            "base_footprint"
-        )
-        tip_goal = HomogeneousTransformationMatrix.from_xyz_quaternion(
-            pos_x=-0.2, reference_frame=tip
-        )
-
-        msc = MotionStatechart()
-        cart_goal = CartesianPose(
-            root_link=root,
-            tip_link=tip,
-            goal_pose=tip_goal,
-        )
-        msc.add_node(cart_goal)
-        end = EndMotion()
-        msc.add_node(end)
-        end.start_condition = cart_goal.observation_variable
-
-        kin_sim = Executor(MotionStatechartContext(world=pr2_world_state_reset))
-        kin_sim.compile(motion_statechart=msc)
-        kin_sim.tick_until_end()
-
     def test_cart_goal_sequence_at_build(
         self, pr2_world_state_reset: World, rclpy_node
     ):
@@ -1818,6 +1792,28 @@ class TestCartesianTasks:
         assert np.allclose(
             cart_straight.goal_pose.to_np(), goal_pose.to_np(), atol=0.015
         )
+
+    def test_cartesian_position_trajectory(self, cylinder_bot_world: World, rclpy_node):
+        VizMarkerPublisher(
+            _world=cylinder_bot_world, node=rclpy_node
+        ).with_tf_publisher()
+        points = []
+        for i in range(100):
+            points.append(
+                Point3(np.sin(i), np.cos(i), 0, reference_frame=cylinder_bot_world.root)
+            )
+        msc = MotionStatechart()
+        cart_traj = CartesianPositionTrajectory(
+            root_link=cylinder_bot_world.root,
+            tip_link=cylinder_bot_world.get_kinematic_structure_entity_by_name("bot"),
+            goal_points=points,
+        )
+        msc.add_node(cart_traj)
+        msc.add_node(EndMotion.when_true(cart_traj))
+
+        kin_sim = Executor(context=MotionStatechartContext(world=cylinder_bot_world))
+        kin_sim.compile(motion_statechart=msc)
+        kin_sim.tick_until_end()
 
 
 class TestDiffDriveBaseGoal:

@@ -40,20 +40,23 @@ class Pointing(Task):
     """
     Priority weight for the pointing constraint in the optimization problem.
     """
-    _root_P_goal_point_index: int = field(init=False)
-    """
-    Index of the FloatVariables for root_P_goal_point in the FloatVariableData. 
-    """
-    _float_variable_data: FloatVariableData = field(init=False)
-    """
-    Reference to the data structure used to store auxiliary variables.
-    """
+    # _root_P_goal_point_index: int = field(init=False)
+    # """
+    # Index of the FloatVariables for root_P_goal_point in the FloatVariableData.
+    # """
+    # _float_variable_data: FloatVariableData = field(init=False)
+    # """
+    # Reference to the data structure used to store auxiliary variables.
+    # """
 
     def build(self, context: MotionStatechartContext) -> NodeArtifacts:
         artifacts = NodeArtifacts()
 
-        self._float_variable_data = context.float_variable_data
-
+        # self._float_variable_data = context.float_variable_data
+        self.root_P_goal_point = Point3.create_with_variables("root_P_goal_point")
+        context.float_variable_data.managed_variables_of_expression(
+            self.root_P_goal_point
+        )
         tip_V_pointing_axis = context.world.transform(
             target_frame=self.tip_link, spatial_object=self.pointing_axis
         )

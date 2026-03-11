@@ -1,10 +1,12 @@
 from dataclasses import field, dataclass
+from functools import cached_property
 from typing import Optional, ClassVar
 
 import numpy as np
 from typing_extensions import List
 
 import krrood.symbolic_math.symbolic_math as sm
+from giskardpy.motion_statechart.exceptions import NodeInitializationError
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.spatial_types import (
     Vector3,
@@ -17,16 +19,68 @@ from semantic_digital_twin.world_description.world_entity import (
     Body,
     KinematicStructureEntity,
 )
-from giskardpy.motion_statechart.binding_policy import GoalBindingPolicy, ForwardKinematicsBinding
+from giskardpy.motion_statechart.binding_policy import (
+    GoalBindingPolicy,
+    ForwardKinematicsBinding,
+)
 from giskardpy.motion_statechart.context import MotionStatechartContext
-from giskardpy.motion_statechart.data_types import DefaultWeights
+from giskardpy.motion_statechart.data_types import (
+    DefaultWeights,
+    ObservationStateValues,
+)
 from giskardpy.motion_statechart.goals.templates import Parallel
-from giskardpy.motion_statechart.graph_node import NodeArtifacts, DebugExpression, MotionStatechartNode
+from giskardpy.motion_statechart.graph_node import (
+    NodeArtifacts,
+    DebugExpression,
+    MotionStatechartNode,
+)
 from giskardpy.motion_statechart.graph_node import Task
 
 
 @dataclass(eq=False, repr=False)
-class CartesianPosition(Task):
+class CartesianTask(Task):
+    root_link: KinematicStructureEntity = field(kw_only=True)
+    """Base link of the kinematic chain."""
+
+    tip_link: KinematicStructureEntity = field(kw_only=True)
+    """End link that should reach the goal position."""
+
+    binding_policy: GoalBindingPolicy = field(
+        default=GoalBindingPolicy.Bind_on_start, kw_only=True
+    )
+    """Describes when the goal is computed. See GoalBindingPolicy for more information."""
+
+    goal_reference_frame: KinematicStructureEntity = field(kw_only=True, init=False)
+    """Reference frame for the goal."""
+    root_T_goal_reference_frame: HomogeneousTransformationMatrix = field(
+        kw_only=True, init=False
+    )
+    """Transformation matrix from root to goal_reference_frame link."""
+
+    _fk_binding: ForwardKinematicsBinding = field(kw_only=True, init=False)
+    """Binding for the goal pose."""
+
+    def build(self, context: MotionStatechartContext) -> NodeArtifacts:
+        artifacts = NodeArtifacts()
+
+        self._fk_binding = ForwardKinematicsBinding(
+            name=PrefixedName("root_T_goal_ref", str(self.name)),
+            root=self.root_link,
+            tip=self.goal_reference_frame,
+            float_variable_data=context.float_variable_data,
+        )
+        self._fk_binding.bind(context.world)
+        self.root_T_goal_reference_frame = self._fk_binding.root_T_tip
+
+        return artifacts
+
+    def on_start(self, context: MotionStatechartContext):
+        if self.binding_policy == GoalBindingPolicy.Bind_on_start:
+            self._fk_binding.bind(context.world)
+
+
+@dataclass(eq=False, repr=False)
+class CartesianPosition(CartesianTask):
     """
     Move a tip link to a goal position in 3D space.
 
@@ -37,13 +91,63 @@ class CartesianPosition(Task):
 
     default_reference_velocity: ClassVar[float] = 0.2
 
+    goal_point: Point3 = field(kw_only=True)
+    """Target 3D point to reach."""
+    threshold: float = field(default=0.01, kw_only=True)
+    """Distance threshold for goal achievement in meters."""
+
+    reference_velocity: Optional[float] = field(
+        default_factory=lambda: CartesianPosition.default_reference_velocity,
+        kw_only=True,
+    )
+    """Reference velocity for normalization in m/s."""
+
+    _fk_binding: ForwardKinematicsBinding = field(kw_only=True, init=False, repr=False)
+
+    def build(self, context: MotionStatechartContext) -> NodeArtifacts:
+        """
+        Build motion constraints for reaching the goal position.
+
+        :param context: Provides access to world model and kinematic expressions.
+        :return: NodeArtifacts containing constraints and observation conditions.
+        """
+        self.goal_reference_frame = self.goal_point.reference_frame
+
+        artifacts = super().build(context)
+
+        root_P_goal = self.root_T_goal_reference_frame @ self.goal_point
+
+        # Get current tip position in root frame
+        root_P_current = context.world.compose_forward_kinematics_expression(
+            self.root_link, self.tip_link
+        ).to_position()
+
+        # Add constraints to move tip towards goal
+        artifacts.constraints.add_point_goal_constraints(
+            frame_P_goal=root_P_goal,
+            frame_P_current=root_P_current,
+            reference_velocity=self.reference_velocity,
+            weight=self.weight,
+        )
+
+        # Success condition: distance below threshold
+        distance_to_goal = root_P_goal.euclidean_distance(root_P_current)
+        artifacts.observation = distance_to_goal < self.threshold
+
+        return artifacts
+
+
+@dataclass(eq=False, repr=False)
+class CartesianPositionTrajectory(Task):
+    default_reference_velocity: ClassVar[float] = 0.2
+
     root_link: KinematicStructureEntity = field(kw_only=True)
     """Base link of the kinematic chain."""
 
     tip_link: KinematicStructureEntity = field(kw_only=True)
     """End link that should reach the goal position."""
 
-    goal_point: Point3 = field(kw_only=True)
+    goal_points: list[Point3] = field(kw_only=True)
     """Target 3D point to reach."""
     threshold: float = field(default=0.01, kw_only=True)
     """Distance threshold for goal achievement in meters."""
@@ -64,23 +168,24 @@ class CartesianPosition(Task):
 
     _fk_binding: ForwardKinematicsBinding = field(kw_only=True, init=False, repr=False)
 
-    def build(self, context: MotionStatechartContext) -> NodeArtifacts:
-        """
-        Build motion constraints for reaching the goal position.
+    current_index: int = field(default=0, init=False, repr=False)
+    """Current index of the goal point in the trajectory."""
 
-        :param context: Provides access to world model and kinematic expressions.
-        :return: NodeArtifacts containing constraints and observation conditions.
-        """
+    def build(self, context: MotionStatechartContext) -> NodeArtifacts:
         artifacts = NodeArtifacts()
+
+        self._float_variable_data = context.float_variable_data
+        self.root_P_goal_point.reference_frame = self.get_trajectory_reference_frame()
+        self.set_root_P_goal_point_data(self.goal_points[self.current_index])
 
         # Create forward kinematics binding for the goal
         self._fk_binding = ForwardKinematicsBinding(
             name=PrefixedName("root_T_goal_ref", str(self.name)),
             root=self.root_link,
-            tip=self.goal_point.reference_frame,
+            tip=self.root_P_goal_point.reference_frame,
             build_context=context,
         )
-        root_P_goal = self._fk_binding.root_T_tip @ self.goal_point
+        root_P_goal = self._fk_binding.root_T_tip @ self.root_P_goal_point
 
         # Get current tip position in root frame
         root_P_current = context.world.compose_forward_kinematics_expression(
@@ -100,16 +205,35 @@ class CartesianPosition(Task):
         artifacts.observation = distance_to_goal < self.threshold
         return artifacts
 
-    def on_start(self, context: MotionStatechartContext):
-        """
-        Called when task starts execution.
+    def get_trajectory_reference_frame(self) -> KinematicStructureEntity:
+        reference_frame = self.goal_points[0].reference_frame
+        for point in self.goal_points[1:]:
+            if point.reference_frame != reference_frame:
+                raise NodeInitializationError(
+                    self,
+                    f"All goal points must have the same reference frame, but got {point.reference_frame} and {reference_frame}.",
+                )
+        return reference_frame
 
-        Binds the goal pose transformation if binding policy is Bind_on_start.
+    def on_tick(
+        self, context: MotionStatechartContext
+    ) -> Optional[ObservationStateValues]:
+        pass
 
-        :param context: Provides access to current world state.
-        """
-        if self.binding_policy == GoalBindingPolicy.Bind_on_start:
-            self._fk_binding.bind(context)
+    @cached_property
+    def root_P_goal_point(self) -> Point3:
+        root_P_goal_point = Point3.create_with_variables(
+            f"{self.name}.root_P_goal_point",
+        )
+        self._root_P_goal_point_index = (
+            self._float_variable_data.add_variables_of_expression(root_P_goal_point)
+        )
+        return root_P_goal_point
+
+    def set_root_P_goal_point_data(self, value: Point3):
+        self._float_variable_data.set_value(
+            self._root_P_goal_point_index, value.to_np()[:3]
+        )
 
 
 @dataclass(eq=False, repr=False)
@@ -388,7 +512,7 @@ class CartesianPose(Task):
             name=PrefixedName("root_T_ref", str(self.name)),
             root=self.root_link,
             tip=self.goal_pose.reference_frame,
-            build_context=context,
+            float_variable_data=context.float_variable_data,
         )
 
         # Extract position and orientation from goal pose
@@ -460,7 +584,7 @@ class CartesianPose(Task):
         :param context: Provides access to current world state.
         """
         if self.binding_policy == GoalBindingPolicy.Bind_on_start:
-            self._fk_binding.bind(context)
+            self._fk_binding.bind(context.world)
 
 
 @dataclass(eq=False, repr=False)
