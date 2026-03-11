@@ -8,6 +8,7 @@ from typing_extensions import List
 
 import krrood.symbolic_math.symbolic_math as sm
 from giskardpy.motion_statechart.exceptions import NodeInitializationError
+from krrood.symbolic_math.float_variable_data import FloatVariableData
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.spatial_types import (
     Vector3,
@@ -40,6 +41,12 @@ from giskardpy.motion_statechart.graph_node import Task
 
 @dataclass(eq=False, repr=False)
 class CartesianTask(Task, ABC):
+    """
+    Base class for all cartesian tasks.
+    Offers goal binding policy functionality to subclasses.
+    .. note:: make sure to call super().build(context) in subclasses, if you override it.
+    """
+
     root_link: KinematicStructureEntity = field(kw_only=True)
     """Base link of the kinematic chain."""
 
@@ -108,8 +115,6 @@ class CartesianPosition(CartesianTask):
     )
     """Reference velocity for normalization in m/s."""
 
-    _fk_binding: ForwardKinematicsBinding = field(kw_only=True, init=False, repr=False)
-
     @property
     def goal_reference_frame(self) -> KinematicStructureEntity:
         return self.goal_point.reference_frame
@@ -146,17 +151,18 @@ class CartesianPosition(CartesianTask):
 
 
 @dataclass(eq=False, repr=False)
-class CartesianPositionTrajectory(Task):
+class CartesianPositionTrajectory(CartesianTask):
+    """
+    Move a tip link to a goal position along a trajectory.
+    .. warning:: the trajectory is assumed to be dense and smooth.
+    """
+
     default_reference_velocity: ClassVar[float] = 0.2
-
-    root_link: KinematicStructureEntity = field(kw_only=True)
-    """Base link of the kinematic chain."""
-
-    tip_link: KinematicStructureEntity = field(kw_only=True)
-    """End link that should reach the goal position."""
 
     goal_points: list[Point3] = field(kw_only=True)
     """Target 3D point to reach."""
+    _goal_points_np: np.ndarray = field(init=False, repr=False)
+    """Goal points in numpy format."""
     threshold: float = field(default=0.01, kw_only=True)
     """Distance threshold for goal achievement in meters."""
 
@@ -166,34 +172,39 @@ class CartesianPositionTrajectory(Task):
     )
     """Reference velocity for normalization in m/s."""
 
-    weight: float = field(default=DefaultWeights.WEIGHT_ABOVE_CA, kw_only=True)
-    """Task priority relative to other tasks."""
+    goal_reference_frame_P_current_target_point: Point3 = field(init=False, repr=False)
+    """Symbolic expression representing the current target point in the goal reference frame."""
 
-    binding_policy: GoalBindingPolicy = field(
-        default=GoalBindingPolicy.Bind_on_start, kw_only=True
-    )
-    """Describes when the goal is computed. See GoalBindingPolicy for more information."""
+    current_index: int = field(default=0, kw_only=True)
+    """Current index in the goal points array."""
 
-    _fk_binding: ForwardKinematicsBinding = field(kw_only=True, init=False, repr=False)
+    @cached_property
+    def goal_reference_frame(self) -> KinematicStructureEntity:
+        reference_frame = self.goal_points[0].reference_frame
+        for point in self.goal_points[1:]:
+            if point.reference_frame != reference_frame:
+                raise NodeInitializationError(
+                    self,
+                    f"All goal points must have the same reference frame, but got {point.reference_frame} and {reference_frame}.",
+                )
+        return reference_frame
 
-    current_index: int = field(default=0, init=False, repr=False)
-    """Current index of the goal point in the trajectory."""
+    def goal_points_to_np(self):
+        self._goal_points_np = np.array(
+            [point.to_np()[:-1] for point in self.goal_points]
+        )
 
     def build(self, context: MotionStatechartContext) -> NodeArtifacts:
-        artifacts = NodeArtifacts()
-
-        self._float_variable_data = context.float_variable_data
-        self.root_P_goal_point.reference_frame = self.get_trajectory_reference_frame()
-        self.set_root_P_goal_point_data(self.goal_points[self.current_index])
-
-        # Create forward kinematics binding for the goal
-        self._fk_binding = ForwardKinematicsBinding(
-            name=PrefixedName("root_T_goal_ref", str(self.name)),
-            root=self.root_link,
-            tip=self.root_P_goal_point.reference_frame,
-            build_context=context,
+        self.goal_points_to_np()
+        artifacts = super().build(context)
+        self.init_goal_reference_frame_P_current_target_point(
+            context.float_variable_data
         )
-        root_P_goal = self._fk_binding.root_T_tip @ self.root_P_goal_point
+
+        root_P_goal = (
+            self.root_T_goal_reference_frame
+            @ self.goal_reference_frame_P_current_target_point
+        )
 
         # Get current tip position in root frame
         root_P_current = context.world.compose_forward_kinematics_expression(
@@ -208,39 +219,81 @@ class CartesianPositionTrajectory(Task):
             weight=self.weight,
         )
 
-        # Success condition: distance below threshold
-        distance_to_goal = root_P_goal.euclidean_distance(root_P_current)
+        final_point = context.world.transform(self.goal_points[-1], self.root_link)
+
+        distance_to_goal = final_point.euclidean_distance(root_P_current)
         artifacts.observation = distance_to_goal < self.threshold
         return artifacts
-
-    def get_trajectory_reference_frame(self) -> KinematicStructureEntity:
-        reference_frame = self.goal_points[0].reference_frame
-        for point in self.goal_points[1:]:
-            if point.reference_frame != reference_frame:
-                raise NodeInitializationError(
-                    self,
-                    f"All goal points must have the same reference frame, but got {point.reference_frame} and {reference_frame}.",
-                )
-        return reference_frame
 
     def on_tick(
         self, context: MotionStatechartContext
     ) -> Optional[ObservationStateValues]:
-        pass
-
-    @cached_property
-    def root_P_goal_point(self) -> Point3:
-        root_P_goal_point = Point3.create_with_variables(
-            f"{self.name}.root_P_goal_point",
+        root_T_tip = context.world.compute_forward_kinematics(
+            self.root_link, self.tip_link
         )
-        self._root_P_goal_point_index = (
-            self._float_variable_data.add_variables_of_expression(root_P_goal_point)
+        goal_reference_frame_T_tip = (
+            self.root_T_goal_reference_frame.inverse() @ root_T_tip
         )
-        return root_P_goal_point
+        goal_reference_frame_P_tip_np = (
+            goal_reference_frame_T_tip.to_position().evaluate()[:-1]
+        )
 
-    def set_root_P_goal_point_data(self, value: Point3):
-        self._float_variable_data.set_value(
-            self._root_P_goal_point_index, value.to_np()[:3]
+        # 2. Find the closest point on the remaining trajectory to update progress
+        remaining_points = self._goal_points_np[self.current_index :]
+        distances = np.linalg.norm(
+            remaining_points - goal_reference_frame_P_tip_np, axis=1
+        )
+        local_closest_index = np.argmin(distances)
+        self.current_index += local_closest_index
+
+        # 3. Compute target point with path correction
+        if self.current_index < len(self._goal_points_np) - 1:
+            p_current = self._goal_points_np[self.current_index]
+            p_next = self._goal_points_np[self.current_index + 1]
+
+            # Tangent vector
+            tangent = p_next - p_current
+            tangent_norm = np.linalg.norm(tangent)
+
+            if tangent_norm > 1e-6:
+                unit_tangent = tangent / tangent_norm
+
+                # Project current position onto the segment (p_current, p_next)
+                # This is the "closest point" on the line segment
+                v = goal_reference_frame_P_tip_np - p_current
+                projection_dist = np.dot(v, unit_tangent)
+                projection_dist = np.clip(projection_dist, 0, tangent_norm)
+                p_projected = p_current + projection_dist * unit_tangent
+
+                # Aim for a point 'threshold' distance away from the PROJECTED point
+                # This ensures that the target point is always 'threshold' away along the path,
+                # which creates a vector that pulls the robot back to the path AND forward.
+                target_point = p_projected + unit_tangent * self.threshold
+            else:
+                target_point = p_current
+        else:
+            target_point = self._goal_points_np[-1]
+
+        # 4. Update the symbolic target point
+        context.float_variable_data.set_value(
+            self.goal_reference_frame_P_current_target_point, target_point
+        )
+
+    def init_goal_reference_frame_P_current_target_point(
+        self, float_variable_data: FloatVariableData
+    ):
+        self.goal_reference_frame_P_current_target_point = Point3.create_with_variables(
+            "goal_reference_frame_P_current_target_point"
+        )
+        self.goal_reference_frame_P_current_target_point.reference_frame = (
+            self.goal_reference_frame
+        )
+        float_variable_data.register_expression(
+            self.goal_reference_frame_P_current_target_point
+        )
+        float_variable_data.set_value(
+            self.goal_reference_frame_P_current_target_point,
+            self.goal_points[self.current_index].to_np()[:-1],
         )
 
 
@@ -704,41 +757,3 @@ class CartesianPositionVelocityTarget(Task):
             ],
             weights=[self.weight] * 3,
         )
-
-
-@dataclass(eq=False, repr=False)
-class JustinTorsoLimitCart(Task):
-    root_link: Body = field(kw_only=True)
-    tip_link: Body = field(kw_only=True)
-    forward_distance: float = field(kw_only=True)
-    backward_distance: float = field(kw_only=True)
-    weight: float = DefaultWeights.WEIGHT_ABOVE_CA
-
-    def __post_init__(self):
-        torso_root_T_torso_tip = context.world.compose_forward_kinematics_expression(
-            self.root_link, self.tip_link
-        )
-        torso_root_V_up = Vector3(0, 0, 1)
-        torso_root_V_up.reference_frame = self.root_link
-        torso_root_V_up.vis_frame = self.root_link
-
-        torso_root_V_left = Vector3(0, 1, 0)
-        torso_root_V_left.reference_frame = self.root_link
-        torso_root_V_left.vis_frame = self.root_link
-
-        torso_root_P_torso_tip = torso_root_T_torso_tip.to_position()
-
-        nearest, distance = torso_root_P_torso_tip.project_to_plane(
-            frame_V_plane_vector1=torso_root_V_left,
-            frame_V_plane_vector2=torso_root_V_up,
-        )
-
-        self.add_inequality_constraint(
-            reference_velocity=CartesianPosition.default_reference_velocity,
-            lower_error=-self.backward_distance - distance,
-            upper_error=self.forward_distance - distance,
-            weight=self.weight,
-            task_expression=distance,
-            name=f"{self.name}/distance",
-        )
-        self.observation_expression = distance <= self.forward_distance

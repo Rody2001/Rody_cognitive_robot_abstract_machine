@@ -91,6 +91,7 @@ from giskardpy.motion_statechart.test_nodes.test_nodes import (
 from giskardpy.qp.constraint import EqualityConstraint
 from giskardpy.qp.constraint_collection import ConstraintCollection
 from giskardpy.qp.exceptions import HardConstraintsViolatedException
+from giskardpy.qp.qp_controller_config import QPControllerConfig
 from giskardpy.utils.math import angle_between_vector
 from krrood.symbolic_math.symbolic_math import (
     trinary_logic_and,
@@ -148,6 +149,9 @@ from semantic_digital_twin.world_description.geometry import (
 )
 from semantic_digital_twin.world_description.shape_collection import ShapeCollection
 from semantic_digital_twin.world_description.world_entity import Body
+from semantic_digital_twin.world_description.world_state_trajectory_plotter import (
+    WorldStateTrajectoryPlotter,
+)
 
 
 @pytest.fixture(scope="function")
@@ -1801,9 +1805,20 @@ class TestCartesianTasks:
             _world=cylinder_bot_world, node=rclpy_node
         ).with_tf_publisher()
         points = []
-        for i in range(100):
+        a = 0.05  # spiral growth factor (tunes how fast radius grows)
+
+        for i in range(10000):
+            t = (
+                i * np.pi / 5000.0
+            )  # angle parameter; adjust divisor for tighter/looser turns
+            r = a * t  # radius grows linearly with t
             points.append(
-                Point3(np.sin(i), np.cos(i), 0, reference_frame=cylinder_bot_world.root)
+                Point3(
+                    r * np.cos(t),
+                    r * np.sin(t),
+                    0,
+                    reference_frame=cylinder_bot_world.root,
+                )
             )
         msc = MotionStatechart()
         cart_traj = CartesianPositionTrajectory(
@@ -1814,9 +1829,96 @@ class TestCartesianTasks:
         msc.add_node(cart_traj)
         msc.add_node(EndMotion.when_true(cart_traj))
 
-        kin_sim = Executor(context=MotionStatechartContext(world=cylinder_bot_world))
+        kin_sim = Executor(
+            context=MotionStatechartContext(
+                world=cylinder_bot_world,
+            ),
+        )
         kin_sim.compile(motion_statechart=msc)
         kin_sim.tick_until_end()
+
+    def test_cartesian_position_trajectory_straight_line(
+        self, cylinder_bot_world: World, rclpy_node
+    ):
+        VizMarkerPublisher(
+            _world=cylinder_bot_world, node=rclpy_node
+        ).with_tf_publisher()
+        points = []
+        step_size = 0.001
+
+        for i in range(1000):
+            points.append(
+                Point3(
+                    step_size * i,
+                    0.5,
+                    0,
+                    reference_frame=cylinder_bot_world.root,
+                )
+            )
+        msc = MotionStatechart()
+        cart_traj = CartesianPositionTrajectory(
+            root_link=cylinder_bot_world.root,
+            tip_link=cylinder_bot_world.get_kinematic_structure_entity_by_name("bot"),
+            goal_points=points,
+        )
+        msc.add_node(cart_traj)
+        msc.add_node(EndMotion.when_true(cart_traj))
+
+        kin_sim = Executor(
+            context=MotionStatechartContext(
+                world=cylinder_bot_world,
+            ),
+            # pacer=SimulationPacer(real_time_factor=1),
+            trajectory_plotter=WorldStateTrajectoryPlotter(),
+        )
+        kin_sim.compile(motion_statechart=msc)
+        kin_sim.tick_until_end()
+        kin_sim.plot_trajectory("traj.pdf")
+
+    def test_cartesian_position_trajectory_straight_line_old(
+        self, cylinder_bot_world: World, rclpy_node
+    ):
+        VizMarkerPublisher(
+            _world=cylinder_bot_world, node=rclpy_node
+        ).with_tf_publisher()
+        points = []
+        step_size = 0.001
+
+        msc = MotionStatechart()
+        for i in range(1000):
+            points.append(
+                Point3(
+                    step_size * i,
+                    0.5,
+                    0,
+                    reference_frame=cylinder_bot_world.root,
+                )
+            )
+        cart_traj = Sequence(
+            [
+                CartesianPosition(
+                    root_link=cylinder_bot_world.root,
+                    tip_link=cylinder_bot_world.get_kinematic_structure_entity_by_name(
+                        "bot"
+                    ),
+                    goal_point=point,
+                )
+                for point in points
+            ]
+        )
+        msc.add_node(cart_traj)
+        msc.add_node(EndMotion.when_true(cart_traj))
+
+        kin_sim = Executor(
+            context=MotionStatechartContext(
+                world=cylinder_bot_world,
+            ),
+            # pacer=SimulationPacer(real_time_factor=1),
+            trajectory_plotter=WorldStateTrajectoryPlotter(),
+        )
+        kin_sim.compile(motion_statechart=msc)
+        kin_sim.tick_until_end(10_000)
+        kin_sim.plot_trajectory("traj.pdf")
 
 
 class TestDiffDriveBaseGoal:
@@ -2637,6 +2739,7 @@ class TestVelocityTasks:
                 root_link=root,
                 tip_link=tip,
                 goal_point=Point3(1, 0, 0, reference_frame=tip),
+                weight=DefaultWeights.WEIGHT_ABOVE_CA,
             )
         else:
             goal = CartesianOrientation(
@@ -2645,6 +2748,7 @@ class TestVelocityTasks:
                 goal_orientation=RotationMatrix.from_rpy(
                     yaw=np.pi / 2, reference_frame=tip
                 ),
+                weight=DefaultWeights.WEIGHT_ABOVE_CA,
             )
 
         low_weight_limit = limit_cls(
@@ -3260,7 +3364,6 @@ class TestCollisionAvoidance:
 
         kin_sim = Executor(
             MotionStatechartContext(world=cylinder_bot_world),
-            pacer=SimulationPacer(real_time_factor=0.25),
         )
         kin_sim.compile(motion_statechart=msc)
 
