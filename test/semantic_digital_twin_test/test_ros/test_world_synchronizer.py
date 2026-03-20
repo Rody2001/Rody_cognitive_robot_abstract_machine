@@ -336,8 +336,12 @@ def test_model_synchronization_merge_full_world(rclpy_node):
 
     w1_connection_hashes = [hash(c) for c in w1.connections]
     w2_connection_hashes = [hash(c) for c in w2.connections]
-    assert w1_connection_hashes == w2_connection_hashes, f"w1: {[c.name for c in w1.connections]}, w2: {[c.name for c in w2.connections]}"
-    assert len(w1.degrees_of_freedom) == len(w2.degrees_of_freedom), f"w1: {[d.name for d in w1.degrees_of_freedom]}, w2: {[d.name for d in w2.degrees_of_freedom]}"
+    assert (
+        w1_connection_hashes == w2_connection_hashes
+    ), f"w1: {[c.name for c in w1.connections]}, w2: {[c.name for c in w2.connections]}"
+    assert len(w1.degrees_of_freedom) == len(
+        w2.degrees_of_freedom
+    ), f"w1: {[d.name for d in w1.degrees_of_freedom]}, w2: {[d.name for d in w2.degrees_of_freedom]}"
 
     synchronizer_1.close()
     synchronizer_2.close()
