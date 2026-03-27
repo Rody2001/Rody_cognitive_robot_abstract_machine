@@ -344,19 +344,23 @@ def test_model_synchronization_merge_full_world(rclpy_node):
     fixed_connection = FixedConnection(child=new_body, parent=pr2_world.root)
     w1.merge_world(pr2_world, fixed_connection)
 
-    body_ids_1, body_ids_2 = wait_for_sync()
+    wait_for_sync()
 
-    assert body_ids_1 == body_ids_2
-    assert len(w1.kinematic_structure_entities) == len(w2.kinematic_structure_entities)
+    assert {body.id for body in w1.kinematic_structure_entities} == {
+        body.id for body in w2.kinematic_structure_entities
+    }
+    assert len(w1.kinematic_structure_entities) == len(
+        w2.kinematic_structure_entities
+    )
 
     w1_connection_hashes = [hash(c) for c in w1.connections]
     w2_connection_hashes = [hash(c) for c in w2.connections]
     assert (
-        w1_connection_hashes == w2_connection_hashes
-    ), f"w1: {[c.name for c in w1.connections]}, w2: {[c.name for c in w2.connections]}"
-    assert len(w1.degrees_of_freedom) == len(
-        w2.degrees_of_freedom
-    ), f"w1: {[d.name for d in w1.degrees_of_freedom]}, w2: {[d.name for d in w2.degrees_of_freedom]}"
+            w1_connection_hashes == w2_connection_hashes
+    ), f"w1: {[c.name for c in w1.connections]}, w2: {[c.name for c in w2.connections]}, If this feels flaky, contact @LucaKro"
+    assert [d.id for d in w1.degrees_of_freedom] == [
+        d.id for d in w2.degrees_of_freedom
+    ], f"w1: {[d.name for d in w1.degrees_of_freedom]}, w2: {[d.name for d in w2.degrees_of_freedom]}, If this feels flaky, contact @LucaKro"
 
     synchronizer_1.close()
     synchronizer_2.close()
