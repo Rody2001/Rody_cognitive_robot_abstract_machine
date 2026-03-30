@@ -726,7 +726,7 @@ def rclpy_node():
         rclpy.shutdown()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def kitchen_environment_fixture():
     world = World()
     all_elements_connections = []

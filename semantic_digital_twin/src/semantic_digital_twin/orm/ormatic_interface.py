@@ -4439,6 +4439,25 @@ class OrangeDAO(
     }
 
 
+class TomatoDAO(
+    FruitDAO,
+    DataAccessObject[
+        semantic_digital_twin.semantic_annotations.semantic_annotations.Tomato
+    ],
+):
+
+    __tablename__ = "TomatoDAO"
+
+    database_id: Mapped[builtins.int] = mapped_column(
+        ForeignKey(FruitDAO.database_id), primary_key=True, use_existing_column=True
+    )
+
+    __mapper_args__ = {
+        "polymorphic_identity": "TomatoDAO",
+        "inherit_condition": database_id == FruitDAO.database_id,
+    }
+
+
 class PotatoDAO(
     ProduceDAO,
     DataAccessObject[
@@ -4511,25 +4530,6 @@ class LettuceDAO(
 
     __mapper_args__ = {
         "polymorphic_identity": "LettuceDAO",
-        "inherit_condition": database_id == VegetableDAO.database_id,
-    }
-
-
-class TomatoDAO(
-    VegetableDAO,
-    DataAccessObject[
-        semantic_digital_twin.semantic_annotations.semantic_annotations.Tomato
-    ],
-):
-
-    __tablename__ = "TomatoDAO"
-
-    database_id: Mapped[builtins.int] = mapped_column(
-        ForeignKey(VegetableDAO.database_id), primary_key=True, use_existing_column=True
-    )
-
-    __mapper_args__ = {
-        "polymorphic_identity": "TomatoDAO",
         "inherit_condition": database_id == VegetableDAO.database_id,
     }
 
