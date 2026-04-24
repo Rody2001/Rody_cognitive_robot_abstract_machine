@@ -1,3 +1,5 @@
+from poetry.publishing import Publisher
+
 from semantic_digital_twin.adapters.ros.visualization.viz_marker import (
     VizMarkerPublisher,
 )
@@ -11,7 +13,7 @@ from semantic_digital_twin.semantic_annotations.semantic_annotations import (
     Desk,
     Handle,
     ShelfLayer,
-    Hinge, Oven,
+    Hinge, Oven, Carrot,
 )
 from semantic_digital_twin.world import World
 import threading
@@ -33,6 +35,8 @@ from semantic_digital_twin.spatial_types.spatial_types import Vector3
 from semantic_digital_twin.world_description.degree_of_freedom import (
     DegreeOfFreedomLimits, DegreeOfFreedom,
 )
+from test.conftest import kitchen_environment_fixture
+
 
 class KitchenEnvironment:
     """
@@ -459,3 +463,9 @@ class KitchenEnvironment:
             office = Room(floor=office_floor, name=PrefixedName("office"))
 
         return world
+
+
+rclpy.init()
+node = rclpy.create_node("kitchen_environment")
+publisher = VizMarkerPublisher(_world=KitchenEnvironment().get_world(), node=node)
+publisher.with_tf_publisher()

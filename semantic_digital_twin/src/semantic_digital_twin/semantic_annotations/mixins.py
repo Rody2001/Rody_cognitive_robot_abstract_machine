@@ -74,6 +74,8 @@ if TYPE_CHECKING:
         Slider,
         Aperture,
     )
+from semantic_digital_twin.world_description.geometry import Cylinder
+from semantic_digital_twin.world_description.shape_collection import ShapeCollection
 
 
 @dataclass(eq=False)
@@ -345,6 +347,60 @@ class HasRootBody(HasRootKinematicStructureEntity, ABC):
             collision_shapes = BoundingBoxCollection.from_event(
                 body, scale.to_simple_event().as_composite_set()
             ).as_shapes()
+            body.collision = collision_shapes
+            body.visual = collision_shapes
+
+        return cls._create_with_connection_in_world(
+            name=name,
+            world=world,
+            kinematic_structure_entity=body,
+            world_root_T_self=world_root_T_self,
+            connection_multiplier=connection_multiplier,
+            connection_offset=connection_offset,
+            active_axis=active_axis,
+            connection_limits=connection_limits,
+        )
+
+    @classmethod
+    def create_with_new_cylinder_body_in_world(
+            cls,
+            name: PrefixedName,
+            world: World,
+            world_root_T_self: Optional[HomogeneousTransformationMatrix] = None,
+            connection_limits: Optional[DegreeOfFreedomLimits] = None,
+            active_axis: Optional[Vector3] = None,
+            connection_multiplier: float = 1.0,
+            connection_offset: float = 0.0,
+            scale: Scale = None,
+            **kwargs,
+    ) -> Self:
+        """
+        Create a new semantic annotation with a new cylinder-shaped body in the given world.
+
+        :param name: The name of the semantic annotation.
+        :param world: The world to add the annotation and body to.
+        :param world_root_T_self: The initial pose of the body in the world root frame.
+        :param connection_limits: The limits for the connection's degrees of freedom.
+        :param active_axis: The active axis for the connection.
+        :param connection_multiplier: The multiplier for the connection.
+        :param connection_offset: The offset for the connection.
+        :param scale: The scale used to generate the geometry of the body. The cylinder width uses the average of x and y, and height uses z.
+        :return: The created semantic annotation instance.
+        """
+
+        body = Body(name=name)
+
+        if scale is not None:
+            # Use average of x and y for cylinder width, and z for height
+            cylinder_width = (scale.x + scale.y) / 2
+            cylinder_height = scale.z
+
+            cylinder_shape = Cylinder(
+                width=cylinder_width,
+                height=cylinder_height,
+                origin=HomogeneousTransformationMatrix(reference_frame=body)
+            )
+            collision_shapes = ShapeCollection([cylinder_shape], reference_frame=body)
             body.collision = collision_shapes
             body.visual = collision_shapes
 

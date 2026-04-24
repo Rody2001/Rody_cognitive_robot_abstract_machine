@@ -1052,3 +1052,15 @@ class LiquidCap(HasRootBody):
     """
     A liquid cap.
     """
+
+@dataclass(eq=False)
+class WindTurbineColumn(HasRootBody):
+    """
+    The Column of the wind turbine.
+    """
+
+@dataclass(eq=False)
+class WindTurbineHead(HasRootBody):
+    """
+    the Head of the Column.
+    """
