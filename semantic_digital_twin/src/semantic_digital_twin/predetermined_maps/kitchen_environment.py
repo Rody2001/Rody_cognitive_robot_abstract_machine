@@ -71,25 +71,16 @@ class KitchenEnvironment:
 
         :return: The modified world instance with configured walls and connections.
         """
-        root = world.root
-
-        north_west_wall = Cylinder(width=1.53, height=3.00)
-        shape_geometry = ShapeCollection([north_west_wall])
-        north_west_wall_body = Body(
-            name=PrefixedName("north_west_wall_body"),
-            collision=shape_geometry,
-            visual=shape_geometry,
-        )
-
-        root_C_north_west_wall = FixedConnection(
-            parent=root,
-            child=north_west_wall_body,
-            parent_T_connection_expression=HomogeneousTransformationMatrix.from_xyz_rpy(
-                x=4.924, y=6.295, z=1.50
-            ),
-        )
-
         with world.modify_world():
+            north_west_wall = Wall.create_with_new_cylinder_body_in_world(
+                world=world,
+                name=PrefixedName("north_west_wall"),
+                world_root_T_self= HomogeneousTransformationMatrix.from_xyz_rpy(
+                    x=4.924, y=6.295, z=1.50
+                ),
+                scale=Scale(x=1.53, y=1.53, z=3.00),
+            )
+
             south_wall1 = Wall.create_with_new_body_in_world(
                 world=world,
                 name=PrefixedName("south_wall1"),
@@ -189,7 +180,6 @@ class KitchenEnvironment:
                 scale=Scale(0.05, 8.04, 3.00),
             )
 
-            world.add_connection(root_C_north_west_wall)
             return world
 
     def _build_environment_furniture(self, world: World):
