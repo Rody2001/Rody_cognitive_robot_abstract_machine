@@ -1,5 +1,5 @@
-"""
-The HSR drives from its start to a goal pose in the kitchen environment, in MuJoCo.
+"""The HSR drives from its start to a goal pose in the kitchen environment, in
+MuJoCo.
 
 Run it from this folder::
 
@@ -16,16 +16,20 @@ from typing_extensions import TYPE_CHECKING
 from coraplex.demonstrations import RobotDemonstration
 from coraplex.plans.context_extensions import RobotAccess
 from coraplex.plans.executors import PhysicallySimulatedPlanExecutor
-from coraplex.robot_plans.actions.core.navigation import NavigateAction
+from coraplex.plans.plan_transformation import ConfigurationTransformation
+from coraplex.robot_plans.actions.core.navigation import DrivesBase, NavigateAction
 from coraplex.robot_plans.actions.core.robot_body import ParkArmsAction
-from cramph.composites import Sequence
+from cramph.composites import Parallel, Sequence
 from cramph.statechart import Statechart
+from giskardpy.motion_statechart.tasks.drive_tasks import DifferentialDriveBaseGoal
+from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
 from krrood_spatial_math.spatial_types import HomogeneousTransformationMatrix, Pose
 from semantic_digital_twin.collision_checking.collision_rules import (
     AllowCollisionBetweenGroups,
 )
+from semantic_digital_twin.datastructures.joint_state import JointState
 from semantic_digital_twin.predefined_maps.kitchen_environment import KitchenEnvironment
-from semantic_digital_twin.robots.hsrb import HSRB
+from semantic_digital_twin.robots.hsrb import HSRB, HSRBJoint
 from semantic_digital_twin.semantic_annotations.semantic_annotations import Floor
 from semantic_digital_twin.specifications.robots import RobotSpecification
 from semantic_digital_twin.specifications.worlds import WorldSpecification
@@ -40,14 +44,42 @@ if TYPE_CHECKING:
 
 
 class SceneBody(StrEnum):
-    """
-    The names of the kitchen bodies the demonstration refers to.
-    """
+    """The names of the kitchen bodies the demonstration refers to."""
 
     SOFA = "sofa"
+    """The sofa of the kitchen environment, which marks whether the scene is
+    already loaded."""
+
+
+# %% driving forwards
+
+
+@dataclass(kw_only=True)
+class DriveFacingTheWayToTheGoal(ConfigurationTransformation[DrivesBase]):
+    """Lets the base turn towards each goal, drive there facing forwards and
+    only then turn to the goal's orientation, instead of moving sideways while
+    turning."""
+
+    def is_applicable(self, plan_node: DrivesBase) -> bool:
+        return True
+
+    def apply(self, plan_node: DrivesBase) -> None:
+        plan_node.base_goal_type = DifferentialDriveBaseGoal
+
+
+@dataclass(kw_only=True)
+class ForwardDrivingPlanExecutor(PhysicallySimulatedPlanExecutor):
     """
-    The sofa of the kitchen environment, which marks whether the scene is already loaded.
+    Performs plans in MuJoCo with a base that drives facing the way it goes:
+    :attr:`plan_adaptations` is extended by :class:`DriveFacingTheWayToTheGoal`.
     """
+
+    def __post_init__(self) -> None:
+        self.plan_adaptations = [
+            *self.plan_adaptations,
+            DriveFacingTheWayToTheGoal(),
+        ]
+        super().__post_init__()
 
 
 # %% the demonstration
@@ -55,58 +87,40 @@ class SceneBody(StrEnum):
 
 @dataclass
 class KitchenNavigationDemonstration(RobotDemonstration):
-    """
-    The HSR parks its arm and drives from :attr:`robot_start` to :attr:`goal`.
-    """
+    """The HSR parks its arm, turns its head to the front of its base and
+    drives from :attr:`robot_start` to the goal, facing the way it drives."""
 
     used_robot: type[AbstractRobot] = HSRB
-    """
-    The robot that drives.
-    """
+    """The robot that drives."""
 
     ros_node_name: str = "hsr_kitchen_navigation_demo"
-    """
-    Name of the node this demonstration registers.
-    """
+    """Name of the node this demonstration registers."""
 
-    executor_type: type[PlanExecutor] = PhysicallySimulatedPlanExecutor
-    """
-    The executor running the plan, which performs it in MuJoCo.
-    """
+    executor_type: type[PlanExecutor] = ForwardDrivingPlanExecutor
+    """The executor running the plan, which performs it in MuJoCo."""
 
     collision_avoidance: bool = True
-    """
-    Whether collision avoidance is added to every motion state chart of this run.
-    """
+    """Whether collision avoidance is added to every motion state chart of this
+    run."""
 
     event_segmentation: bool = False
-    """
-    Whether the events of this run are segmented; there is nothing to segment here.
-    """
+    """Whether the events of this run are segmented; there is nothing to
+    segment here."""
 
     robot_start: HomogeneousTransformationMatrix = field(
-        default_factory=lambda: HomogeneousTransformationMatrix.from_xyz_rpy(
-            x=0, y=0
-        )
+        default_factory=lambda: HomogeneousTransformationMatrix.from_xyz_rpy(x=0, y=0)
     )
-    """
-    Where the HSR stands before the plan begins.
-    """
+    """Where the HSR stands before the plan begins."""
 
-    goal_x: float = 5.0
-    """
-    Where the HSR drives to along the world's x axis, in meters.
-    """
+    goal_x: float = 3.75189
+    """Where the HSR drives to along the world's x axis, in meters."""
 
-    goal_y: float = 5.0
-    """
-    Where the HSR drives to along the world's y axis, in meters.
-    """
+    goal_y: float = 4.66774
+    """Where the HSR drives to along the world's y axis, in meters."""
 
     goal_yaw: float = 0.0
-    """
-    Which way the HSR faces at the goal, in radians around the world's z axis.
-    """
+    """Which way the HSR faces at the goal, in radians around the world's z
+    axis."""
 
     def scene_specification(self) -> WorldSpecification:
         return WorldSpecification(world_source=KitchenEnvironment())
@@ -121,10 +135,8 @@ class KitchenNavigationDemonstration(RobotDemonstration):
         return world.is_kinematic_structure_entity_in_world_by_name(SceneBody.SOFA)
 
     def acquire_world(self) -> World:
-        """
-        Obtain the world as :meth:`RobotDemonstration.acquire_world` does, in which the
-        whole HSR may touch the kitchen's floors.
-        """
+        """Obtain the world as :meth:`RobotDemonstration.acquire_world` does,
+        in which the whole HSR may touch the kitchen's floors."""
         world = super().acquire_world()
         [robot] = world.get_semantic_annotations_by_type(self.used_robot)
         with world.modify_world():
@@ -154,12 +166,29 @@ class KitchenNavigationDemonstration(RobotDemonstration):
             yaw=self.goal_yaw,
             reference_frame=context.world.root,
         )
+        head_forward = JointState(
+            connections=[context.world.get_connection_by_name(HSRBJoint.HEAD_PAN)],
+            target_values=[0.0],
+        )
         statechart = Statechart(context=context)
         statechart.add_node(
             node=Sequence(
                 nodes=[
-                    ParkArmsAction(arms=robot.all_arms),
+                    Parallel(
+                        nodes=[
+                            ParkArmsAction(arms=robot.all_arms),
+                            JointPositionList(goal_state=head_forward),
+                        ]
+                    ),
                     NavigateAction(target_location=goal),
+                    NavigateAction(
+                        target_location=Pose.from_xyz_rpy(
+                            x=0.973906,
+                            y=4.48839,
+                            yaw=self.goal_yaw,
+                            reference_frame=context.world.root,
+                        )
+                    ),
                 ]
             )
         )
@@ -167,8 +196,7 @@ class KitchenNavigationDemonstration(RobotDemonstration):
 
 
 def main(headless: bool = False) -> World:
-    """
-    Run the demonstration.
+    """Run the demonstration.
 
     :param headless: Whether the physics runs without a viewer.
     :return: The world the HSR drove in.
