@@ -86,7 +86,7 @@ class KitchenNavigationDemonstration(RobotDemonstration):
 
     robot_start: HomogeneousTransformationMatrix = field(
         default_factory=lambda: HomogeneousTransformationMatrix.from_xyz_rpy(
-            x=-0.178202, y=3.60589
+            x=0, y=0
         )
     )
     """
@@ -140,10 +140,14 @@ class KitchenNavigationDemonstration(RobotDemonstration):
         return world
 
     def build_context_extensions(self, world: World) -> list[ContextExtension]:
-        return [RobotAccess(world.get_semantic_annotations_by_type(self.used_robot)[0])]
+        return [
+            RobotAccess(
+                robot=world.get_semantic_annotations_by_type(self.used_robot)[0]
+            )
+        ]
 
     def build_statechart(self, context: StatechartContext) -> Statechart:
-        robot = context.require_extension(RobotAccess).robot
+        robot = context.require_extension(extension_type=RobotAccess).robot
         goal = Pose.from_xyz_rpy(
             x=self.goal_x,
             y=self.goal_y,
@@ -152,7 +156,7 @@ class KitchenNavigationDemonstration(RobotDemonstration):
         )
         statechart = Statechart(context=context)
         statechart.add_node(
-            Sequence(
+            node=Sequence(
                 nodes=[
                     ParkArmsAction(arms=robot.all_arms),
                     NavigateAction(target_location=goal),
