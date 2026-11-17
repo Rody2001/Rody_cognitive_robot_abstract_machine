@@ -15,6 +15,7 @@ from typing_extensions import Generator, Iterable
 from coraplex.datastructures.enums import DetectionTechnique
 from coraplex.datastructures.trajectory import PoseTrajectory
 from coraplex.exceptions import NoFloorBelowRobot
+from coraplex.plans.context_extensions import PathDisplay
 from coraplex.plans.plan_transformation import PlanRewriting
 from cramph.executor import StatechartExecutor
 from cramph.statechart import Statechart
@@ -957,6 +958,39 @@ def test_gcs_navigation_takes_a_waypoints_height_from_that_waypoints_frame(
             robot.root.global_transform, pose.reference_frame
         )
         assert float(pose.z) == pytest.approx(float(base_in_pose_frame.z))
+
+
+@dataclass(kw_only=True)
+class RecordedPathDisplay(PathDisplay):
+    """
+    Keeps every path it is asked to show, so a test can read them back.
+    """
+
+    shown_paths: list[list[Pose]] = field(default_factory=list)
+    """
+    The paths shown so far, in the order they were shown.
+    """
+
+    def show_path(self, *, path: list[Pose]) -> None:
+        self.shown_paths.append(path)
+
+
+def test_gcs_navigation_shows_the_path_it_drives(multiple_robot_apartment_context):
+    """
+    The context's path display is shown the poses the drive is made of, once.
+    """
+    world, robot, extensions = multiple_robot_apartment_context
+    path_display = RecordedPathDisplay()
+
+    action = PathPlanningNavigateAction(
+        target=Pose.from_xyz_rpy(5, 1, 0, reference_frame=world.root)
+    )
+    attach_to_statechart(action, [*extensions, path_display])
+
+    [shown_path] = path_display.shown_paths
+    assert [pose.to_np() for pose in shown_path] == pytest.approx(
+        [pose.to_np() for pose in action._path()]
+    )
 
 
 def test_gcs_navigation_needs_a_floor_below_the_robot(

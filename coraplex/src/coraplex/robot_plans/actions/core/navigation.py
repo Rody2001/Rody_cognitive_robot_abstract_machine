@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 
 from coraplex.exceptions import NoFloorBelowRobot, NotOnASingleLevelException
+from coraplex.plans.context_extensions import PathDisplay
 from cramph.node import StatechartNode
 from coraplex.robot_plans.actions.base import (
     Action,
@@ -178,7 +179,8 @@ class PathPlanningNavigateAction(DrivesBase, SequentialAction):
     the furniture and walls between it and the target instead of straight at them.
 
     This works for obstacles which are known in the environment beforehand, not for
-    those added during navigation.
+    those added during navigation. The planned path is shown by the context's
+    :class:`~coraplex.plans.context_extensions.PathDisplay`, if it holds one.
     """
 
     target: Pose
@@ -193,11 +195,15 @@ class PathPlanningNavigateAction(DrivesBase, SequentialAction):
     """
 
     def create_steps(self) -> list[StatechartNode]:
+        path = self._path()
+        path_display = self.context.get_extension(extension_type=PathDisplay)
+        if path_display is not None:
+            path_display.show_path(path=path)
         return [
             self.base_goal_type.moving_base_of(
                 self.robot, waypoint, self.base_pose_threshold
             )
-            for waypoint in self._path()
+            for waypoint in path
         ]
 
     @property

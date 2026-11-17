@@ -1,5 +1,5 @@
-"""The HSR drives from its start to a goal pose in the kitchen environment, in
-MuJoCo.
+"""
+The HSR drives from its start to a goal pose in the kitchen environment, in MuJoCo.
 
 Run it from this folder::
 
@@ -15,8 +15,11 @@ from enum import StrEnum
 from typing_extensions import TYPE_CHECKING
 
 from coraplex.demonstrations import RobotDemonstration
-from coraplex.plans.context_extensions import RobotAccess
-from coraplex.plans.executors import PhysicallySimulatedPlanExecutor, ForwardDrivingPlanExecutor
+from coraplex.plans.context_extensions import PathDisplay, RobotAccess
+from coraplex.plans.executors import (
+    PhysicallySimulatedPlanExecutor,
+    ForwardDrivingPlanExecutor,
+)
 from coraplex.plans.plan_transformation import ConfigurationTransformation
 from coraplex.robot_plans.actions.core.navigation import (
     DrivesBase,
@@ -28,6 +31,12 @@ from cramph.statechart import Statechart
 from giskardpy.motion_statechart.tasks.drive_tasks import StraightLineBaseGoal
 from giskardpy.motion_statechart.tasks.joint_tasks import JointPositionList
 from krrood_spatial_math.spatial_types import HomogeneousTransformationMatrix, Pose
+from semantic_digital_twin.adapters.ros.visualization.spatial_type_marker_renderer import (
+    SpatialTypeVisualization,
+)
+from semantic_digital_twin.adapters.ros.visualization.spatial_type_publisher import (
+    SpatialTypePublisher,
+)
 from semantic_digital_twin.collision_checking.collision_rules import (
     AllowCollisionBetweenGroups,
 )
@@ -45,24 +54,64 @@ if TYPE_CHECKING:
     from semantic_digital_twin.world import World
 
 
+# %% showing the planned paths
+
+
+@dataclass(kw_only=True)
+class RvizPathDisplay(PathDisplay):
+    """
+    Publishes every waypoint of the planned paths as an RViz marker, labelled with its
+    place in its path.
+    """
+
+    publisher: SpatialTypePublisher
+    """
+    Publishes the waypoints, keeping them up to date while the world changes.
+    """
+
+    def show_path(self, *, path: list[Pose]) -> None:
+        self.publisher.add_all(
+            SpatialTypeVisualization(spatial_type=waypoint, label=str(index))
+            for index, waypoint in enumerate(path, start=1)
+        )
+
+    def cleanup(self) -> None:
+        """
+        Stop updating the waypoints, see :meth:`ContextExtension.cleanup`; RViz keeps
+        showing the last ones published.
+        """
+        self.publisher.stop()
+
+
+# %% demonstration
+
 
 @dataclass
 class KitchenNavigationDemonstration(RobotDemonstration):
-    """The HSR parks its arm, turns its head to the front of its base and
-    drives from :attr:`robot_start` to the goal, facing the way it drives."""
+    """
+    The HSR parks its arm, turns its head to the front of its base and drives from
+    :attr:`robot_start` to the goal, facing the way it drives.
+    """
 
     used_robot: type[AbstractRobot] = HSRB
-    """The robot that drives."""
+    """
+    The robot that drives.
+    """
 
     ros_node_name: str = "hsr_kitchen_navigation_demo"
-    """Name of the node this demonstration registers."""
+    """
+    Name of the node this demonstration registers.
+    """
 
     executor_type: type[PlanExecutor] = ForwardDrivingPlanExecutor
-    """The executor running the plan, which performs it in MuJoCo."""
+    """
+    The executor running the plan, which performs it in MuJoCo.
+    """
 
     collision_avoidance: bool = True
-    """Whether collision avoidance is added to every motion state chart of this
-    run."""
+    """
+    Whether collision avoidance is added to every motion state chart of this run.
+    """
 
     simulation_time_per_action: timedelta | None = timedelta(seconds=120)
     """
@@ -71,23 +120,31 @@ class KitchenNavigationDemonstration(RobotDemonstration):
     """
 
     event_segmentation: bool = False
-    """Whether the events of this run are segmented; there is nothing to
-    segment here."""
+    """
+    Whether the events of this run are segmented; there is nothing to segment here.
+    """
 
     robot_start: HomogeneousTransformationMatrix = field(
         default_factory=lambda: HomogeneousTransformationMatrix.from_xyz_rpy(x=0, y=0)
     )
-    """Where the HSR stands before the plan begins."""
+    """
+    Where the HSR stands before the plan begins.
+    """
 
     goal_x: float = 3.75189
-    """Where the HSR drives to along the world's x axis, in meters."""
+    """
+    Where the HSR drives to along the world's x axis, in meters.
+    """
 
     goal_y: float = 4.66774
-    """Where the HSR drives to along the world's y axis, in meters."""
+    """
+    Where the HSR drives to along the world's y axis, in meters.
+    """
 
     goal_yaw: float = 0.0
-    """Which way the HSR faces at the goal, in radians around the world's z
-    axis."""
+    """
+    Which way the HSR faces at the goal, in radians around the world's z axis.
+    """
 
     def scene_specification(self) -> WorldSpecification:
         return WorldSpecification(world_source=KitchenEnvironment())
@@ -102,8 +159,10 @@ class KitchenNavigationDemonstration(RobotDemonstration):
         return world.is_kinematic_structure_entity_in_world_by_name("sofa")
 
     def acquire_world(self) -> World:
-        """Obtain the world as :meth:`RobotDemonstration.acquire_world` does,
-        in which the whole HSR may touch the kitchen's floors."""
+        """
+        Obtain the world as :meth:`RobotDemonstration.acquire_world` does, in which the
+        whole HSR may touch the kitchen's floors.
+        """
         world = super().acquire_world()
         [robot] = world.get_semantic_annotations_by_type(self.used_robot)
         with world.modify_world():
@@ -122,7 +181,10 @@ class KitchenNavigationDemonstration(RobotDemonstration):
         return [
             RobotAccess(
                 robot=world.get_semantic_annotations_by_type(self.used_robot)[0]
-            )
+            ),
+            RvizPathDisplay(
+                publisher=SpatialTypePublisher(node=self.ros_node, _world=world)
+            ),
         ]
 
     def build_statechart(self, context: StatechartContext) -> Statechart:
@@ -164,7 +226,8 @@ class KitchenNavigationDemonstration(RobotDemonstration):
 
 
 def main(headless: bool = False) -> World:
-    """Run the demonstration.
+    """
+    Run the demonstration.
 
     :param headless: Whether the physics runs without a viewer.
     :return: The world the HSR drove in.

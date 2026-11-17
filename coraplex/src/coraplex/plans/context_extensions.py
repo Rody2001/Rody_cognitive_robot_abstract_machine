@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 
@@ -8,6 +9,7 @@ from krrood.entity_query_language.backends import (
     EntityQueryLanguageGenerativeBackend,
     QueryBackend,
 )
+from krrood_spatial_math.spatial_types import Pose
 from semantic_digital_twin.robots.robot_part_mixins import HasMobileBase
 from semantic_digital_twin.robots.robot_parts import AbstractRobot
 from semantic_digital_twin.world_description.world_entity import (
@@ -71,3 +73,18 @@ class StatementGrounding(ContextExtension):
     Seed for the locations the plan's actions sample, so a run repeats; ``None`` samples
     afresh each run.
     """
+
+
+@dataclass(kw_only=True)
+class PathDisplay(ContextExtension, ABC):
+    """
+    Shows the paths the plan's navigation actions plan through the environment.
+    """
+
+    @abstractmethod
+    def show_path(self, *, path: list[Pose]) -> None:
+        """
+        Show a planned path next to the paths shown before it.
+
+        :param path: The poses the robot's base drives to, in order.
+        """
